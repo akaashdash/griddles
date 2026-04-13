@@ -1,0 +1,10 @@
+name = "griddles-p1-lean"
+version = "0.1.0"
+defaultTargets = ["griddles-p1-lean"]
+
+[[lean_lib]]
+name = "GriddlesP1Lean"
+
+[[lean_exe]]
+name = "griddles-p1-lean"
+root = "Main"
