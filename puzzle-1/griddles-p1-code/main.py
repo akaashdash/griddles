@@ -387,7 +387,7 @@ if __name__ == "__main__":
             fix_ok    = fix == [fe, fr90, fr180, fr270]
             grp_ok    = groups == f_groups
             print(
-                f"  Formula fixes    : [{fe:,}, {fr90}, {fr180:,}, {fr270}]  "
+                f"  Formula fixes    : [{fe}, {fr90}, {fr180}, {fr270}]  "
                 f"{'✓' if fix_ok else '✗'}"
             )
             print(

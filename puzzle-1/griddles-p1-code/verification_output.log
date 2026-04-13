@@ -57,7 +57,7 @@ CHROMATIC ROTATIONS — verification  n = 2 … 11
   Separability     : ✓  ALL separable
   Separable gen    : ✓  sets equal  (12,288 generated)
   Fix(e,90,180,270): [12288, 24, 192, 24]  →  12,528 / 4 = 3,132 groups
-  Formula fixes    : [12,288, 24, 192, 24]  ✓
+  Formula fixes    : [12288, 24, 192, 24]  ✓
   Formula groups   : 3,132  ✓
 
 ─────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ CHROMATIC ROTATIONS — verification  n = 2 … 11
   Separability     : ✓  ALL separable (streamed)
   Separable gen    : ✓  count matches  (196,608, set equality inferred)
   Fix(e,90,180,270): [196608, 48, 768, 48]  →  197,472 / 4 = 49,368 groups
-  Formula fixes    : [196,608, 48, 768, 48]  ✓
+  Formula fixes    : [196608, 48, 768, 48]  ✓
   Formula groups   : 49,368  ✓
 
 ─────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ CHROMATIC ROTATIONS — verification  n = 2 … 11
   Separability     : ✓  ALL separable (streamed)
   Separable gen    : ✓  count matches  (3,145,728, set equality inferred)
   Fix(e,90,180,270): [3145728, 96, 3072, 96]  →  3,148,992 / 4 = 787,248 groups
-  Formula fixes    : [3,145,728, 96, 3,072, 96]  ✓
+  Formula fixes    : [3145728, 96, 3072, 96]  ✓
   Formula groups   : 787,248  ✓
 
 =================================================================
