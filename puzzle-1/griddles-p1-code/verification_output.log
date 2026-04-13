@@ -1,0 +1,114 @@
+=================================================================
+CHROMATIC ROTATIONS — verification  n = 2 … 11
+  Workers : 8   Log : verification_output.log
+=================================================================
+
+─────────────────────────────────────────────────────────────────
+  n = 2   (2×2 grid, 81 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :         12  (formula 3·2^2 = 12)  ✓
+  Separability     : ✓  ALL separable
+  Separable gen    : ✓  sets equal  (12 generated)
+  Fix(e,90,180,270): [12, 0, 0, 0]  →  12 / 4 = 3 groups
+  (n=2 even — no closed-form formula; brute-force is ground truth)
+
+─────────────────────────────────────────────────────────────────
+  n = 3   (3×3 grid, 19,683 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :         48  (formula 3·2^4 = 48)  ✓
+  Separability     : ✓  ALL separable
+  Separable gen    : ✓  sets equal  (48 generated)
+  Fix(e,90,180,270): [48, 6, 12, 6]  →  72 / 4 = 18 groups
+  Formula fixes    : [48, 6, 12, 6]  ✓
+  Formula groups   : 18  ✓
+
+─────────────────────────────────────────────────────────────────
+  n = 4   (4×4 grid, 43,046,721 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :        192  (formula 3·2^6 = 192)  ✓
+  Separability     : ✓  ALL separable
+  Separable gen    : ✓  sets equal  (192 generated)
+  Fix(e,90,180,270): [192, 0, 0, 0]  →  192 / 4 = 48 groups
+  (n=4 even — no closed-form formula; brute-force is ground truth)
+
+─────────────────────────────────────────────────────────────────
+  n = 5   (5×5 grid, 847,288,609,443 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :        768  (formula 3·2^8 = 768)  ✓
+  Separability     : ✓  ALL separable
+  Separable gen    : ✓  sets equal  (768 generated)
+  Fix(e,90,180,270): [768, 12, 48, 12]  →  840 / 4 = 210 groups
+  Formula fixes    : [768, 12, 48, 12]  ✓
+  Formula groups   : 210  ✓
+
+─────────────────────────────────────────────────────────────────
+  n = 6   (6×6 grid, 150,094,635,296,999,121 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :      3,072  (formula 3·2^10 = 3,072)  ✓
+  Separability     : ✓  ALL separable
+  Separable gen    : ✓  sets equal  (3,072 generated)
+  Fix(e,90,180,270): [3072, 0, 0, 0]  →  3,072 / 4 = 768 groups
+  (n=6 even — no closed-form formula; brute-force is ground truth)
+
+─────────────────────────────────────────────────────────────────
+  n = 7   (7×7 grid, 239,299,329,230,617,529,590,083 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :     12,288  (formula 3·2^12 = 12,288)  ✓
+  Separability     : ✓  ALL separable
+  Separable gen    : ✓  sets equal  (12,288 generated)
+  Fix(e,90,180,270): [12288, 24, 192, 24]  →  12,528 / 4 = 3,132 groups
+  Formula fixes    : [12,288, 24, 192, 24]  ✓
+  Formula groups   : 3,132  ✓
+
+─────────────────────────────────────────────────────────────────
+  n = 8   (8×8 grid, 3,433,683,820,292,512,484,657,849,089,281 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :     49,152  (formula 3·2^14 = 49,152)  ✓
+  Separability     : ✓  ALL separable (streamed)
+  Separable gen    : ✓  count matches  (49,152, set equality inferred)
+  Fix(e,90,180,270): [49152, 0, 0, 0]  →  49,152 / 4 = 12,288 groups
+  (n=8 even — no closed-form formula; brute-force is ground truth)
+
+─────────────────────────────────────────────────────────────────
+  n = 9   (9×9 grid, 443,426,488,243,037,769,948,249,630,619,149,892,803 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :    196,608  (formula 3·2^16 = 196,608)  ✓
+  Separability     : ✓  ALL separable (streamed)
+  Separable gen    : ✓  count matches  (196,608, set equality inferred)
+  Fix(e,90,180,270): [196608, 48, 768, 48]  →  197,472 / 4 = 49,368 groups
+  Formula fixes    : [196,608, 48, 768, 48]  ✓
+  Formula groups   : 49,368  ✓
+
+─────────────────────────────────────────────────────────────────
+  n = 10   (10×10 grid, 515,377,520,732,011,331,036,461,129,765,621,272,702,107,522,001 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :    786,432  (formula 3·2^18 = 786,432)  ✓
+  Separability     : ✓  ALL separable (streamed)
+  Separable gen    : ✓  count matches  (786,432, set equality inferred)
+  Fix(e,90,180,270): [786432, 0, 0, 0]  →  786,432 / 4 = 196,608 groups
+  (n=10 even — no closed-form formula; brute-force is ground truth)
+
+─────────────────────────────────────────────────────────────────
+  n = 11   (11×11 grid, 5,391,030,899,743,293,631,239,539,488,528,815,119,194,426,882,613,553,319,203 candidates)
+─────────────────────────────────────────────────────────────────
+  Proper colorings :  3,145,728  (formula 3·2^20 = 3,145,728)  ✓
+  Separability     : ✓  ALL separable (streamed)
+  Separable gen    : ✓  count matches  (3,145,728, set equality inferred)
+  Fix(e,90,180,270): [3145728, 96, 3072, 96]  →  3,148,992 / 4 = 787,248 groups
+  Formula fixes    : [3,145,728, 96, 3,072, 96]  ✓
+  Formula groups   : 787,248  ✓
+
+=================================================================
+  EXTRAPOLATION TO n = 101
+=================================================================
+  Fix(e)    = 3 · 2^200
+  Fix(r90)  = Fix(r270) = 3 · 2^50
+  Fix(r180) = 3 · 2^100
+
+  Groups = (3·2^200 + 3·2^50 + 3·2^100 + 3·2^50) / 4
+         = (3/4)(2^200 + 2^100 + 2·2^50)
+         = (3/4)(2^200 + 2^100 + 2^51)
+         = 3(2^198 + 2^98 + 2^49)
+
+  Numerical value  : 1205203533194242706656471569256822689841823419077067014144000
+  Compact form     : 3(2^198 + 2^98 + 2^49)
