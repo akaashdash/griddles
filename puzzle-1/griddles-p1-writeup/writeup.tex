@@ -1,6 +1,16 @@
+% ============================================================
+%  Chromatic Rotations -- main writeup
+%  Compile with: pdflatex writeup.tex  (twice for refs)
+% ============================================================
 \documentclass{article}
 
-\usepackage[nonatbib]{neurips_2026}
+\usepackage[final,nonatbib,main]{neurips_2026}  % final+main = non-anonymous, no line nums
+
+% suppress NeurIPS conference footer notice
+\makeatletter
+\renewcommand{\@notice}{}
+\makeatother
+
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -15,12 +25,9 @@
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{listings}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
 \usepackage{array}
 \usepackage{tabularx}
 \usepackage{mathtools}
-\usepackage{thmtools}
 \usepackage{enumitem}
 
 \hypersetup{
@@ -30,6 +37,7 @@
   urlcolor=blue!60!black
 }
 
+% ── listing style ────────────────────────────────────────────────────────────
 \definecolor{codebg}{rgb}{0.97,0.97,0.97}
 \definecolor{codeframe}{rgb}{0.7,0.7,0.7}
 
@@ -57,6 +65,7 @@
   belowskip=4pt
 }
 
+% ── theorem environments ──────────────────────────────────────────────────────
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{corollary}[theorem]{Corollary}
@@ -66,21 +75,22 @@
 \newtheorem{example}[theorem]{Example}
 \newtheorem{claim}[theorem]{Claim}
 
+% ── macros ────────────────────────────────────────────────────────────────────
 \newcommand{\F}{\mathbb{F}_3}
-\newcommand{\Zf}{\mathbb{Z}}
 \newcommand{\calC}{\mathcal{C}}
 \newcommand{\calP}{\mathcal{P}}
 \newcommand{\Fix}{\mathrm{Fix}}
-\newcommand{\ol}[1]{\overline{#1}}
+\newcommand{\comp}[1]{\bar{#1}}   % complement in {1,2}
 
-% bar notation: complement in {1,2}
-\newcommand{\comp}[1]{\bar{#1}}
-
+% ── document ─────────────────────────────────────────────────────────────────
 \title{Chromatic Rotations on a $101 \times 101$ Grid:\\
 A Complete Structural Analysis, Exact Enumeration,\\
 and Exhaustive Computational Verification}
 
-\author{Anonymous Author(s)}
+\author{%
+  Akaash Dash \\
+  \texttt{akaash.dash@gmail.com}
+}
 
 \begin{document}
 
@@ -115,11 +125,13 @@ For $n = 101$ the final answer is
   \boxed{3\!\left(2^{198}+2^{98}+2^{49}\right)
   \;\approx\; 1.205\times 10^{60}.}
 \]
-Every step is independently verified by exhaustive brute-force
-search over all $3^{n^2}$ candidate colourings for
-$n\in\{2,3,4\}$, confirming the Separability Theorem, the total
-count, the fixed-point counts under each rotation, and the final
-group count.
+Every step is independently verified by exhaustive computation
+for all $n\in\{2,3,\ldots,11\}$ using a backtracking search
+with early pruning, parallelised across all CPU cores.
+The formula for odd $n$ is confirmed at $n=3,5,7,9,11$; the
+total-count formula is confirmed for all $n\leq 11$.
+The entire verification (all ten grid sizes) completes in
+under 30 seconds on a laptop CPU.
 \end{abstract}
 
 % ============================================================
@@ -212,9 +224,9 @@ proper colourings.  Section~\ref{sec:burnside} applies
 Burnside's Lemma and computes all fixed-point sets.
 Section~\ref{sec:answer} collects the final answer.
 Section~\ref{sec:verification} describes the exhaustive
-computational verification and presents the Python code and
-its output in full.  Section~\ref{sec:extensions} discusses
-generalisations.
+computational verification (extended to $n \le 11$) and
+presents the algorithm and its output.
+Section~\ref{sec:extensions} discusses generalisations.
 
 % ============================================================
 \section{Local Structure of Proper Colourings}
@@ -445,7 +457,7 @@ $f(r,c) = \mathrm{base}+R(c)+D(r)\pmod3$.
 
 \emph{Adjacency:} $f(r,c+1)-f(r,c) = R(c+1)-R(c) = h_c
 \in\{1,2\}\neq 0$.  Similarly $f(r+1,c)-f(r,c) = v_r\neq 0$.
-\checkmark
+$\checkmark$
 
 \emph{Richness:}  The four values of the sub-square at
 $(r,c)$ are $\{a+0,\;a+h_c,\;a+v_r,\;a+h_c+v_r\}$ where
@@ -456,12 +468,12 @@ Since $h_c,v_r\in\{1,2\}$:
     a+h_c,\;a+2h_c$.  Since $2h_c = -h_c\neq h_c$ and
     $\{0,h_c,2h_c\}$ covers all of $\mathbb{F}_3$
     (as $h_c\in\{1,2\}$ generates the group), all three colours
-    appear. \checkmark
+    appear. $\checkmark$
   \item If $h_c\neq v_r$: then $\{h_c,v_r\}=\{1,2\}$ and
     $h_c+v_r = 3\equiv 0\pmod3$.  The four values are
     $a,\;a+h_c,\;a+v_r,\;a+0$, i.e.\ $a$ appears twice,
     and $a+1,a+2$ also appear.  All three colours appear.
-    \checkmark
+    $\checkmark$
 \end{itemize}
 
 \textbf{Uniqueness and bijectivity.}
@@ -504,23 +516,30 @@ The count is $3\times 2^{n-1}\times 2^{n-1} = 3\times
 
 For $n=101$ this gives $|\calP_{101}| = 3\times 2^{200}$.
 
-\paragraph{Small cases.}
-Table~\ref{tab:counts} shows the counts for small $n$,
-all confirmed by exhaustive enumeration (Section~\ref{sec:verification}).
+\paragraph{Verified cases.}
+Table~\ref{tab:counts} shows the formula against the
+exhaustive backtracking count for all $n\leq 11$.
+All entries agree.
 
 \begin{table}[h]
   \centering
-  \caption{Total proper colourings for small $n$, compared
-    with brute-force enumeration over all $3^{n^2}$ candidates.}
+  \caption{Total proper colourings for $n = 2$--$11$,
+    verified by backtracking search.}
   \label{tab:counts}
-  \begin{tabular}{cccc}
+  \begin{tabular}{rrrr}
     \toprule
-    $n$ & Candidates ($3^{n^2}$) & Formula $3\times 2^{2(n-1)}$
-        & Brute-force count \\
+    $n$ & Formula $3\times 2^{2(n-1)}$ & Verified count & Match \\
     \midrule
-    2 & 81         & 12  & 12 \\
-    3 & 19\,683    & 48  & 48 \\
-    4 & 43\,046\,721 & 192 & 192 \\
+    2  & 12         & 12        & \checkmark \\
+    3  & 48         & 48        & \checkmark \\
+    4  & 192        & 192       & \checkmark \\
+    5  & 768        & 768       & \checkmark \\
+    6  & 3\,072     & 3\,072    & \checkmark \\
+    7  & 12\,288    & 12\,288   & \checkmark \\
+    8  & 49\,152    & 49\,152   & \checkmark \\
+    9  & 196\,608   & 196\,608  & \checkmark \\
+    10 & 786\,432   & 786\,432  & \checkmark \\
+    11 & 3\,145\,728& 3\,145\,728& \checkmark \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -621,7 +640,7 @@ $D(100) = \sum_{i=0}^{99}v_i\equiv 0$:
   = \sum_{i=0}^{49}(v_i+\comp{v_i})
   = \sum_{i=0}^{49}3 = 0\pmod3.
 \]
-Automatically satisfied. \checkmark
+Automatically satisfied. $\checkmark$
 
 \paragraph{Conclusion.}
 \[
@@ -675,13 +694,13 @@ before:
 \eqref{eq:180hcond}.)
 
 \paragraph{Step 4.} Verify $D(100)=0$:
-Same calculation as in Section~\ref{subsec:180}. \checkmark
+Same calculation as in Section~\ref{subsec:180}. $\checkmark$
 
 \paragraph{Step 5.} Verify consistency with
 \eqref{eq:90cond}: Substituting $D(r)=R(r)$ and
 $R(c) = R(100-c)$, the condition becomes
 $R(c)+R(r) = R(r)+D(100-c) = R(r)+R(100-c) = R(r)+R(c)$.
-\checkmark
+$\checkmark$
 
 \paragraph{Degrees of freedom.}
 The free parameters are $h_0,\ldots,h_{49}\in\{1,2\}$
@@ -723,8 +742,9 @@ the roles of $(r,c)$ relabelled.
 
 \begin{table}[h]
   \centering
-  \caption{Fixed-point counts under each rotation, for the
-    $101\times 101$ grid and for small grids (brute-force).}
+  \caption{Fixed-point counts under each rotation.
+    Odd-$n$ rows include the closed-form formula; even-$n$
+    rows are ground-truth only (no formula derived).}
   \label{tab:fix}
   \begin{tabular}{lcccccc}
     \toprule
@@ -735,9 +755,17 @@ the roles of $(r,c)$ relabelled.
     Grid & $k=0$ & $k=1$ & $k=2$ & $k=3$
          & groups & groups \\
     \midrule
-    $2\times 2$   & 12 & 0  & 0   & 0  & 3  & -- \\
-    $3\times 3$   & 48 & 6  & 12  & 6  & 18 & 18 \\
-    $4\times 4$   & 192& 0  & 0   & 0  & 48 & -- \\
+    $2\times 2$   & 12     & 0       & 0       & 0      & 3       & -- \\
+    $3\times 3$   & 48     & 6       & 12      & 6      & 18      & 18 \\
+    $4\times 4$   & 192    & 0       & 0       & 0      & 48      & -- \\
+    $5\times 5$   & 768    & 12      & 48      & 12     & 210     & 210 \\
+    $6\times 6$   & 3072   & 0       & 0       & 0      & 768     & -- \\
+    $7\times 7$   & 12288  & 24      & 192     & 24     & 3132    & 3132 \\
+    $8\times 8$   & 49152  & 0       & 0       & 0      & 12288   & -- \\
+    $9\times 9$   & 196608 & 48      & 768     & 48     & 49368   & 49368 \\
+    $10\times 10$ & 786432 & 0       & 0       & 0      & 196608  & -- \\
+    $11\times 11$ & 3145728& 96      & 3072    & 96     & 787248  & 787248 \\
+    \midrule
     $101\times 101$
       & $3\cdot 2^{200}$ & $3\cdot 2^{50}$
       & $3\cdot 2^{100}$ & $3\cdot 2^{50}$
@@ -747,7 +775,7 @@ the roles of $(r,c)$ relabelled.
 \end{table}
 
 \paragraph{Note on even $n$.}
-For even $n$ (such as 2 and 4), the brute-force shows
+For even $n$, the brute-force shows
 $|\Fix(\rho^1)| = |\Fix(\rho^2)| = |\Fix(\rho^3)| = 0$.
 Intuitively, a $90^\circ$ rotation of an even-$n$ grid
 has no fixed cells at all (there is no centre cell), making
@@ -801,346 +829,340 @@ which is divisible by $4 = 2^2$ since $51 \geq 2$.  Therefore:
   &\approx 3\times 4.018\times 10^{59} \\
   &= 1.205\times 10^{60}.
 \end{align*}
-The exact decimal value has 60 digits and begins
-$1205203533\ldots$
+The exact 60-digit decimal is
+$1205203533194242706656471569256822689841823419077067014144000$.
 
 % ============================================================
 \section{Computational Verification}
 \label{sec:verification}
 % ============================================================
 
-To verify the theoretical claims independently and completely,
-we implemented an exhaustive brute-force search.  For each
-grid size $n\in\{2,3,4\}$, the code:
-\begin{enumerate}[noitemsep]
-  \item Generates every possible 3-colouring of the
-    $n\times n$ grid ($3^{n^2}$ candidates in total).
-  \item Filters to retain only those satisfying both the
-    adjacency and richness conditions.
-  \item Tests each proper colouring for separability
-    via Theorem~\ref{thm:sep}.
-  \item Verifies that the set of proper colourings equals
-    the set produced by directly enumerating all valid
-    separable triples.
-  \item Counts fixed points under each of the four rotations
-    and applies Burnside's Lemma.
-  \item Computes the number of equivalence classes by
-    explicit orbit-tracking and verifies it matches the
-    Burnside computation.
-\end{enumerate}
+\subsection{Algorithm}
 
-\subsection{Implementation}
+Flat enumeration of all $3^{n^2}$ candidates becomes
+infeasible for $n \ge 5$ ($3^{25}\approx 8.5\times10^{11}$
+for $n=5$).  We therefore use \emph{backtracking with early
+pruning}.
 
-The complete Python implementation is given in
-Listing~\ref{lst:code}.
+\paragraph{Key observation.}
+Once the first row and the first column of the grid are
+fixed, every remaining cell is \emph{uniquely determined}
+by the $2\times 2$ richness constraint.  Concretely, given
+the three known corners of the $2\times 2$ square above and
+to the left of cell $(r,c)$ (with $r,c\ge 1$), the richness
+condition forces the fourth corner to be the unique missing
+colour.  (This is easy to verify: with adjacency, the three
+known cells always cover two or three distinct colours, and
+in every case exactly one colour for the new cell satisfies
+both adjacency and richness.)
+
+This means the search tree has at most
+$3\times 2^{(n-1)}\times 2^{(n-1)} = 3\times 2^{2(n-1)}$
+leaves --- exactly the number of valid colourings --- with
+no wasted backtracking.  For $n=11$ this is $3\,145\,728$
+leaves versus $5.4\times 10^{62}$ flat candidates.
+
+\paragraph{Parallelisation.}
+We generate all $3\times 2^{n-1}$ valid first-row
+configurations (sequences with no two adjacent entries
+equal) and dispatch each as an independent job to a pool of
+worker processes.  For $n=11$ this creates $3072$ jobs
+distributed across 8 CPU cores.  Each worker runs an
+iterative (non-recursive) backtracking loop from its
+fixed first row.
+
+\paragraph{Memory strategy.}
+For $n \le 7$ each worker returns the list of proper
+colourings it finds (at most $4096$ per job), and the
+main process performs full set-equality and orbit-counting
+verification.  For $n \ge 8$, where collecting all colorings
+would require gigabytes, each worker instead returns only
+aggregate counts: total found, separability-check count, and
+the four Burnside fixed-point counts.  The main process sums
+these to produce the final verification figures.
+
+\subsection{Core implementation}
+
+Listing~\ref{lst:code} gives the key functions.
+The complete implementation (including the parallel
+dispatcher and logging infrastructure) is in the
+accompanying file \texttt{main.py}.
 
 \begin{lstlisting}[
-  caption={Complete verification script (\texttt{chromatic.py}).
-    Requires only the Python standard library and
-    \texttt{tqdm}.},
+  caption={Core verification functions.},
   label={lst:code},
   language=Python
 ]
-"""
-Chromatic Rotations Verifier
-Tests all claims for the 101x101 grid problem on small grids.
-"""
-
-import itertools
+import itertools, multiprocessing as mp, os
 from tqdm import tqdm
 
-# ── helpers ──────────────────────────────────────────────────
+NUM_WORKERS = os.cpu_count()  # 8 on Apple M1 Pro
+
+# -- constraint checkers ---------------------------------------
 
 def is_proper(g, n):
-    """Check both adjacency and 2x2 richness conditions."""
     for r in range(n):
         for c in range(n):
-            if c+1 < n and g[r*n+c] == g[r*n+c+1]:
-                return False
-            if r+1 < n and g[r*n+c] == g[(r+1)*n+c]:
-                return False
+            v = g[r*n+c]
+            if c+1 < n and v == g[r*n+c+1]: return False
+            if r+1 < n and v == g[(r+1)*n+c]: return False
     for r in range(n-1):
         for c in range(n-1):
             sq = {g[r*n+c], g[r*n+c+1],
                   g[(r+1)*n+c], g[(r+1)*n+c+1]}
-            if len(sq) < 3:
-                return False
+            if len(sq) < 3: return False
     return True
-
 
 def rotate90(g, n):
-    """90 deg clockwise: (r,c) -> (c, n-1-r)."""
-    out = [0] * (n * n)
+    out = [0]*(n*n)
     for r in range(n):
         for c in range(n):
-            out[c * n + (n - 1 - r)] = g[r * n + c]
+            out[c*n+(n-1-r)] = g[r*n+c]
     return tuple(out)
 
-
 def is_separable(g, n):
-    """Check g(r,c) = base + R[c] + D[r]  (mod 3)."""
     base = g[0]
-    R = [(g[c] - base) % 3 for c in range(n)]
-    D = [(g[r * n] - base) % 3 for r in range(n)]
-    for r in range(n):
-        for c in range(n):
-            if g[r * n + c] != (base + R[c] + D[r]) % 3:
-                return False
-    return True
-
+    R = [(g[c]-base)%3 for c in range(n)]
+    D = [(g[r*n]-base)%3 for r in range(n)]
+    return all(g[r*n+c]==(base+R[c]+D[r])%3
+               for r in range(n) for c in range(n))
 
 def generate_separable(n):
-    """Enumerate all separable colorings directly."""
     out = []
     for base in range(3):
-        for hs in itertools.product((1, 2), repeat=n - 1):
-            R = [0] * n
-            for c in range(1, n):
-                R[c] = (R[c - 1] + hs[c - 1]) % 3
-            for vs in itertools.product((1, 2), repeat=n - 1):
-                D = [0] * n
-                for r in range(1, n):
-                    D[r] = (D[r - 1] + vs[r - 1]) % 3
-                g = tuple(
-                    (base + R[c] + D[r]) % 3
-                    for r in range(n) for c in range(n)
-                )
+        for hs in itertools.product((1,2), repeat=n-1):
+            R = [0]*n
+            for c in range(1,n): R[c]=(R[c-1]+hs[c-1])%3
+            for vs in itertools.product((1,2), repeat=n-1):
+                D = [0]*n
+                for r in range(1,n): D[r]=(D[r-1]+vs[r-1])%3
+                g = tuple((base+R[c]+D[r])%3
+                          for r in range(n) for c in range(n))
                 out.append(g)
     return out
 
-
 def burnside_groups(proper, n):
-    """
-    Count rotation-equivalence classes via Burnside's lemma.
-    Returns (num_groups, fix_e, fix_r90, fix_r180, fix_r270).
-    """
-    fix = [0, 0, 0, 0]
-    seen = set()
-    groups = 0
+    fix = [0,0,0,0]; seen = set(); groups = 0
     for g in proper:
         fix[0] += 1
-        g1 = rotate90(g, n)
-        g2 = rotate90(g1, n)
-        g3 = rotate90(g2, n)
-        if g == g1: fix[1] += 1
-        if g == g2: fix[2] += 1
-        if g == g3: fix[3] += 1
+        g1=rotate90(g,n); g2=rotate90(g1,n); g3=rotate90(g2,n)
+        if g==g1: fix[1]+=1
+        if g==g2: fix[2]+=1
+        if g==g3: fix[3]+=1
         if g not in seen:
-            groups += 1
-            seen |= {g, g1, g2, g3}
-    burnside = sum(fix) // 4
-    assert burnside == groups, "Burnside count mismatch!"
+            groups += 1; seen |= {g,g1,g2,g3}
+    assert sum(fix)//4 == groups
     return groups, fix
 
-
-# ── formula for general odd n ─────────────────────────────────
+# -- closed-form formulas (odd n) -----------------------------
 
 def formula_groups_odd(n):
-    k = n - 1
-    return (3 * (2**(2*k) + 2**(k//2 + 1) + 2**k)) // 4
-
+    k = n-1
+    return (3*(2**(2*k) + 2**(k//2+1) + 2**k))//4
 
 def formula_fix_odd(n):
-    k = n - 1
-    return (3 * 2**(2*k),
-            3 * 2**(k // 2),
-            3 * 2**k,
-            3 * 2**(k // 2))
+    k = n-1
+    fe=3*2**(2*k); fr90=3*2**(k//2); fr180=3*2**k
+    return fe, fr90, fr180, fr90
 
+# -- iterative backtracking worker (module-level for pickling) -
 
-# ── main ──────────────────────────────────────────────────────
+def _worker(args):
+    """
+    Iterative DFS from a fixed first-row prefix.
 
-print("=" * 65)
-print("CHROMATIC ROTATIONS -- verification on small grids")
-print("=" * 65)
+    collect_mode=True  -> return list of proper colorings
+    collect_mode=False -> return (total, sep, r90, r180, r270)
+    """
+    prefix, n, collect_mode = args
+    nn = n*n
+    grid = list(prefix) + [0]*(nn-len(prefix))
+    start = len(prefix)
+    nv = [0]*(nn+1)   # next color to try at each position
+    proper = [] if collect_mode else None
+    total=sep=r90=r180=r270=0
 
-for n in range(2, 5):
-    print(f"\n{'─'*65}")
-    print(f"  Grid n = {n}   ({n}x{n}, {3**n**2:,} candidates)")
-    print(f"{'─'*65}")
+    pos = start
+    while pos >= start:
+        if pos == nn:
+            if collect_mode:
+                proper.append(tuple(grid))
+            else:
+                g=tuple(grid); total+=1
+                if is_separable(g,n): sep+=1
+                g1=rotate90(g,n)
+                if g==g1: r90+=1
+                g2=rotate90(g1,n)
+                if g==g2: r180+=1
+                if g==rotate90(g2,n): r270+=1
+            pos -= 1
+        else:
+            r,c = divmod(pos,n)
+            v=nv[pos]; found=False
+            while v < 3:
+                ok=True
+                if c>0 and v==grid[pos-1]:   ok=False
+                if ok and r>0 and v==grid[pos-n]: ok=False
+                if ok and r>0 and c>0:
+                    sq={grid[(r-1)*n+(c-1)],grid[(r-1)*n+c],
+                        grid[r*n+(c-1)],v}
+                    if len(sq)<3: ok=False
+                if ok: found=True; break
+                v+=1
+            if found:
+                grid[pos]=v; nv[pos]=v+1; nv[pos+1]=0; pos+=1
+            else:
+                nv[pos]=0; pos-=1
 
-    proper = []
-    for g in tqdm(itertools.product(range(3), repeat=n * n),
-                  total=3**(n * n),
-                  desc="  brute-force", leave=False):
-        if is_proper(g, n):
-            proper.append(g)
+    return proper if collect_mode else (total,sep,r90,r180,r270)
 
-    num_proper     = len(proper)
-    formula_total  = 3 * 2**(2 * (n - 1))
-    match_total    = "OK" if num_proper == formula_total \
-                          else "FAIL"
-    print(f"  Proper colorings  : {num_proper:>6}  "
-          f"(formula = {formula_total})  {match_total}")
+# -- job generation and parallel dispatch ---------------------
 
-    non_sep = [g for g in proper if not is_separable(g, n)]
-    print(f"  All separable     : "
-          + ("YES" if not non_sep
-             else f"NO  ({len(non_sep)} failures)"))
+def _first_row_jobs(n, collect_mode):
+    jobs=[]; stack=[(v,) for v in range(3)]
+    while stack:
+        row=stack.pop()
+        if len(row)==n:
+            jobs.append((row,n,collect_mode))
+        else:
+            last=row[-1]
+            for v in range(3):
+                if v!=last: stack.append(row+(v,))
+    return jobs
 
-    sep_set    = set(generate_separable(n))
-    proper_set = set(proper)
-    print(f"  Sep gen = brute   : "
-          + ("YES" if sep_set == proper_set else "NO"))
-
-    groups, fix = burnside_groups(proper, n)
-    print(f"  Fix(e,90,180,270) : {fix}")
-    print(f"  Groups (Burnside) : {groups}")
-
-    if n % 2 == 1:
-        fe, fr90, fr180, fr270 = formula_fix_odd(n)
-        fg = formula_groups_odd(n)
-        print(f"  Formula fix       : "
-              f"[{fe},{fr90},{fr180},{fr270}]  "
-              + ("OK" if fix == [fe,fr90,fr180,fr270]
-                 else "FAIL"))
-        print(f"  Formula groups    : {fg}  "
-              + ("OK" if groups == fg else "FAIL"))
-
-# ── extrapolate to n=101 ──────────────────────────────────────
-print(f"\n{'='*65}")
-print("  EXTRAPOLATION TO n = 101")
-n = 101
-val = 3 * (2**198 + 2**98 + 2**49)
-print(f"  Fix(e)     = 3 * 2^200")
-print(f"  Fix(90)    = Fix(270) = 3 * 2^50")
-print(f"  Fix(180)   = 3 * 2^100")
-print(f"  Groups = (3*2^200 + 3*2^50 + 3*2^100 + 3*2^50) / 4")
-print(f"         = 3*(2^200 + 2^100 + 2^51) / 4")
-print(f"         = 3*(2^198 + 2^98 + 2^49)")
-print(f"  Numerical  : {val}")
+def run_parallel(n, collect_mode):
+    jobs = _first_row_jobs(n, collect_mode)
+    with mp.Pool(processes=NUM_WORKERS) as pool:
+        chunks = list(tqdm(pool.imap_unordered(_worker, jobs),
+                           total=len(jobs), leave=False))
+    if collect_mode:
+        return [g for chunk in chunks for g in chunk]
+    total=sep=r90=r180=r270=0
+    for t,s,a,b,c in chunks:
+        total+=t; sep+=s; r90+=a; r180+=b; r270+=c
+    return total,sep,r90,r180,r270
 \end{lstlisting}
 
 \subsection{Verified output}
 
-Running \texttt{python chromatic.py} produces the following
-output (tqdm progress bars omitted for brevity):
+Running \texttt{uv run python main.py} produces the following
+(tqdm progress bars omitted):
 
 \begin{lstlisting}[language={},
   basicstyle=\scriptsize\ttfamily,
   backgroundcolor=\color{codebg},
   frame=single,
   numbers=none,
-  caption={Complete output of the verification script.},
+  caption={Complete verification output (n = 2--11).},
   label={lst:output}]
 =================================================================
-CHROMATIC ROTATIONS -- verification on small grids
+CHROMATIC ROTATIONS  --  verification  n = 2 ... 11
+  Workers : 8    Log : verification_output.log
 =================================================================
 
-─────────────────────────────────────────────────────────────────
-  Grid n = 2   (2x2, 81 candidates)
-─────────────────────────────────────────────────────────────────
-  Proper colorings  :     12  (formula = 12)  OK
-  All separable     : YES
-  Sep gen = brute   : YES
-  Fix(e,90,180,270) : [12, 0, 0, 0]
-  Groups (Burnside) : 3
+  n = 2   (2x2 grid, 81 candidates)
+  Proper colorings :         12  (formula 3*2^2  = 12)   OK
+  Separability     : ALL separable
+  Separable gen    : sets equal  (12 generated)
+  Fix(e,90,180,270): [12, 0, 0, 0]  ->  12 / 4 = 3 groups
+  (n=2 even -- no closed-form formula)
 
-─────────────────────────────────────────────────────────────────
-  Grid n = 3   (3x3, 19,683 candidates)
-─────────────────────────────────────────────────────────────────
-  Proper colorings  :     48  (formula = 48)  OK
-  All separable     : YES
-  Sep gen = brute   : YES
-  Fix(e,90,180,270) : [48, 6, 12, 6]
-  Groups (Burnside) : 18
-  Formula fix       : [48, 6, 12, 6]  OK
-  Formula groups    : 18  OK
+  n = 3   (3x3 grid, 19,683 candidates)
+  Proper colorings :         48  (formula 3*2^4  = 48)   OK
+  Separability     : ALL separable
+  Separable gen    : sets equal  (48 generated)
+  Fix(e,90,180,270): [48, 6, 12, 6]  ->  72 / 4 = 18 groups
+  Formula fixes    : [48, 6, 12, 6]   OK
+  Formula groups   : 18               OK
 
-─────────────────────────────────────────────────────────────────
-  Grid n = 4   (4x4, 43,046,721 candidates)
-─────────────────────────────────────────────────────────────────
-  Proper colorings  :    192  (formula = 192)  OK
-  All separable     : YES
-  Sep gen = brute   : YES
-  Fix(e,90,180,270) : [192, 0, 0, 0]
-  Groups (Burnside) : 48
+  n = 4   (4x4 grid)
+  Proper colorings :        192  (formula 3*2^6  = 192)  OK
+  Fix(e,90,180,270): [192, 0, 0, 0]  ->  192 / 4 = 48 groups
+
+  n = 5   (5x5 grid)
+  Proper colorings :        768  (formula 3*2^8  = 768)  OK
+  Fix(e,90,180,270): [768, 12, 48, 12]  ->  840 / 4 = 210 groups
+  Formula fixes    : [768, 12, 48, 12]  OK
+  Formula groups   : 210               OK
+
+  n = 6   (6x6 grid)
+  Proper colorings :      3,072  (formula 3*2^10 = 3,072)  OK
+  Fix(e,90,180,270): [3072, 0, 0, 0]  ->  3,072 / 4 = 768 groups
+
+  n = 7   (7x7 grid)
+  Proper colorings :     12,288  (formula 3*2^12 = 12,288)  OK
+  Fix(e,90,180,270): [12288, 24, 192, 24]  ->  12,528 / 4 = 3,132 groups
+  Formula fixes    : [12288, 24, 192, 24]  OK
+  Formula groups   : 3,132               OK
+
+  n = 8   (8x8 grid, streamed)
+  Proper colorings :     49,152  (formula 3*2^14 = 49,152)  OK
+  Fix(e,90,180,270): [49152, 0, 0, 0]  ->  49,152 / 4 = 12,288 groups
+
+  n = 9   (9x9 grid, streamed)
+  Proper colorings :    196,608  (formula 3*2^16 = 196,608)  OK
+  Fix(e,90,180,270): [196608, 48, 768, 48]  ->  197,472 / 4 = 49,368 groups
+  Formula fixes    : [196608, 48, 768, 48]  OK
+  Formula groups   : 49,368              OK
+
+  n = 10  (10x10 grid, streamed)
+  Proper colorings :    786,432  (formula 3*2^18 = 786,432)  OK
+  Fix(e,90,180,270): [786432, 0, 0, 0]  ->  786,432 / 4 = 196,608 groups
+
+  n = 11  (11x11 grid, streamed)
+  Proper colorings :  3,145,728  (formula 3*2^20 = 3,145,728)  OK
+  Fix(e,90,180,270): [3145728, 96, 3072, 96]  ->  3,148,992 / 4 = 787,248
+  Formula fixes    : [3145728, 96, 3072, 96]  OK
+  Formula groups   : 787,248              OK
+
+  All n <= 11: every proper coloring is separable.  OK
 
 =================================================================
   EXTRAPOLATION TO n = 101
 =================================================================
-  Fix(e)     = 3 * 2^200
-  Fix(90)    = Fix(270) = 3 * 2^50
-  Fix(180)   = 3 * 2^100
+  Fix(e)    = 3 * 2^200
+  Fix(r90)  = Fix(r270) = 3 * 2^50
+  Fix(r180) = 3 * 2^100
   Groups = (3*2^200 + 3*2^50 + 3*2^100 + 3*2^50) / 4
-         = 3*(2^200 + 2^100 + 2^51) / 4
-         = 3*(2^198 + 2^98 + 2^49)
-  Numerical  : 120520353319424270665647156925682268984182341907
-               7067014144000
+         = (3/4)(2^200 + 2^100 + 2^51)
+         = 3(2^198 + 2^98 + 2^49)
+  Numerical: 1205203533194242706656471569256822689841823419077067014144000
 \end{lstlisting}
 
 \subsection{What the verification proves}
 
-The brute-force computation provides a \emph{certificate} for
-the following claims, with no possibility of error for $n\leq 4$:
+The computation provides a certificate for the following
+claims, with no possibility of error for $n\leq 11$:
 
 \begin{enumerate}
-  \item \textbf{Separability.}  Among the 252 proper colourings
-    found for $n\in\{2,3,4\}$, \emph{every single one} passes
-    the \texttt{is\_separable()} test.  No exceptions.  This
-    is non-trivial: the test is a concrete numerical check that
-    $f(r,c) = f(0,0) + R(c) + D(r) \pmod 3$ holds at every
-    cell.
+  \item \textbf{Separability.}  Among all proper colourings
+    found for $n\in\{2,\ldots,11\}$, \emph{every single one}
+    passes the \texttt{is\_separable()} test.  No exceptions.
 
   \item \textbf{Total count.}  The formula $3\times 2^{2(n-1)}$
-    matches the brute-force count for all three grid sizes.
+    matches the backtracking count for all ten grid sizes.
 
-  \item \textbf{Fixed-point counts.}  For $n=3$ (the smallest
-    odd size greater than 1):
-    $|\Fix(e,\rho,\rho^2,\rho^3)| = (48,6,12,6)$, matching
-    the formula $(3\cdot 2^4, 3\cdot 2^1, 3\cdot 2^2, 3\cdot 2^1)$
-    exactly.
+  \item \textbf{Fixed-point counts (odd $n$).}
+    For $n \in \{3,5,7,9,11\}$ the fix counts
+    $|\Fix(e,\rho,\rho^2,\rho^3)|$ match the closed-form
+    formula exactly (Table~\ref{tab:fix}).
 
-  \item \textbf{Group count.}  For $n=3$: 18 rotationally
-    distinct classes, matching the formula.  The direct
-    orbit-tracking (using the \texttt{seen} set) and the
-    Burnside computation agree.
+  \item \textbf{Group count (odd $n$).}
+    The Burnside count matches the formula
+    $3(2^{2n-4}+2^{n-3}+2^{(n-3)/2})$ at all five odd sizes.
 
-  \item \textbf{Equivalence relation.}  The \texttt{seen} set
-    groups two colourings together if and only if one is a
-    $\{0^\circ,90^\circ,180^\circ,270^\circ\}$-rotation of the
-    other.  This is exactly the relation defined in the problem.
-    Reflections are \emph{not} included (the dihedral group is
-    not used), consistent with the problem asking for
-    \emph{rotations} only.
+  \item \textbf{Even $n$.}
+    For all even $n \le 10$ the fix counts under non-identity
+    rotations are zero, confirming the general argument.
+    The group count is $|\calP_n|/4$.
 
-  \item \textbf{Separable generation.}  The set produced by
-    enumerating all valid triples $(\mathrm{base},(h_j),(v_i))$
-    is identical to the set of proper colourings found by
-    brute force.  The two code paths (forward: generate by
-    parametrisation; backward: filter from all colourings) meet
-    at the same set.
+  \item \textbf{Set equality (small $n$).}
+    For $n\leq 7$ the set of proper colourings found by
+    backtracking equals the set produced by
+    \texttt{generate\_separable}.  For $n\geq 8$ set equality
+    is inferred from: (a) every found colouring is separable,
+    and (b) the total count equals $|\calP_n|$.
 \end{enumerate}
-
-\subsection{Rotation versus reflection: an important distinction}
-
-Since the problem asks for equivalence under \emph{rotation}
-and not under all symmetries of the square (which would also
-include reflections), we verified that the rotations-only
-(group $\mathbb{Z}_4$) count differs from the dihedral group
-($D_4$, adding reflections) count for $n=3$.  An additional
-script confirmed:
-
-\begin{itemize}
-  \item Groups under $\mathbb{Z}_4$ (rotations only):
-    \textbf{18}.
-  \item Groups under $D_4$ (rotations + reflections):
-    \textbf{18}.
-\end{itemize}
-
-For $n=3$ the two happen to coincide (every orbit under
-reflections is already an orbit under rotations), but this is
-an accident of the specific structure of the colourings for
-this size.  For general $n$ or a different class of colourings
-they would differ.  The script also confirmed that no coloring
-produced a distinct image under horizontal reflection that
-was not already reachable by some rotation, explaining the
-coincidence.
-
-The key point is that our main formula
-$3(2^{198}+2^{98}+2^{49})$ is computed with $\mathbb{Z}_4$
-(the rotation group), which is exactly what the problem
-specifies.
 
 % ============================================================
 \section{Generalisations and Extensions}
@@ -1176,13 +1198,17 @@ of a palindrome $h_j = \comp{h_{n-2-j}}$ summing to zero
 when the pairing forces non-zero partial sums).  The group
 count is simply $|\calP_n|/4 = 3\cdot 2^{2(n-1)-2}$.
 
-\paragraph{Spot-check.}
+\paragraph{Spot-checks.}
 
-For $n=3$ ($m=1$, so $(n-3)/2=0$):
-$|\calC_3| = 3(2^2+2^0+2^0) = 3\cdot 6 = 18$. \checkmark
+For $n=3$: $|\calC_3| = 3(2^2+2^0+2^0) = 18$. $\checkmark$
 
-For $n=5$ ($m=2$, so $(n-3)/2=1$):
-$|\calC_5| = 3(2^6+2^2+2^1) = 3\cdot 70 = 210$.
+For $n=5$: $|\calC_5| = 3(2^6+2^2+2^1) = 3\times 70 = 210$. $\checkmark$
+
+For $n=7$: $|\calC_7| = 3(2^{10}+2^4+2^2) = 3\times 1044 = 3132$. $\checkmark$
+
+For $n=9$: $|\calC_9| = 3(2^{14}+2^6+2^3) = 3\times 16456 = 49368$. $\checkmark$
+
+For $n=11$: $|\calC_{11}| = 3(2^{18}+2^8+2^4) = 3\times 262416 = 787248$. $\checkmark$
 
 \subsection{Rectangular grids}
 
@@ -1206,6 +1232,11 @@ This gives $|\Fix(\sigma)| = 3\times 2^{50}\times 2^{100}
 = 3\times 2^{150}$.  Burnside's Lemma over $D_4$ would then
 yield a smaller count than our $\mathbb{Z}_4$ result.
 
+The key point is that our main formula
+$3(2^{198}+2^{98}+2^{49})$ is computed with $\mathbb{Z}_4$
+(the rotation group), which is exactly what the problem
+specifies.
+
 \subsection{More colours}
 
 The problem is specific to 3 colours because the richness
@@ -1216,16 +1247,23 @@ condition without using all colours in every $2\times 2$
 square, and the analysis would differ significantly.
 
 % ============================================================
-\section*{Acknowledgments and Disclosure of Funding}
+\section*{Acknowledgements}
 % ============================================================
 
-This work does not involve any external funding or conflicts
-of interest.  The computations were performed using standard
-Python (version 3.11) with the \texttt{tqdm} library for
-progress display.  No special hardware was required; the
-largest computation ($n=4$, iterating over $43\,046\,721$
-candidates) completed in approximately 25 seconds on a
-commodity CPU.
+The mathematical solution to this problem --- including the
+Separability Theorem, the Burnside fixed-point analysis, and the
+closed-form answer --- was developed in collaboration with
+\href{https://claude.ai}{Claude} (Anthropic).
+The computational verification code and this writeup were
+subsequently produced in collaboration with
+\href{https://claude.ai/code}{Claude Code} (Anthropic).
+
+Computations were performed in Python~3.13 with the
+\texttt{tqdm} library on an Apple M1~Pro laptop (8 CPU cores).
+The full verification sweep ($n = 2$ through $11$) completes in
+approximately 28~seconds using all 8 cores via Python's
+\texttt{multiprocessing} module, with no GPU or special
+hardware required.
 
 % ============================================================
 \section*{References}
@@ -1312,11 +1350,10 @@ and:
   \end{pmatrix}
   \pmod 3.
 \]
-Checking: horizontal slopes in each row are $(1,2,1,2,\ldots)$
-as given; vertical slopes in each column are $(2,1,2,1,\ldots)$
+Checking: horizontal slopes in each row are $(1,2)$
+as given; vertical slopes in each column are $(2,1)$
 as given.  Every $2\times 2$ sub-square contains all three
-colours (the top-left $2\times 2$ block is
-$\{0,1,2,0\}$). \checkmark
+colours. $\checkmark$
 
 \subsection{A colouring fixed by $180^\circ$ rotation
   ($n=3$)}
@@ -1391,113 +1428,5 @@ the sum telescopes:
 \]
 No additional constraint is imposed beyond the pairing, and
 the choice of 50 free values in $\{1,2\}$ is unrestricted.
-
-\section{NeurIPS Paper Checklist}
-
-\begin{enumerate}
-
-\item {\bf Claims}
-    \item[] Answer: \answerYes{}
-    \item[] Justification: The abstract states that we determine
-    the number of equivalence classes of proper 3-colourings of
-    the $101\times 101$ grid under rotation, and the body
-    proves this rigorously and verifies it computationally for
-    small cases.
-
-\item {\bf Limitations}
-    \item[] Answer: \answerYes{}
-    \item[] Justification: Section~\ref{sec:extensions}
-    discusses the scope of the result (odd vs.\ even grids,
-    other symmetry groups, other numbers of colours) and
-    identifies where the argument does and does not extend.
-
-\item {\bf Theory assumptions and proofs}
-    \item[] Answer: \answerYes{}
-    \item[] Justification: All theorems are stated with
-    complete assumptions and full proofs.  The main
-    Separability Theorem (Theorem~\ref{thm:sep}) is proved
-    in two directions (necessity and sufficiency).
-    The Burnside analysis (Section~\ref{sec:burnside})
-    derives all fixed-point constraints from scratch.
-
-\item {\bf Experimental result reproducibility}
-    \item[] Answer: \answerYes{}
-    \item[] Justification: The complete verification script
-    is provided in Listing~\ref{lst:code} and the exact
-    output is shown in Listing~\ref{lst:output}.  The only
-    dependency beyond the Python standard library is
-    \texttt{tqdm}, installable via \texttt{pip install tqdm}.
-
-\item {\bf Open access to data and code}
-    \item[] Answer: \answerYes{}
-    \item[] Justification: The complete self-contained code
-    is included in the paper body (Listing~\ref{lst:code}).
-    There is no external dataset.
-
-\item {\bf Experimental setting/details}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: This is a mathematics paper with
-    no training procedure, hyperparameters, or data splits.
-    The computational verification is fully specified by the
-    code listing.
-
-\item {\bf Experiment statistical significance}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: The computations are deterministic
-    exhaustive searches with no randomness; statistical
-    significance does not apply.
-
-\item {\bf Experiments compute resources}
-    \item[] Answer: \answerYes{}
-    \item[] Justification: The largest computation iterates
-    over $3^{16}\approx 43$ million candidates
-    ($n=4$) and completes in approximately 25 seconds on a
-    standard CPU.  No GPU or specialised hardware is required.
-
-\item {\bf Code of ethics}
-    \item[] Answer: \answerYes{}
-    \item[] Justification: This is pure mathematics research
-    with no data collection, human subjects, or potential
-    for misuse.
-
-\item {\bf Broader impacts}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: This is foundational combinatorics
-    research with no direct societal impact, positive or
-    negative.
-
-\item {\bf Safeguards}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: No models, datasets, or systems
-    with misuse potential are released.
-
-\item {\bf Licenses for existing assets}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: No external datasets or pre-trained
-    models are used.
-
-\item {\bf New assets}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: The only asset released is the
-    verification script, which is entirely contained within
-    the paper.
-
-\item {\bf Crowdsourcing and research with human subjects}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: No crowdsourcing or human subjects
-    are involved.
-
-\item {\bf Institutional review board (IRB) approvals}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: No human subjects research was
-    conducted.
-
-\item {\bf Declaration of LLM usage}
-    \item[] Answer: \answerNA{}
-    \item[] Justification: No LLMs form part of the core
-    methodology; the proofs and verification code are
-    mathematical in nature.
-
-\end{enumerate}
 
 \end{document}
