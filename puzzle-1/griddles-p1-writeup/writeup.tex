@@ -132,6 +132,11 @@ The formula for odd $n$ is confirmed at $n=3,5,7,9,11$; the
 total-count formula is confirmed for all $n\leq 11$.
 The entire verification (all ten grid sizes) completes in
 under 30 seconds on a laptop CPU.
+Additionally, the complete proof chain --- from grid
+definitions through the Separability Theorem, Burnside
+fixed-point analysis, and closed-form formula --- has been
+machine-checked in \textbf{Lean~4} with the
+\textsc{Mathlib} library.
 \end{abstract}
 
 % ============================================================
@@ -1247,6 +1252,173 @@ condition without using all colours in every $2\times 2$
 square, and the analysis would differ significantly.
 
 % ============================================================
+\section{Machine-Checked Formal Proof in Lean~4}
+\label{sec:lean}
+% ============================================================
+
+To provide the highest degree of mathematical certainty,
+the entire proof has been formalised in \textbf{Lean~4}
+using the \textsc{Mathlib} library~[6].
+The formalisation proves, from first principles, that the
+Burnside orbit count for any odd $n\geq 5$ with $4\mid(n-1)$
+equals the closed form, and specialises this to $n=101$.
+
+\subsection{Module structure}
+
+The Lean library (\texttt{GriddlesP1Lean}) is organised
+into six modules in dependency order:
+
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{\texttt{Defs}} --- Core types:
+    \texttt{Coloring~n} (a function
+    $\{0,\ldots,n-1\}^2\to\mathbb{Z}/3\mathbb{Z}$),
+    the predicates \texttt{AdjOk} and \texttt{RichOk}
+    encoding the two colouring constraints,
+    the rotation map \texttt{rotate90}, and the fixed-point
+    predicates \texttt{FixedBy90}/\texttt{FixedBy180}.
+
+  \item \textbf{\texttt{Separability}} --- The Separability
+    Theorem (\texttt{ProperColoring.isSeparable}):
+    every proper colouring satisfies
+    $f(r,c) = \mathrm{base} + R(c) + D(r)$
+    for uniquely determined slope sequences.
+
+  \item \textbf{\texttt{Slopes}} --- The nonzero slope type
+    $\texttt{NZMod3} = \{1,2\}\subset\mathbb{Z}/3\mathbb{Z}$
+    and the palindrome-extending cumulative-sum construction
+    \texttt{mkCumSum} used to build the fixed-point bijections.
+
+  \item \textbf{\texttt{Bijections}} --- Three explicit
+    \texttt{Equiv}s that parametrise each fixed-point set
+    by a product type:
+    \begin{itemize}
+      \item \texttt{equiv\_proper}: all proper colourings
+        $\;\longleftrightarrow\;$
+        $\mathbb{Z}/3\,\times\,
+        (\mathrm{Fin}(n{-}1)\to\texttt{NZMod3})^2$,
+      \item \texttt{equiv\_fixed180}: $180^\circ$-fixed
+        colourings $\;\longleftrightarrow\;$
+        $\mathbb{Z}/3\,\times\,
+        (\mathrm{Fin}(m)\to\texttt{NZMod3})^2$,
+        where $m=(n{-}1)/2$,
+      \item \texttt{equiv\_fixed90}: $90^\circ$-fixed
+        colourings $\;\longleftrightarrow\;$
+        $\mathbb{Z}/3\,\times\,
+        (\mathrm{Fin}(m)\to\texttt{NZMod3})$.
+    \end{itemize}
+
+  \item \textbf{\texttt{Counting}} --- Cardinality results
+    derived from the bijections via
+    \texttt{Fintype.card\_prod}/\texttt{card\_pi}:
+    \begin{align*}
+      \texttt{card\_proper}
+        &: |\calP_n| = 3\cdot 2^{2(n-1)},\\
+      \texttt{card\_fixed180\_odd}
+        &: |\Fix(\rho^2)| = 3\cdot 2^{n-1},\\
+      \texttt{card\_fixed90\_odd}
+        &: |\Fix(\rho^1)| = 3\cdot 2^{(n-1)/2},
+    \end{align*}
+    and the Burnside arithmetic lemma
+    \texttt{chromatic\_rotations\_general} which combines
+    these into the closed form.
+
+  \item \textbf{\texttt{Answer}} --- The general theorem
+    \texttt{chromatic\_rotations\_burnside} and its
+    specialisations to $n=5,9,13,101$.
+\end{enumerate}
+
+\subsection{The main theorem}
+
+The capstone result, stated and proved in Lean~4:
+
+\begin{lstlisting}[language={},
+  basicstyle=\scriptsize\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single, numbers=none,
+  caption={General Burnside theorem (\texttt{Answer.lean}).},
+  label={lst:lean_main}]
+theorem chromatic_rotations_burnside (n : N) (hn : Odd n)
+    (hn5 : 5 <= n) (h4 : 4 | (n - 1)) :
+    (Nat.card {f : Coloring n // AdjOk f /\ RichOk f}
+   + Nat.card {f : Coloring n // AdjOk f /\ RichOk f /\ FixedBy90  n f}
+   + Nat.card {f : Coloring n // AdjOk f /\ RichOk f /\ FixedBy180 n f}
+   + Nat.card {f : Coloring n // AdjOk f /\ RichOk f /\ FixedBy90  n f}) / 4
+  = 3 * (2 ^ (2*(n-1) - 2) + 2 ^ ((n-1)/2 - 1) + 2 ^ (n-3)) := by
+  rw [card_proper n (by omega),
+      card_fixed180_odd n hn (by omega),
+      card_fixed90_odd n hn hn5 h4]
+  exact chromatic_rotations_general n hn hn5 h4
+\end{lstlisting}
+
+\noindent
+The proof rewrites each \texttt{Nat.card} term using the
+proved bijections, then delegates Burnside arithmetic to
+\texttt{chromatic\_rotations\_general}.
+The $n=101$ instance follows by direct application:
+
+\begin{lstlisting}[language={},
+  basicstyle=\scriptsize\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single, numbers=none,
+  caption={The $n=101$ instance (\texttt{Answer.lean}).},
+  label={lst:lean_101}]
+theorem chromatic_rotations_n101 :
+    (...) / 4 = 3 * (2 ^ 198 + 2 ^ 49 + 2 ^ 98) :=
+  chromatic_rotations_burnside 101 (by decide) (by norm_num) (by norm_num)
+\end{lstlisting}
+
+\noindent
+The exponents $198 = 2{\cdot}100-2$, $49 = 100/2-1$,
+$98 = 101-3$ reduce definitionally in Lean's kernel,
+so no additional arithmetic lemmas are required.
+
+\subsection{Proof strategy}
+
+The key insight making the formalisation tractable is that
+\emph{every fixed-point count reduces to a cardinality of
+a product type}.  Rather than counting by
+inclusion--exclusion or generating functions, each
+fixed-point set is shown equivalent (via an explicit
+\texttt{Equiv}) to a finite product; \textsc{Mathlib} then
+computes the cardinality automatically.
+The full proof chain from grid definitions to the $n=101$
+answer requires no \texttt{sorry}, no \texttt{native\_decide},
+and no unverified arithmetic --- every step is either a
+structural bijection proof or an \texttt{omega}/\texttt{ring}
+closure.
+
+\paragraph{Computable formula.}
+As a separate convenience, the library also provides a
+computable definition:
+\[
+  \texttt{chromaticRotations}(n)
+  = 3\!\left(2^{2n-4}+2^{(n-3)/2}+2^{n-3}\right),
+\]
+which can be evaluated with \texttt{\#eval} for any
+specific odd $n$:
+
+\begin{center}
+\begin{tabular}{rr}
+  \toprule
+  $n$ & \texttt{chromaticRotations n} \\
+  \midrule
+   3 & $18$ \\
+   5 & $210$ \\
+   7 & $3{,}132$ \\
+   9 & $49{,}368$ \\
+  13 & $12{,}586{,}080$ \\
+ 101 & $\approx 1.205\times 10^{60}$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+These values agree with the Python verification in
+Section~\ref{sec:computation}.
+The Lean source is available alongside this writeup in
+\texttt{puzzle-1/griddles-p1-lean/}.
+
+% ============================================================
 \section*{Acknowledgements}
 % ============================================================
 
@@ -1254,8 +1426,8 @@ The mathematical solution to this problem --- including the
 Separability Theorem, the Burnside fixed-point analysis, and the
 closed-form answer --- was developed in collaboration with
 \href{https://claude.ai}{Claude} (Anthropic).
-The computational verification code and this writeup were
-subsequently produced in collaboration with
+The computational verification code, the Lean~4 formalisation,
+and this writeup were subsequently produced in collaboration with
 \href{https://claude.ai/code}{Claude Code} (Anthropic).
 
 Computations were performed in Python~3.13 with the
@@ -1264,6 +1436,8 @@ The full verification sweep ($n = 2$ through $11$) completes in
 approximately 28~seconds using all 8 cores via Python's
 \texttt{multiprocessing} module, with no GPU or special
 hardware required.
+The Lean~4 formalisation uses \textsc{Mathlib4} and was
+type-checked with Lean~4 on the same machine.
 
 % ============================================================
 \section*{References}
@@ -1292,6 +1466,10 @@ Cambridge University Press.
 [5] Stanley, R.P.\ (2011).
 \textit{Enumerative Combinatorics}, Vol.~1 (2nd ed.).
 Cambridge University Press.
+
+[6] The Mathlib Community (2020).
+\textit{Lean 4 Mathematical Library (\textsc{Mathlib4})}.
+\url{https://leanprover-community.github.io}.
 
 }
 
