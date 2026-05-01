@@ -60,6 +60,27 @@ theorem chromatic_rotations_9 :
 theorem chromatic_rotations_13 :
     (3 * (2 : ℕ) ^ 24 + 3 * 2 ^ 6 + 3 * 2 ^ 12 + 3 * 2 ^ 6) / 4 = 12586080 := by norm_num
 
+/-- The answer for n = 101, derived by connecting all four proved cardinalities
+    via Burnside's lemma: |orbits| = (|Fix(e)| + |Fix(ρ)| + |Fix(ρ²)| + |Fix(ρ³)|) / 4.
+
+    This is the formal bridge between the structural proofs and the final answer:
+    - |Fix(e)|  = card_proper 101           = 3 · 2^200  (all proper colorings)
+    - |Fix(ρ)|  = card_fixed90_odd 101      = 3 · 2^50   (90°-fixed)
+    - |Fix(ρ²)| = card_fixed180_odd 101     = 3 · 2^100  (180°-fixed)
+    - |Fix(ρ³)| = card_fixed90_odd 101      = 3 · 2^50   (270°-fixed = 90°-fixed by symmetry)
+
+    Together: (3·2^200 + 3·2^50 + 3·2^100 + 3·2^50) / 4 = 3·(2^198 + 2^98 + 2^49). -/
+theorem chromatic_rotations_101_from_burnside :
+    (Nat.card { f : Coloring 101 // AdjOk f ∧ RichOk f } +
+     Nat.card { f : Coloring 101 // AdjOk f ∧ RichOk f ∧ FixedBy90 101 f } +
+     Nat.card { f : Coloring 101 // AdjOk f ∧ RichOk f ∧ FixedBy180 101 f } +
+     Nat.card { f : Coloring 101 // AdjOk f ∧ RichOk f ∧ FixedBy90 101 f }) / 4 =
+    3 * (2 ^ 198 + 2 ^ 98 + 2 ^ 49) := by
+  rw [card_proper 101 (by norm_num),
+      card_fixed180_odd 101 (by decide) (by norm_num),
+      card_fixed90_odd 101 (by decide) (by norm_num) (by norm_num)]
+  norm_num
+
 end ChromaticRotations
 
 /-- Number of equivalence classes of proper 3-colorings of an n×n grid under

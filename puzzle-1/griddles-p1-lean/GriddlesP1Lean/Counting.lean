@@ -61,6 +61,24 @@ theorem card_fixed90_odd (n : ℕ) (hn : Odd n) (hn3 : 5 ≤ n) (h4 : 4 ∣ (n -
              Fintype.card_pi, ZMod.card, NZMod3_card,
              Finset.prod_const, Finset.card_fin]
 
+/-- Total number of proper 3-colorings of an n×n grid (for n ≥ 1).
+
+    Every proper coloring is uniquely determined by:
+    - a base color f(0,0) ∈ ZMod 3        (3 choices)
+    - n−1 horizontal slopes ∈ NZMod3      (2^(n−1) choices each)
+    - n−1 vertical slopes ∈ NZMod3        (2^(n−1) choices each)
+
+    Total: 3 · 2^(n−1) · 2^(n−1) = 3 · 2^(2(n−1)).
+    No oddness constraint is needed — this holds for all n ≥ 1. -/
+theorem card_proper (n : ℕ) (hn : 1 ≤ n) :
+    Nat.card { f : Coloring n // AdjOk f ∧ RichOk f } = 3 * 2 ^ (2 * (n - 1)) := by
+  rw [Nat.card_congr (equiv_proper n hn)]
+  have hm : (n - 1) + (n - 1) = 2 * (n - 1) := by omega
+  simp only [Nat.card_eq_fintype_card, Fintype.card_prod,
+             Fintype.card_pi, ZMod.card, NZMod3_card,
+             Finset.prod_const, Finset.card_fin]
+  rw [← pow_add, hm]
+
 /-- Key arithmetic: for k divisible by 4 with k ≥ 4, the Burnside sum factors
     as 4 times the orbit count. Proved using pow_add + ring (in ℕ as semiring).
 

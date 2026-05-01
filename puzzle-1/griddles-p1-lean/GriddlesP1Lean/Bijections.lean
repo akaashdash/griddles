@@ -48,6 +48,163 @@ Additionally, f(r,0) = f(0,r) follows from the 90° condition at c=0.
 
 namespace ChromaticRotations
 
+/-! ### Simple cumulative sum (for unrestricted proper colorings)
+
+For the bijection on *all* proper colorings, the n−1 slopes are fully free
+(no palindrome constraint). We use a plain cumulative sum instead of the
+palindrome-extending `mkCumSum`. -/
+
+/-- Cumulative sum of unrestricted slopes: simpleCumSum hs c = Σ_{j < c} hs(j). -/
+private noncomputable def simpleCumSum (n : ℕ) (hs : Fin (n - 1) → NZMod3) (c : Fin n) : ZMod 3 :=
+  ∑ j : Fin c.val, (hs ⟨j.val, by have := j.isLt; have := c.isLt; omega⟩).val
+
+private lemma simpleCumSum_zero (n : ℕ) (hn : 1 ≤ n) (hs : Fin (n - 1) → NZMod3) :
+    simpleCumSum n hs ⟨0, hn⟩ = 0 := by
+  simp [simpleCumSum]
+
+private lemma simpleCumSum_succ (n : ℕ) (hs : Fin (n - 1) → NZMod3) (j : ℕ) (hj : j + 1 < n) :
+    simpleCumSum n hs ⟨j + 1, hj⟩ =
+    simpleCumSum n hs ⟨j, by omega⟩ + (hs ⟨j, by omega⟩).val := by
+  simp only [simpleCumSum, Fin.sum_univ_castSucc, Fin.val_castSucc, Fin.val_last]
+
+/-- All proper colorings biject with (base, h-slopes, v-slopes) where the n−1 slopes
+    per direction are all freely chosen from NZMod3 = {1, 2}.
+
+    Unlike `equiv_fixed180`, there is no palindrome constraint here: every combination
+    of nonzero slopes yields a valid proper coloring. The count is therefore
+    3 × 2^(n−1) × 2^(n−1) = 3 × 2^(2(n−1)).
+
+    Forward map: extract base = f(0,0), h-slopes from row 0, v-slopes from column 0.
+    Backward map: f(r,c) = base + simpleCumSum(hs)(c) + simpleCumSum(vs)(r). -/
+noncomputable def equiv_proper (n : ℕ) (hn : 1 ≤ n) :
+    { f : Coloring n // AdjOk f ∧ RichOk f } ≃
+    ZMod 3 × (Fin (n - 1) → NZMod3) × (Fin (n - 1) → NZMod3) :=
+  let hn0 : 0 < n := hn
+  { toFun := fun ⟨f, hadj, _⟩ =>
+      (f ⟨0, hn0⟩ ⟨0, hn0⟩,
+       fun j =>
+        have hj_lt : j.val + 1 < n := by have := j.isLt; omega
+        ⟨f ⟨0, hn0⟩ ⟨j.val + 1, hj_lt⟩ - f ⟨0, hn0⟩ ⟨j.val, Nat.lt_of_lt_pred j.isLt⟩,
+         sub_ne_zero.mpr (Ne.symm (hadj.1 ⟨0, hn0⟩ ⟨j.val, Nat.lt_of_lt_pred j.isLt⟩ hj_lt))⟩,
+       fun k =>
+        have hk_lt : k.val + 1 < n := by have := k.isLt; omega
+        ⟨f ⟨k.val + 1, hk_lt⟩ ⟨0, hn0⟩ - f ⟨k.val, Nat.lt_of_lt_pred k.isLt⟩ ⟨0, hn0⟩,
+         sub_ne_zero.mpr (Ne.symm (hadj.2 ⟨k.val, Nat.lt_of_lt_pred k.isLt⟩ ⟨0, hn0⟩ hk_lt))⟩)
+    invFun := fun (base, hs, vs) =>
+      ⟨fun r c => base + simpleCumSum n hs c + simpleCumSum n vs r,
+       -- AdjOk: horizontal difference = (hs c).val ≠ 0
+       ⟨fun r c hc => by
+          intro heq
+          have hstep := simpleCumSum_succ n hs c.val hc
+          have h1 := add_right_cancel heq
+          have h2 := add_left_cancel h1
+          have hne : (hs ⟨c.val, by omega⟩).val ≠ 0 := (hs ⟨c.val, by omega⟩).prop
+          exact hne (by linear_combination -(h2.trans hstep)),
+        -- AdjOk: vertical difference = (vs r).val ≠ 0
+        fun r c hr => by
+          intro heq
+          have hstep := simpleCumSum_succ n vs r.val hr
+          have h1 := add_left_cancel heq
+          have hne : (vs ⟨r.val, by omega⟩).val ≠ 0 := (vs ⟨r.val, by omega⟩).prop
+          exact hne (by linear_combination -(h1.trans hstep))⟩,
+       -- RichOk: 2×2 block has all 3 colours (slopes are nonzero)
+       fun r c hr hc => by
+         have hh : (hs ⟨c.val, by omega⟩).val ≠ 0 := (hs ⟨c.val, by omega⟩).prop
+         have hv : (vs ⟨r.val, by omega⟩).val ≠ 0 := (vs ⟨r.val, by omega⟩).prop
+         have h1 : base + simpleCumSum n hs ⟨c.val + 1, hc⟩ + simpleCumSum n vs r =
+             base + simpleCumSum n hs c + simpleCumSum n vs r +
+             (hs ⟨c.val, by omega⟩).val := by
+           rw [simpleCumSum_succ n hs c.val hc]; ring
+         have h2 : base + simpleCumSum n hs c + simpleCumSum n vs ⟨r.val + 1, hr⟩ =
+             base + simpleCumSum n hs c + simpleCumSum n vs r +
+             (vs ⟨r.val, by omega⟩).val := by
+           rw [simpleCumSum_succ n vs r.val hr]; ring
+         have h3 : base + simpleCumSum n hs ⟨c.val + 1, hc⟩ +
+             simpleCumSum n vs ⟨r.val + 1, hr⟩ =
+             base + simpleCumSum n hs c + simpleCumSum n vs r +
+             (hs ⟨c.val, by omega⟩).val + (vs ⟨r.val, by omega⟩).val := by
+           rw [simpleCumSum_succ n hs c.val hc, simpleCumSum_succ n vs r.val hr]; ring
+         show ({base + simpleCumSum n hs c + simpleCumSum n vs r,
+                base + simpleCumSum n hs ⟨c.val + 1, hc⟩ + simpleCumSum n vs r,
+                base + simpleCumSum n hs c + simpleCumSum n vs ⟨r.val + 1, hr⟩,
+                base + simpleCumSum n hs ⟨c.val + 1, hc⟩ +
+                  simpleCumSum n vs ⟨r.val + 1, hr⟩} : Finset (ZMod 3)).card = 3
+         rw [h1, h2, h3]
+         exact richness_from_slopes _ _ _ hh hv⟩
+    left_inv := fun ⟨f, hadj, hrich⟩ => by
+      -- Strategy: show simpleCumSum(extracted h-slopes)(c) = f(0,c) − f(0,0) by induction,
+      -- then conclude via separability (vOffset_col_independent).
+      simp only [Subtype.mk.injEq]
+      let pc : ProperColoring n := ⟨f, hadj, hrich⟩
+      -- sep: f(r,c) − f(0,c) = f(r,0) − f(0,0)  [separability]
+      have sep : ∀ (r c : Fin n), f r c - f ⟨0, hn0⟩ c = f r ⟨0, hn0⟩ - f ⟨0, hn0⟩ ⟨0, hn0⟩ :=
+        fun r c => vOffset_col_independent pc hn0 r c
+      -- hcumR: the cumsum of extracted h-slopes equals f(0,c) − f(0,0), by induction
+      have hcumR : ∀ (k : ℕ) (hk : k < n),
+          simpleCumSum n (fun j =>
+            have hj_lt : j.val + 1 < n := by have := j.isLt; omega
+            ⟨f ⟨0, hn0⟩ ⟨j.val + 1, hj_lt⟩ -
+             f ⟨0, hn0⟩ ⟨j.val, Nat.lt_of_lt_pred j.isLt⟩,
+             sub_ne_zero.mpr (Ne.symm (hadj.1 ⟨0, hn0⟩
+               ⟨j.val, Nat.lt_of_lt_pred j.isLt⟩
+               hj_lt))⟩) ⟨k, hk⟩ =
+          f ⟨0, hn0⟩ ⟨k, hk⟩ - f ⟨0, hn0⟩ ⟨0, hn0⟩ := by
+        intro k hk
+        induction k with
+        | zero => simp [simpleCumSum]
+        | succ k ihk =>
+          have hk' : k < n := by omega
+          rw [simpleCumSum_succ n _ k hk]
+          have heqk1 : (⟨k + 1, hk⟩ : Fin n) = ⟨k + 1, by omega⟩ := Fin.ext rfl
+          rw [heqk1]
+          linear_combination ihk hk'
+      -- hcumD: the cumsum of extracted v-slopes equals f(r,0) − f(0,0), by induction
+      have hcumD : ∀ (k : ℕ) (hk : k < n),
+          simpleCumSum n (fun j =>
+            have hj_lt : j.val + 1 < n := by have := j.isLt; omega
+            ⟨f ⟨j.val + 1, hj_lt⟩ ⟨0, hn0⟩ -
+             f ⟨j.val, Nat.lt_of_lt_pred j.isLt⟩ ⟨0, hn0⟩,
+             sub_ne_zero.mpr (Ne.symm (hadj.2
+               ⟨j.val, Nat.lt_of_lt_pred j.isLt⟩ ⟨0, hn0⟩
+               hj_lt))⟩) ⟨k, hk⟩ =
+          f ⟨k, hk⟩ ⟨0, hn0⟩ - f ⟨0, hn0⟩ ⟨0, hn0⟩ := by
+        intro k hk
+        induction k with
+        | zero => simp [simpleCumSum]
+        | succ k ihk =>
+          have hk' : k < n := by omega
+          rw [simpleCumSum_succ n _ k hk]
+          have heqk1 : (⟨k + 1, hk⟩ : Fin n) = ⟨k + 1, by omega⟩ := Fin.ext rfl
+          rw [heqk1]
+          linear_combination ihk hk'
+      funext r c
+      have hR := hcumR c.val c.isLt
+      have hD := hcumD r.val r.isLt
+      rw [hR, hD]
+      linear_combination -(sep r c)
+    right_inv := fun (base, hs, vs) => by
+      simp only [Prod.mk.injEq]
+      refine ⟨?_, ?_, ?_⟩
+      · -- base: base + simpleCumSum hs ⟨0,_⟩ + simpleCumSum vs ⟨0,_⟩ = base
+        rw [simpleCumSum_zero n hn hs, simpleCumSum_zero n hn vs]
+        ring
+      · -- h-slopes: the extracted slope at j equals hs j
+        funext j
+        apply Subtype.ext
+        dsimp only
+        rw [simpleCumSum_zero n hn vs]
+        rw [simpleCumSum_succ n hs j.val (by have := j.isLt; omega)]
+        have hfin : (⟨j.val, by have := j.isLt; omega⟩ : Fin (n - 1)) = j := Fin.ext rfl
+        rw [hfin]; ring
+      · -- v-slopes: the extracted slope at k equals vs k
+        funext k
+        apply Subtype.ext
+        dsimp only
+        rw [simpleCumSum_zero n hn hs]
+        rw [simpleCumSum_succ n vs k.val (by have := k.isLt; omega)]
+        have hfin : (⟨k.val, by have := k.isLt; omega⟩ : Fin (n - 1)) = k := Fin.ext rfl
+        rw [hfin]; ring }
+
 /-- 180°-fixed proper colorings biject with (base, m h-slopes, m v-slopes)
     where m = (n−1)/2 and each slope is nonzero. -/
 noncomputable def equiv_fixed180 (n : ℕ) (hn : Odd n) (hn3 : 3 ≤ n) :
