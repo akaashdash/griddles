@@ -20,8 +20,7 @@ EDGE = {
     'RED':    '#922b21',
     'GREEN':  '#1d6a39',
 }
-MYSTERY_FACE = '#fef3cd'
-MYSTERY_EDGE = '#d4860b'
+MYSTERY_BORDER = '#111111'  # thick black border for mystery cell
 
 # (row, col, ordinal, year, city, continent, calendar_label, is_mystery)
 cells = [
@@ -57,9 +56,9 @@ for row, col, ordinal, year, city, cont, cal, mystery in cells:
     x0 = col * S
     y0 = (3 - row) * S
 
-    face = MYSTERY_FACE if mystery else FACE[cont]
-    edge = MYSTERY_EDGE if mystery else EDGE[cont]
-    lw = 2.8 if mystery else 2.0
+    face = FACE[cont]
+    edge = MYSTERY_BORDER if mystery else EDGE[cont]
+    lw = 4.5 if mystery else 2.0
 
     rect = FancyBboxPatch((x0 + PAD, y0 + PAD), S - 2*PAD, S - 2*PAD,
                           boxstyle='round,pad=0.03',
@@ -70,7 +69,7 @@ for row, col, ordinal, year, city, cont, cal, mystery in cells:
 
     if mystery:
         ax.text(cx, y0 + 0.74, '?', ha='center', va='center',
-                fontsize=24, fontweight='bold', color=MYSTERY_EDGE)
+                fontsize=24, fontweight='bold', color='#111111')
         ax.text(cx, y0 + 0.51, '= 26', ha='center', va='center',
                 fontsize=11, fontweight='bold', color='#555555')
         ax.text(cx, y0 + 0.31, city, ha='center', va='center',
@@ -106,15 +105,12 @@ border = plt.Rectangle((0, 0), 4*S, 4*S, fill=False,
                         edgecolor='#555555', linewidth=2)
 ax.add_patch(border)
 
-# Main diagonal: positions (0,0),(1,1),(2,2),(3,3)
-# In plot coords: row r → y = 3-r, col c → x = c
-# Center of (r,c): x=c+0.5, y=(3-r)+0.5
-# Main diagonal (0,0)→(3,3): plot (0.5,3.5)→(3.5,0.5)
-ax.plot([0.5, 3.5], [3.5, 0.5], color='#888888', lw=1.0,
-        linestyle='--', zorder=0, alpha=0.6)
-# Anti-diagonal (0,3)→(3,0): plot (3.5,3.5)→(0.5,0.5)
-ax.plot([3.5, 0.5], [3.5, 0.5], color='#888888', lw=1.0,
-        linestyle='--', zorder=0, alpha=0.6)
+# Main diagonal (0,0)→(3,3): plot coords (0.5,3.5)→(3.5,0.5)
+# Anti-diagonal (0,3)→(3,0): plot coords (3.5,3.5)→(0.5,0.5)
+# zorder=5 keeps them on top of cell patches (default zorder ~1)
+diag_kw = dict(color='#666666', lw=1.2, linestyle='--', zorder=5, alpha=0.7)
+ax.plot([0.5, 3.5], [3.5, 0.5], **diag_kw)
+ax.plot([3.5, 0.5], [3.5, 0.5], **diag_kw)
 
 # Title
 ax.set_title('Decoded $4\\times 4$ Parshvanath Pandiagonal Magic Square  ($M = 98$)',
@@ -126,7 +122,7 @@ legend_items = [
     mpatches.Patch(facecolor=FACE['BLUE'],   edgecolor=EDGE['BLUE'],   label='Europe'),
     mpatches.Patch(facecolor=FACE['YELLOW'], edgecolor=EDGE['YELLOW'], label='Asia'),
     mpatches.Patch(facecolor=FACE['GREEN'],  edgecolor=EDGE['GREEN'],  label='Oceania'),
-    mpatches.Patch(facecolor=MYSTERY_FACE,   edgecolor=MYSTERY_EDGE,   label='Mystery cell'),
+    mpatches.Patch(facecolor=FACE['RED'],    edgecolor=MYSTERY_BORDER, linewidth=3, label='Mystery cell'),
 ]
 ax.legend(handles=legend_items, loc='lower center',
           bbox_to_anchor=(2.0, -0.88), fontsize=9,
