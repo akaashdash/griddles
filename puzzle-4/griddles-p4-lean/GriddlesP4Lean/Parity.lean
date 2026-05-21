@@ -89,4 +89,21 @@ lemma even_time_sub_displacement {k₀ : ℤ} {t : ℕ}
     Even ((t : ℤ) - displacement c σ k₀ t) :=
   Int.even_iff.mpr (displacement_parity (σ := σ) (c := c) (k₀ := k₀) t h)
 
+/-- *Position lower bound.*  Under the no-guess hypothesis, the position cannot drop
+    below `k₀ - t`. -/
+lemma position_lower_bound {k₀ : ℤ} :
+    ∀ (t : ℕ),
+      (∀ s, s < t → ∃ d, σ (history c σ k₀ s) = Action.move d) →
+      k₀ - (t : ℤ) ≤ position c σ k₀ t
+  | 0,     _ => by simp [position_zero]
+  | n + 1, h => by
+      obtain ⟨d, hd⟩ := h n (Nat.lt_succ_self n)
+      have ih := position_lower_bound n (fun s hs => h s (Nat.lt_succ_of_lt hs))
+      have hpos : position c σ k₀ (n + 1) = position c σ k₀ n + d.delta :=
+        position_succ_of_move hd
+      rw [hpos]
+      cases d
+      · simp only [Dir.delta_left]; push_cast; linarith
+      · simp only [Dir.delta_right]; push_cast; linarith
+
 end TrolleyRetrieval

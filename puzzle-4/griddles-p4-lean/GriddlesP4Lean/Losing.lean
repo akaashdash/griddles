@@ -322,4 +322,175 @@ lemma signal_match
     · intro _; exact lt_of_le_of_lt h_c_p1_bound h_t_gt_cBound
     · intro _; exact lt_of_le_of_lt h_c_p_bound h_t_gt_cBound
 
+/-! ### Parallel evolution from `2j` and `2j+1` for eventually-identity `c` -/
+
+/-- For `c` eventually identity past `N` and `j > cBound c N`, the trajectories from
+    starting positions `2j` and `2j+1` evolve in lockstep: histories agree and positions
+    stay offset by `1`, as long as Bob has not yet guessed and positions stay safe. -/
+lemma parallel_for_eventually_identity
+    {c : Perm} {N : ℕ}
+    (hN : ∀ n : ℕ+, N < n.val → c n = n)
+    {σ : Strategy} {j : ℕ} (hj : cBound c N < j) (t : ℕ) :
+    (∀ s, s < t → ∀ g, σ (history c σ (2 * j : ℤ) s) ≠ .guess g) →
+    (∀ s, s ≤ t → 1 ≤ position c σ (2 * j : ℤ) s) →
+    history c σ (2 * j : ℤ) t = history c σ (2 * j + 1 : ℤ) t ∧
+    position c σ (2 * j + 1 : ℤ) t = position c σ (2 * j : ℤ) t + 1 := by
+  induction t with
+  | zero =>
+      intro _ _
+      refine ⟨rfl, ?_⟩
+      simp [position_zero]
+  | succ n ih =>
+      intro h_ng h_safe
+      -- No-guess up to n+1 implies σ outputs a move at every s < n+1.
+      have h_is_move :
+          ∀ s, s < n + 1 → ∃ d, σ (history c σ (2 * j : ℤ) s) = .move d := by
+        intro s hs
+        have h_ng_s := h_ng s hs
+        by_contra h_no_move
+        push_neg at h_no_move
+        cases h : σ (history c σ (2 * j : ℤ) s) with
+        | move  d => exact h_no_move d h
+        | guess g => exact h_ng_s g h
+      -- IH at n.
+      have ih' := ih (fun s hs => h_ng s (Nat.lt_succ_of_lt hs))
+                     (fun s hs => h_safe s (Nat.le_succ_of_le hs))
+      obtain ⟨h_hist_n, h_pos_n⟩ := ih'
+      -- Action at step n is a move (by h_ng); apply to both trajectories.
+      obtain ⟨d, hd₁⟩ := h_is_move n (Nat.lt_succ_self n)
+      have hd₂ : σ (history c σ (2 * j + 1 : ℤ) n) = .move d := by
+        rw [← h_hist_n]; exact hd₁
+      have hp₁ : position c σ (2 * j : ℤ) (n + 1) =
+                 position c σ (2 * j : ℤ) n + d.delta :=
+        position_succ_of_move hd₁
+      have hp₂ : position c σ (2 * j + 1 : ℤ) (n + 1) =
+                 position c σ (2 * j + 1 : ℤ) n + d.delta :=
+        position_succ_of_move hd₂
+      have h_pos_succ :
+          position c σ (2 * j + 1 : ℤ) (n + 1) =
+          position c σ (2 * j : ℤ) (n + 1) + 1 := by
+        rw [hp₁, hp₂, h_pos_n]; ring
+      refine ⟨?_, h_pos_succ⟩
+      -- Histories: derive that signals at corresponding positions match.
+      rw [history_succ_of_move hd₁, history_succ_of_move hd₂, h_hist_n]
+      have h_p_pos : (1 : ℤ) ≤ position c σ (2 * j : ℤ) (n + 1) :=
+        h_safe (n + 1) (le_refl _)
+      have h_lower :
+          (2 * j : ℤ) - ((n + 1 : ℕ) : ℤ) ≤ position c σ (2 * j : ℤ) (n + 1) := by
+        have h_bound := position_lower_bound (c := c) (σ := σ) (k₀ := (2 * j : ℤ))
+          (n + 1) h_is_move
+        push_cast at h_bound ⊢
+        linarith
+      have h_parity :
+          (((n + 1 : ℕ) : ℤ) + position c σ (2 * j : ℤ) (n + 1)) % 2 = 0 := by
+        have h_par := displacement_parity (c := c) (σ := σ) (k₀ := (2 * j : ℤ))
+          (n + 1) h_is_move
+        unfold displacement at h_par
+        omega
+      have h_sig :=
+        signal_match hN hj h_p_pos h_lower h_parity
+      -- Goal after history_succ_of_move rewrites:
+      -- signalOf c (pos(2j, n) + d.delta) (n+1) :: history(2j+1, n)
+      --   = signalOf c (pos(2j+1, n) + d.delta) (n+1) :: history(2j+1, n)
+      -- We need to recognise that pos(2j, n) + d.delta = pos(2j, n+1) [by hp₁]
+      -- and pos(2j+1, n) + d.delta = pos(2j+1, n+1) [by hp₂] = pos(2j, n+1) + 1
+      -- [by h_pos_succ], then apply h_sig.
+      rw [← hp₁, ← hp₂, h_pos_succ]
+      exact congrArg (· :: _) h_sig
+
+/-! ### Main theorem -/
+
+/-- **Main theorem (losing direction).**  If the permutation `c` is eventually identity,
+    then Bob has no strategy that wins from every starting cell. -/
+theorem EventuallyIdentity_loses (c : Perm) (h_ei : EventuallyIdentity c) :
+    ¬ BobWins c := by
+  obtain ⟨N, hN⟩ := h_ei
+  -- Replace the (rather strong) `N ≤ n` with the equivalent `N.val < n.val + 1` form
+  -- so that we can pass it to `signal_match` and `parallel_for_eventually_identity`.
+  -- For our uses we only ever instantiate with `n.val > N.val`, so weaken `N ≤ n` to
+  -- `N.val < n.val` (which implies `N ≤ n` since both are positive).
+  have hN' : ∀ n : ℕ+, N.val < n.val → c n = n := by
+    intro n h
+    exact hN n (by exact_mod_cast (Nat.le_of_lt h))
+  intro ⟨σ, h_wins⟩
+  -- Choose `j > cBound c N.val`.  This guarantees the parallel argument applies.
+  set j : ℕ := cBound c N.val + 1 with hj_def
+  have hj_pos : 0 < j := by
+    have := cBound_ge_succ c N.val
+    omega
+  have hj_gt : cBound c N.val < j := by simp [hj_def]
+  -- The starting cells `2j` and `2j+1`, as positive naturals.
+  have h2j_pos : 0 < 2 * j := by omega
+  have h2j1_pos : 0 < 2 * j + 1 := by omega
+  let k₁ : ℕ+ := ⟨2 * j, h2j_pos⟩
+  let k₂ : ℕ+ := ⟨2 * j + 1, h2j1_pos⟩
+  -- σ wins from k₁ and k₂.
+  have h_win₁ := h_wins k₁
+  have h_win₂ := h_wins k₂
+  obtain ⟨T, h_safe₁, h_no_guess₁, g₁, hg₁, hg₁_pos⟩ := h_win₁
+  obtain ⟨T', h_safe₂, h_no_guess₂, g₂, hg₂, hg₂_pos⟩ := h_win₂
+  -- Recast integer coercions.
+  have hk₁_int : (k₁ : ℤ) = (2 * j : ℤ) := by simp [k₁]
+  have hk₂_int : (k₂ : ℤ) = (2 * j + 1 : ℤ) := by simp [k₂]
+  -- Apply parallel evolution at time T (= guess time from k₁).
+  have h_no_guess₁' : ∀ s, s < T → ∀ g, σ (history c σ (2 * j : ℤ) s) ≠ .guess g := by
+    intro s hs g
+    have := h_no_guess₁ s hs g
+    rwa [hk₁_int] at this
+  have h_safe₁' : ∀ s, s ≤ T → 1 ≤ position c σ (2 * j : ℤ) s := by
+    intro s hs
+    have := h_safe₁ s hs
+    rwa [hk₁_int] at this
+  obtain ⟨h_hist_T, h_pos_T⟩ :=
+    parallel_for_eventually_identity hN' hj_gt T h_no_guess₁' h_safe₁'
+  -- σ from k₂ at history(T) is also `.guess g₁`.
+  have hg₁_at_k₁ : σ (history c σ (2 * j : ℤ) T) = .guess g₁ := by
+    rw [← hk₁_int]; exact hg₁
+  have hg₁_at_k₂ : σ (history c σ (2 * j + 1 : ℤ) T) = .guess g₁ := by
+    rw [← h_hist_T]; exact hg₁_at_k₁
+  -- σ's first-guess time from k₂ is T' ≤ T (else σ wouldn't have made the guess
+  -- σ at history(k₂, T) above — but that's the action σ takes at T).  Actually
+  -- σ from k₂ first guesses at T' and we have σ from k₂ at history(T) = .guess g₁,
+  -- so T' ≤ T.  If T' < T: we need to rule it out.  By parallel evolution at T':
+  -- σ from k₁ would also guess at T', contradicting h_no_guess₁.
+  have h_T'_le_T : T' ≤ T := by
+    by_contra h_not_le
+    have h_lt : T < T' := by omega
+    -- σ from k₂ guesses at T (above).  But T < T' and h_no_guess₂ says no guess before T'.
+    have hg₁_at_k₂' : σ (history c σ (k₂ : ℤ) T) = .guess g₁ := by
+      rw [hk₂_int]; exact hg₁_at_k₂
+    exact h_no_guess₂ T h_lt g₁ hg₁_at_k₂'
+  have h_T_le_T' : T ≤ T' := by
+    by_contra h_not_le
+    have h_lt : T' < T := by omega
+    -- Apply parallel evolution at T' (no guess from k₁ holds at s < T' < T).
+    have h_no_guess₁_T' : ∀ s, s < T' → ∀ g, σ (history c σ (2 * j : ℤ) s) ≠ .guess g :=
+      fun s hs g => h_no_guess₁' s (lt_trans hs h_lt) g
+    have h_safe₁_T' : ∀ s, s ≤ T' → 1 ≤ position c σ (2 * j : ℤ) s :=
+      fun s hs => h_safe₁' s (le_of_lt (lt_of_le_of_lt hs h_lt))
+    obtain ⟨h_hist_T', _⟩ :=
+      parallel_for_eventually_identity hN' hj_gt T' h_no_guess₁_T' h_safe₁_T'
+    have hg₂_at_k₂ : σ (history c σ (2 * j + 1 : ℤ) T') = .guess g₂ := by
+      rw [← hk₂_int]; exact hg₂
+    have hg₂_at_k₁ : σ (history c σ (2 * j : ℤ) T') = .guess g₂ := by
+      rw [h_hist_T']; exact hg₂_at_k₂
+    exact h_no_guess₁' T' h_lt g₂ hg₂_at_k₁
+  have hTT' : T = T' := le_antisymm h_T_le_T' h_T'_le_T
+  -- So σ from k₂ guesses g₁ at time T = T'.  But by hg₂, σ from k₂ guesses g₂ at T'.
+  -- Hence g₁ = g₂.
+  have hg₂_at_T : σ (history c σ (2 * j + 1 : ℤ) T) = .guess g₂ := by
+    rw [hTT', ← hk₂_int]; exact hg₂
+  have h_g_eq : g₁ = g₂ := by
+    have : (Action.guess g₁ : Action) = .guess g₂ := hg₁_at_k₂.symm.trans hg₂_at_T
+    injection this
+  -- Now: g₁ = position(k₁, T) (winning from k₁) and g₂ = position(k₂, T) (winning from k₂);
+  -- positions differ by 1 (parallel evolution); so 0 = 1, contradiction.
+  have h_g₁_pos_int : (g₁ : ℤ) = position c σ (2 * j : ℤ) T := by
+    rw [← hk₁_int]; exact hg₁_pos
+  have h_g₂_pos_int : (g₂ : ℤ) = position c σ (2 * j + 1 : ℤ) T := by
+    rw [hTT', ← hk₂_int]; exact hg₂_pos
+  rw [h_g_eq] at h_g₁_pos_int
+  rw [h_pos_T] at h_g₂_pos_int
+  linarith
+
 end TrolleyRetrieval
