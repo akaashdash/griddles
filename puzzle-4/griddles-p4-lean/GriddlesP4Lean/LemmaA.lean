@@ -479,16 +479,16 @@ lemma shift_Delta_ge_2_contradiction {c : Perm} {Δ : ℕ} (hΔ : 2 ≤ Δ) {N�
 /-! ### Auxiliary: shift relation from Indistinguishable -/
 
 /-- **Auxiliary**: the key combinatorial content of LemmaA — under `Indistinguishable`,
-    there exists `N : ℕ+` past which the shift relation `c (n + Δ) = c n + 1` holds
-    (with `Δ := b.val − a.val`).
+    the shift relation `c (n + Δ) = c n + 1` holds from position `a` onward (with
+    `Δ := b.val − a.val`).
 
 This packages the σ ≡ +1 argument: indist_consec gives `c (b + D).val − c (a + D).val
-∈ {−1, +1}` for good D; bijectivity + Δ-periodicity force a consistent direction; and
-the positivity constraint of c (values ≥ 1) rules out the descending `σ ≡ −1` case for
-sufficiently large D. -/
+∈ {−1, +1}` for good D; bijectivity rules out the descending direction (`σ ≡ −1`
+would force c-values to decrease below 1 eventually). Since the chain starts at D = 0
+(always good), the shift relation holds globally from position a. -/
 lemma shift_relation_of_indist {c : Perm} {a b : ℕ+} (hab : a < b)
     (h : Indistinguishable c a b) :
-    ∃ N : ℕ+, ∀ n : ℕ+, N ≤ n →
+    ∀ n : ℕ+, a ≤ n →
       ∀ (h_pos : 0 < n.val + (b.val - a.val)),
         (c ⟨n.val + (b.val - a.val), h_pos⟩).val = (c n).val + 1 := by
   sorry
@@ -514,8 +514,9 @@ theorem Indistinguishable_implies_eventually_identity
   have hΔ_pos : 1 ≤ Δ := by
     have h_ab_val : a.val < b.val := hab
     omega
-  -- Use the auxiliary to extract a threshold N where the shift relation `c(n+Δ) = c(n)+1` holds.
-  obtain ⟨N, h_shift_rel⟩ := shift_relation_of_indist hab h
+  -- The shift relation `c(n+Δ) = c(n)+1` holds for n ≥ a.
+  have h_shift_rel := shift_relation_of_indist hab h
+  set N : ℕ+ := a with hN_def
   -- Case split: Δ = 1 vs Δ ≥ 2.
   rcases eq_or_lt_of_le hΔ_pos with hΔ_eq | hΔ_ge_2
   · -- Δ = 1.  We have c(n + 1) = c n + 1 for n ≥ N (via the shift relation), so
@@ -541,29 +542,19 @@ theorem Indistinguishable_implies_eventually_identity
       have h_plus : ((c n + (1 : ℕ+))).val = (c n).val + 1 := rfl
       rw [h_plus]
       exact h_rel
-    -- Apply shift_one_implies_eventually_identity.
+    -- Apply shift_one_implies_eventually_identity.  Since N = a, this gives c n = n
+    -- for all n ≥ a.
     have h_id : ∀ n : ℕ+, N ≤ n → c n = n := shift_one_implies_eventually_identity h_shift_one
     -- Conclude b = a + 1.
     have h_b_eq : b = a + 1 := by
       apply Subtype.ext
-      show b.val = (a + 1 : ℕ+).val
-      have h_pnat_add : (a + 1 : ℕ+).val = a.val + 1 := rfl
+      show b.val = (a + (1 : ℕ+)).val
+      have h_pnat_add : (a + (1 : ℕ+)).val = a.val + 1 := rfl
       rw [h_pnat_add]
       omega
-    refine ⟨h_b_eq, ?_⟩
-    -- Need: ∀ n ≥ a, c n = n.  We have it for n ≥ N (where N might be > a or ≤ a).
-    -- For n ≥ max(N, a), use h_id.  We need to extend to all n ≥ a.
-    intro n han
-    -- If N ≤ n, apply h_id directly.
-    by_cases hNn : N ≤ n
-    · exact h_id n hNn
-    · -- n < N.  We need to show c n = n in this case too.
-      -- The shift relation propagates upward, so c (n + k) = c n + k.  If c n ≠ n,
-      -- then eventually the values overlap, contradicting bijectivity.
-      sorry  -- Extending identity from `N` downward to `a` requires another bijection argument.
-  · -- Δ ≥ 2.  Apply shift_Delta_ge_2_contradiction.
+    exact ⟨h_b_eq, h_id⟩
+  · -- Δ ≥ 2.  Apply shift_Delta_ge_2_contradiction with threshold N = a.
     have hΔ_ge_2' : 2 ≤ Δ := hΔ_ge_2
-    -- The shift relation at "+ Δ" with Δ ≥ 2 yields contradiction.
     have h_for_lemma : ∀ n : ℕ+, N ≤ n → ∀ (h_pos : 0 < n.val + Δ),
         (c ⟨n.val + Δ, h_pos⟩).val = (c n).val + 1 :=
       fun n hN_le_n h_pos => h_shift_rel n hN_le_n h_pos
