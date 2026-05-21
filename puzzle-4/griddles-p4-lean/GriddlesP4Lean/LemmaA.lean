@@ -217,10 +217,171 @@ lemma shift_one_implies_eventually_identity {c : Perm} {N : ℕ+}
   show (c n).val = n.val
   rw [h_cn_val, h_cN, ← h_n_val]
 
+/-! ### Sub-lemma: indistinguishability forces consecutive c-values
+
+For any `D : ℕ` such that both `c (a + D)` and `c (b + D)` have value at least `D`,
+the `Indistinguishable` hypothesis pins down the two c-values to be *consecutive
+integers*, with the *minimum* sharing parity with `D`.
+
+The argument: any value strictly between (and inclusive of the max) of the two
+c-values is a *witness time* `t` where the signals disagree.  For `Indistinguishable`
+to hold, none of these witnesses can be a "valid time" (`t ≥ D` with the right
+parity).  This rules out gaps ≥ 2 (which would force a parity-matching witness) and
+also rules out the wrong parity for the minimum value. -/
+
+/-- Helper: the position `a + D : ℕ+` (positivity from `a ≥ 1`). -/
+private def aD (a : ℕ+) (D : ℕ) : ℕ+ :=
+  ⟨a.val + D, Nat.lt_of_lt_of_le a.property (Nat.le_add_right _ _)⟩
+
+@[simp] private lemma aD_val (a : ℕ+) (D : ℕ) : (aD a D).val = a.val + D := rfl
+
+lemma indist_consec {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h_indist : Indistinguishable c a b) {D : ℕ}
+    (h_a_ge : D ≤ (c (aD a D)).val) (h_b_ge : D ≤ (c (aD b D)).val) :
+    ((c (aD a D)).val + 1 = (c (aD b D)).val ∨
+     (c (aD b D)).val + 1 = (c (aD a D)).val) ∧
+    min (c (aD a D)).val (c (aD b D)).val % 2 = D % 2 := by
+  set X := (c (aD a D)).val with hX_def
+  set Y := (c (aD b D)).val with hY_def
+  -- Specialize `Indistinguishable` to this `D`.  The `aD` wrapper has the same `val`
+  -- as the `⟨_, _⟩` form used inside `Indistinguishable`, so `simpa` reconciles.
+  have h_sig : ∀ t : ℕ, (t : ℤ) ≥ D → ((t : ℤ) - D) % 2 = 0 → (X < t ↔ Y < t) := by
+    intro t ht_ge ht_par
+    have := h_indist D t ht_ge ht_par
+    simpa [aD, hX_def, hY_def] using this
+  -- X ≠ Y by bijectivity.
+  have h_X_ne_Y : X ≠ Y := by
+    intro h_eq
+    have h_pnat_eq : c (aD a D) = c (aD b D) := Subtype.ext h_eq
+    have h_arg_eq : aD a D = aD b D := c.injective h_pnat_eq
+    have h_val_eq : a.val + D = b.val + D := by
+      have := congrArg (fun (n : ℕ+) => n.val) h_arg_eq
+      simpa [aD_val] using this
+    have hab_val : a.val < b.val := hab
+    omega
+  -- Step 1: show |X - Y| = 1, i.e., either Y = X + 1 or X = Y + 1.
+  -- Step 2: show min(X, Y) ≡ D (mod 2).
+  -- We argue by trichotomy on X vs Y.
+  rcases lt_or_gt_of_ne h_X_ne_Y with h_X_lt_Y | h_X_gt_Y
+  · -- X < Y.  Show Y = X + 1.
+    have h_Y_eq_X1 : Y = X + 1 := by
+      by_contra h_ne
+      have h_Y_ge_X2 : X + 2 ≤ Y := by omega
+      -- Pick the witness t whose parity matches D's.
+      -- Either t = X + 1 (if X + 1 ≡ D mod 2) or t = X + 2 (else).
+      by_cases h_par : (X + 1 - D) % 2 = 0
+      · -- t = X + 1 has correct parity.
+        have h_t_ge : ((↑(X + 1) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(X + 1) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ X + 1 := by omega
+          have h_cast : (((X + 1) - D : ℕ) : ℤ) = (↑(X + 1) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]
+          exact_mod_cast h_par
+        have h_iff := h_sig (X + 1) h_t_ge h_t_par
+        have : X < X + 1 := by omega
+        have h_Y_lt : Y < X + 1 := h_iff.mp this
+        omega
+      · -- t = X + 2 has correct parity.
+        have h_X2_par : (X + 2 - D) % 2 = 0 := by omega
+        have h_t_ge : ((↑(X + 2) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(X + 2) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ X + 2 := by omega
+          have h_cast : (((X + 2) - D : ℕ) : ℤ) = (↑(X + 2) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]
+          exact_mod_cast h_X2_par
+        have h_iff := h_sig (X + 2) h_t_ge h_t_par
+        have : X < X + 2 := by omega
+        have h_Y_lt : Y < X + 2 := h_iff.mp this
+        omega
+    -- Parity: at t = Y = X + 1, signal differs.  Hence t is invalid: (t - D) % 2 ≠ 0.
+    have h_par_diff : ((↑Y : ℤ) - D) % 2 ≠ 0 := by
+      intro h_par
+      have h_t_ge : ((↑Y : ℤ)) ≥ D := by exact_mod_cast h_b_ge
+      have h_iff := h_sig Y h_t_ge h_par
+      have hX : X < Y := h_X_lt_Y
+      have hY : ¬ (Y < Y) := lt_irrefl Y
+      exact hY (h_iff.mp hX)
+    refine ⟨Or.inl h_Y_eq_X1.symm, ?_⟩
+    -- min(X, Y) = X.  X ≡ D mod 2 since Y ≡ D + 1 mod 2 (from h_par_diff).
+    rw [min_eq_left (by omega : X ≤ Y)]
+    have h_X_le_Y : X ≤ Y := by omega
+    have h_Y_ne_D_par : (Y - D) % 2 ≠ 0 := by
+      intro h
+      apply h_par_diff
+      have h_nat : ((Y - D : ℕ) : ℤ) % 2 = 0 := by exact_mod_cast h
+      have : ((Y - D : ℕ) : ℤ) = ((Y : ℤ) - D) := by
+        have : D ≤ Y := h_b_ge
+        push_cast; omega
+      rw [← this]; exact h_nat
+    -- Y = X + 1, and (Y - D) % 2 = 1, so (X + 1 - D) % 2 = 1, so (X - D) % 2 = 0.
+    omega
+  · -- X > Y.  Symmetric.
+    have h_X_eq_Y1 : X = Y + 1 := by
+      by_contra h_ne
+      have h_X_ge_Y2 : Y + 2 ≤ X := by omega
+      by_cases h_par : (Y + 1 - D) % 2 = 0
+      · have h_t_ge : ((↑(Y + 1) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(Y + 1) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ Y + 1 := by omega
+          have h_cast : (((Y + 1) - D : ℕ) : ℤ) = (↑(Y + 1) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]
+          exact_mod_cast h_par
+        have h_iff := h_sig (Y + 1) h_t_ge h_t_par
+        have : Y < Y + 1 := by omega
+        have h_X_lt : X < Y + 1 := h_iff.mpr this
+        omega
+      · have h_Y2_par : (Y + 2 - D) % 2 = 0 := by omega
+        have h_t_ge : ((↑(Y + 2) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(Y + 2) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ Y + 2 := by omega
+          have h_cast : (((Y + 2) - D : ℕ) : ℤ) = (↑(Y + 2) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]
+          exact_mod_cast h_Y2_par
+        have h_iff := h_sig (Y + 2) h_t_ge h_t_par
+        have : Y < Y + 2 := by omega
+        have h_X_lt : X < Y + 2 := h_iff.mpr this
+        omega
+    have h_par_diff : ((↑X : ℤ) - D) % 2 ≠ 0 := by
+      intro h_par
+      have h_t_ge : ((↑X : ℤ)) ≥ D := by exact_mod_cast h_a_ge
+      have h_iff := h_sig X h_t_ge h_par
+      have hY : Y < X := h_X_gt_Y
+      have hX : ¬ (X < X) := lt_irrefl X
+      exact hX (h_iff.mpr hY)
+    refine ⟨Or.inr h_X_eq_Y1.symm, ?_⟩
+    rw [min_eq_right (by omega : Y ≤ X)]
+    have h_X_ne_D_par : (X - D) % 2 ≠ 0 := by
+      intro h
+      apply h_par_diff
+      have h_nat : ((X - D : ℕ) : ℤ) % 2 = 0 := by exact_mod_cast h
+      have : ((X - D : ℕ) : ℤ) = ((X : ℤ) - D) := by
+        have : D ≤ X := h_a_ge
+        push_cast; omega
+      rw [← this]; exact h_nat
+    omega
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
-    `b = a + 1` and `c` is eventually identity from position `a`. -/
+    `b = a + 1` and `c` is eventually identity from position `a`.
+
+The proof combines:
+
+* `indist_consec` — for `D` such that both c-values are `≥ D`, the values are
+  consecutive integers with the parity condition.
+* A counting argument: for sufficiently large `D` (specifically, those `D` such that
+  no position `≤ a + D` has c-value `< D`, of which there are cofinitely many), the
+  consecutive property holds.
+* The σ-periodicity / σ ≡ +1 / Δ = 1 / bijection-overlap chain converts the
+  consecutive property into the shift relation `c (n + 1) = c n + 1` past some
+  threshold `N`.
+* `shift_one_implies_eventually_identity` (proven above) finishes.
+
+-/
 theorem Indistinguishable_implies_eventually_identity
     {c : Perm} {a b : ℕ+} (hab : a < b)
     (h : Indistinguishable c a b) :
