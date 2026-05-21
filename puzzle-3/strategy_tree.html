@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recursive L-Trap — Strategy Tree</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0d1117; color: #c9d1d9;
+  font-family: ui-monospace, 'Courier New', monospace;
+  display: flex; height: 100vh; overflow: hidden;
+}
+
+/* ── sidebar ── */
+#sidebar {
+  width: 320px; flex-shrink: 0; overflow-y: auto;
+  padding: 14px 10px; border-right: 1px solid #21262d;
+}
+#sidebar h2 { font-size: 11px; color: #58a6ff; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; }
+
+.node-row {
+  cursor: pointer; padding: 7px 9px; border-radius: 5px;
+  border: 1px solid transparent; margin-bottom: 2px; transition: background 0.1s;
+}
+.node-row:hover { background: #161b22; border-color: #30363d; }
+.node-row.active { background: #1c2d40; border-color: #1f6feb; }
+
+.node-label { font-size: 12px; font-weight: 600; color: #e6edf3; }
+.node-sub   { font-size: 10.5px; color: #7d8590; margin-top: 1px; }
+
+.badge {
+  display: inline-block; border-radius: 3px; font-size: 9px; font-weight: 700;
+  padding: 1px 5px; margin-right: 5px; letter-spacing: 0.3px;
+}
+.b-root { background: #1a3a1a; color: #56d364; border: 1px solid #2ea043; }
+.b-trap { background: #3a1a1a; color: #ff7b72; border: 1px solid #8b2020; }
+.b-oa   { background: #1e2a4a; color: #79c0ff; border: 1px solid #1f6feb; }
+.b-ob   { background: #2a1a3a; color: #c084fc; border: 1px solid #6e40c9; }
+.b-l2   { background: #1a2e2e; color: #56d4d4; border: 1px solid #1b7a7a; }
+.b-l3   { background: #2a2a1a; color: #e3b341; border: 1px solid #9e6a03; }
+.b-snap { background: #2a1a10; color: #ffa657; border: 1px solid #9b4f0a; }
+
+/* ── main ── */
+#main {
+  flex: 1; display: flex; flex-direction: column;
+  padding: 18px 20px; gap: 12px; overflow-y: auto;
+}
+#title-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#title-bar h3 { font-size: 14px; color: #58a6ff; }
+#score-chip {
+  font-size: 11px; padding: 2px 9px; border-radius: 10px;
+  background: #1c2d40; border: 1px solid #388bfd; color: #58a6ff;
+}
+
+#legend {
+  display: flex; gap: 14px; flex-wrap: wrap; font-size: 10.5px; color: #7d8590;
+}
+.leg { display: flex; align-items: center; gap: 5px; }
+.leg-sq { width: 11px; height: 11px; border-radius: 2px; }
+.leg-ln { width: 18px; height: 3px; border-radius: 1px; }
+
+#body-wrap { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+canvas { border: 1px solid #21262d; border-radius: 4px; display: block; flex-shrink: 0; }
+
+#info {
+  flex: 1; min-width: 220px; max-width: 360px;
+  background: #161b22; border: 1px solid #21262d; border-radius: 7px;
+  padding: 13px 15px; font-size: 11.5px; line-height: 1.65;
+}
+#info p { margin-bottom: 7px; color: #c9d1d9; }
+#info p:last-child { margin-bottom: 0; }
+#info b { color: #e6edf3; }
+#info .hi { color: #ff9800; font-weight: 600; }
+#info .ok { color: #56d364; }
+#info .warn { color: #e3b341; }
+#info .bad { color: #ff7b72; }
+#info .note {
+  margin-top: 8px; padding: 6px 9px;
+  background: #1c2428; border-left: 2px solid #388bfd; border-radius: 3px;
+  color: #8b949e; font-size: 11px;
+}
+#info .score-box {
+  margin-top: 9px; padding: 6px 10px;
+  background: #1c3829; border: 1px solid #2ea043; border-radius: 4px;
+  color: #56d364; font-size: 11px;
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h2>Strategy Tree</h2>
+  <div id="tree-list"></div>
+</div>
+
+<div id="main">
+  <div id="title-bar">
+    <h3 id="node-title">Click a node to explore the strategy</h3>
+    <span id="score-chip" style="display:none"></span>
+  </div>
+  <div id="legend">
+    <div class="leg"><div class="leg-ln" style="background:#ff9800"></div>New walls (this step)</div>
+    <div class="leg"><div class="leg-ln" style="background:rgba(180,180,180,.55)"></div>Prior walls</div>
+    <div class="leg"><div class="leg-sq" style="background:#00e5ff"></div>Pawn</div>
+    <div class="leg"><div class="leg-sq" style="background:#76ff03"></div>Goal (9,9)</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(255,23,68,.4)"></div>Bait / trap trigger</div>
+    <div class="leg"><div class="leg-sq" style="background:rgba(100,160,255,.12)"></div>Active sub-interior</div>
+  </div>
+  <div id="body-wrap">
+    <canvas id="grid"></canvas>
+    <div id="info"><em style="color:#7d8590">Select a node from the tree to see details.</em></div>
+  </div>
+</div>
+
+<script>
+// ── constants ──────────────────────────────────────────────────────────────
+const N = 10, C = 40, P = 20;
+const canvas = document.getElementById('grid');
+canvas.width = N*C + 2*P;
+canvas.height = N*C + 2*P;
+const ctx = canvas.getContext('2d');
+
+// ── edge key (normalized: smaller row-major position first) ────────────────
+function ek(r1,c1,r2,c2) {
+  if (r1 > r2 || (r1===r2 && c1>c2)) { let t=[r1,c1]; r1=r2; c1=c2; r2=t[0]; c2=t[1]; }
+  return `${r1},${c1},${r2},${c2}`;
+}
+
+// ── wall builders ──────────────────────────────────────────────────────────
+function outerL() {
+  const w = [];
+  for (let c=1; c<=8; c++) w.push(ek(0,c,1,c));  // south of row 0
+  for (let r=1; r<=8; r++) w.push(ek(r,0,r,1));  // east of col 0
+  return w;
+}
+
+// Level-k inner L walls.
+// Odd k (entry top-right (k,9)): south-of-row-k c=k+1..9, east-of-col-k r=k+1..8
+// Even k (entry bottom-left (9,k)): east-of-col-k r=k+1..9, south-of-row-k c=k+1..8
+function innerLWalls(k) {
+  const w = [];
+  if (k % 2 === 1) {
+    // odd: entry (k,9), traverse row-k left then col-k down, exit (9,k)→(9,k+1)
+    for (let c=k+1; c<=9; c++) w.push(ek(k,c,k+1,c));    // south of row k
+    for (let r=k+1; r<=8; r++) w.push(ek(r,k,r,k+1));    // east of col k (not r=9, that's exit)
+  } else {
+    // even: entry (9,k), traverse col-k up then row-k right, exit (k,9)→(k+1,9)
+    for (let r=k+1; r<=9; r++) w.push(ek(r,k,r,k+1));    // east of col k (include r=9)
+    for (let c=k+1; c<=8; c++) w.push(ek(k,c,k+1,c));    // south of row k (not c=9, that's exit)
+  }
+  return w;
+}
+
+// Close the exit from level k (placed when level-(k+1) trap fires)
+function closeExit(k) {
+  if (k === 0) return [ek(9,0,9,1)]; // outer trap B: close bait B
+  if (k % 2 === 1) return [ek(9,k,9,k+1)]; // odd: exit is (9,k)→(9,k+1)
+  else             return [ek(k,9,k+1,9)];  // even: exit is (k,9)→(k+1,9)
+}
+
+function union(...arrs) {
+  const s = new Set();
+  for (const a of arrs) for (const x of a) s.add(x);
+  return [...s];
+}
+
+// Pre-build cumulative wall sets for each level
+const OL = outerL();
+const IL1 = innerLWalls(1);
+const IL2 = innerLWalls(2);
+const IL3 = innerLWalls(3);
+const CL0 = closeExit(0); // close bait B
+const CL1 = closeExit(1); // close level-1 exit
+const CL2 = closeExit(2); // close level-2 exit
+
+// Option B: top-right inner L (row 1 south c=1..8 + col 9 left r=2..8)
+function innerL_B() {
+  const w = [];
+  for (let c=1; c<=8; c++) w.push(ek(1,c,2,c));
+  for (let r=2; r<=8; r++) w.push(ek(r,8,r,9));
+  return w;
+}
+const IL_B = innerL_B();
+const IL_B_DEAD = [ek(8,9,9,9)];
+
+// ── entry / exit helpers ──────────────────────────────────────────────────
+function levelEntry(k) {
+  if (k === 0) return [0,0];
+  if (k % 2 === 1) return [k,9];   // top-right
+  else             return [9,k];   // bottom-left
+}
+
+// ── node definitions ──────────────────────────────────────────────────────
+// Each node: id, pid (parent), indent, badge, badgeClass, label, sub,
+//            pawn [r,c], baits [[r,c],...], region {r1,c1,r2,c2}|null,
+//            walls (Set of edge keys), newWalls (Set), info HTML
+const NODES = [
+  {
+    id:'root', pid:null, indent:0,
+    badge:'L0', bc:'b-root',
+    label:'Outer L-trap (WS Turn 1)',
+    sub:'Confines PP to row 0 + col 0',
+    pawn:[0,0], baits:[[0,9],[9,0]], region:null,
+    walls: new Set(OL),
+    newWalls: new Set(OL),
+    info:`
+<p>WS places the <b>outer L-corridor</b> on turn 1.</p>
+<p>
+• <span class="hi">South wall of row 0:</span> (0,c)↔(1,c) for c=1–8<br>
+• <span class="hi">East wall of col 0:</span> (r,0)↔(r,1) for r=1–8
+</p>
+<p>PP (cyan) is confined to the L-shaped perimeter (row 0 + col 0). Two exits remain open:</p>
+<p>
+• <span style="color:#ff1744">Bait A (0,9)</span> — top-right corner<br>
+• <span style="color:#ff1744">Bait B (9,0)</span> — bottom-left corner
+</p>
+<div class="note">By diagonal symmetry, Trap A and Trap B yield identical sub-problems — "it represents both."</div>`,
+    score:null,
+  },
+  {
+    id:'trap', pid:'root', indent:1,
+    badge:'L1', bc:'b-trap',
+    label:'Trap fires → PP enters at (1,9)',
+    sub:'Trap B shown; Trap A is diagonal mirror',
+    pawn:[1,9], baits:[], region:{r1:1,c1:1,r2:9,c2:9},
+    walls: new Set(union(OL, CL0)),
+    newWalls: new Set(CL0),
+    info:`
+<p>PP reached bait B at (9,0). WS closes (9,0)↔(9,1).</p>
+<p>PP backtracks:<br>
+• Up col 0: (9,0)→(0,0) — 9 steps<br>
+• Across row 0: (0,0)→(0,9) — 9 steps<br>
+• Into interior: (0,9)→(1,9) — 1 step</p>
+<p>PP is now at <b>(1,9)</b> — top-right corner of interior (rows 1–9, cols 1–9). Goal remains at (9,9).</p>
+<div class="note">WS must now choose an inner L. Two options to try — see children.</div>`,
+    score:'28 steps (outer L cost)',
+  },
+  {
+    id:'opt_a', pid:'trap', indent:2,
+    badge:'A', bc:'b-oa',
+    label:'Option A — top-left inner L',
+    sub:'Row 1 south (c=2..9) + col 1 east (r=2..8)',
+    pawn:[1,9], baits:[], region:{r1:1,c1:1,r2:9,c2:9},
+    walls: new Set(union(OL, CL0, IL1)),
+    newWalls: new Set(IL1),
+    info:`
+<p><b>Option A:</b> inner L with corner at (1,1). PP enters at right end of row 1.</p>
+<p><span class="hi">New walls:</span><br>
+• South of row 1: (1,c)↔(2,c) for c=2–9<br>
+• East of col 1: (r,1)↔(r,2) for r=2–8</p>
+<p>PP at (1,9) is forced through the L-corridor:<br>
+• <b>Row 1 arm (left):</b> (1,9) → (1,1) — 8 steps<br>
+• <b>Col 1 arm (down):</b> (1,1) → (9,1) — 8 steps<br>
+• Enter sub-interior: (9,1) → (9,2) — 1 step</p>
+<p>Exit at <b>(9,1)→(9,2)</b> — bottom-left of sub-interior (rows 2–9, cols 2–9).</p>
+<div class="score-box">16 steps forced + 1 entry = 17 inner-level steps</div>`,
+    score:'28 + 17 = 45 so far',
+  },
+  {
+    id:'opt_b', pid:'trap', indent:2,
+    badge:'B', bc:'b-ob',
+    label:'Option B — top-right inner L',
+    sub:'Row 1 south (c=1..8) + col 9 left (r=2..8)',
+    pawn:[1,9], baits:[], region:{r1:1,c1:1,r2:9,c2:9},
+    walls: new Set(union(OL, CL0, IL_B)),
+    newWalls: new Set(IL_B),
+    info:`
+<p><b>Option B:</b> inner L with corner at (1,9) — where PP already is.</p>
+<p><span class="hi">New walls:</span><br>
+• South of row 1: (1,c)↔(2,c) for c=1–8<br>
+• Left of col 9: (r,8)↔(r,9) for r=2–8</p>
+<p>PP at (1,9) is at the <b>corner</b> of this L. Two arms extend:<br>
+• Row 1 arm → left end at (1,1)<br>
+• Col 9 arm → bottom at (9,9) = <span class="warn">GOAL</span></p>
+<p class="bad">⚠ (1,9)↔(2,9) is open — PP can go straight down col 9 to goal in 8 steps. BFS-optimal PP always does this.</p>
+<div class="note">Try adding a dead-end wall (8,9)↔(9,9) to see what happens ↓</div>`,
+    score:'PP reaches goal in 8 interior steps — bad for WS',
+  },
+  {
+    id:'opt_b2', pid:'opt_b', indent:3,
+    badge:'B+', bc:'b-ob',
+    label:'Option B + dead end (8,9)↔(9,9)',
+    sub:'Forces PP left — but BFS still avoids the bait',
+    pawn:[1,9], baits:[[8,9]], region:{r1:1,c1:1,r2:9,c2:9},
+    walls: new Set(union(OL, CL0, IL_B, IL_B_DEAD)),
+    newWalls: new Set(IL_B_DEAD),
+    info:`
+<p>Adding wall <span class="hi">(8,9)↔(9,9)</span> seals col 9 into a dead end at (8,9).</p>
+<p>PP at (1,9) — BFS analysis:<br>
+• Go down col 9 → dead end at (8,9), must backtrack 7 steps — <em>longer</em><br>
+• Go left along row 1 → exit via (1,1)→(2,1) — <em>shorter</em></p>
+<p class="bad">BFS-optimal PP always takes the shorter path — goes left immediately without entering col 9 at all. Dead-end baits are invisible to BFS-optimal PP.</p>
+<p>This means Option B forces only <b>8 steps</b> (row 1 only), vs Option A's <b>16 steps</b>.</p>
+<div class="note"><b>Conclusion: Option A is the right choice.</b> Its exits both connect to the sub-interior, creating the proper recursive structure.</div>`,
+    score:'Only 8 forced steps — worse than Option A',
+  },
+  {
+    id:'l2', pid:'opt_a', indent:3,
+    badge:'L2', bc:'b-l2',
+    label:'Level 2 inner L (row 2 + col 2)',
+    sub:'Entry at (9,2) — sub-interior (rows 2–9, cols 2–9)',
+    pawn:[9,2], baits:[], region:{r1:2,c1:2,r2:9,c2:9},
+    walls: new Set(union(OL, CL0, IL1, CL1, IL2)),
+    newWalls: new Set(union(CL1, IL2)),
+    info:`
+<p>PP exits col 1 at (9,1), entering sub-interior at (9,2). WS fires level-2 trap:</p>
+<p><span class="hi">New walls:</span><br>
+• Close level-1 exit: (9,1)↔(9,2)<br>
+• East of col 2: (r,2)↔(r,3) for r=3–9 <em>(r=9 blocks row-9 shortcut)</em><br>
+• South of row 2: (2,c)↔(3,c) for c=3–8 <em>(c=9 left open as exit)</em></p>
+<p>PP at (9,2) is forced through the level-2 L-corridor:<br>
+• <b>Col 2 arm (up):</b> (9,2) → (2,2) — 7 steps<br>
+• <b>Row 2 arm (right):</b> (2,2) → (2,9) — 7 steps<br>
+• Enter sub-sub-interior: (2,9) → (3,9) — 1 step</p>
+<div class="score-box">14 steps forced + 1 entry = 15 level-2 steps</div>`,
+    score:'28 + 17 + 15 = 60 so far',
+  },
+  {
+    id:'l3', pid:'l2', indent:4,
+    badge:'L3', bc:'b-l3',
+    label:'Level 3 inner L (row 3 + col 3)',
+    sub:'Entry at (3,9) — sub-sub-interior (rows 3–9, cols 3–9)',
+    pawn:[3,9], baits:[], region:{r1:3,c1:3,r2:9,c2:9},
+    walls: new Set(union(OL, CL0, IL1, CL1, IL2, CL2, IL3)),
+    newWalls: new Set(union(CL2, IL3)),
+    info:`
+<p>PP exits row 2 at (2,9), entering sub-sub-interior at (3,9). WS fires level-3 trap:</p>
+<p><span class="hi">New walls:</span><br>
+• Close level-2 exit: (2,9)↔(3,9)<br>
+• South of row 3: (3,c)↔(4,c) for c=4–9 <em>(c=9 blocks col-9 shortcut from (3,9))</em><br>
+• East of col 3: (r,3)↔(r,4) for r=4–8 <em>(r=9 left open as exit at (9,3)→(9,4))</em></p>
+<p>PP at (3,9) forced through level-3 L:<br>
+• <b>Row 3 arm (left):</b> (3,9) → (3,3) — 6 steps<br>
+• <b>Col 3 arm (down):</b> (3,3) → (9,3) — 6 steps<br>
+• Enter next level: (9,3) → (9,4) — 1 step</p>
+<div class="score-box">12 steps + 1 entry = 13 level-3 steps</div>`,
+    score:'28 + 17 + 15 + 13 = 73 so far',
+  },
+  {
+    id:'summary', pid:'l3', indent:5,
+    badge:'∑', bc:'b-snap',
+    label:'Full recursive spiral → score = 108',
+    sub:'Levels 1–8 each shrink by one row+col',
+    pawn:[9,9], baits:[], region:null,
+    walls: new Set(union(
+      OL, CL0, IL1,
+      CL1, IL2,
+      CL2, IL3,
+      closeExit(3), innerLWalls(4),
+      closeExit(4), innerLWalls(5),
+      closeExit(5), innerLWalls(6),
+      closeExit(6), innerLWalls(7),
+      closeExit(7), innerLWalls(8),
+    )),
+    newWalls: new Set(union(
+      closeExit(3), innerLWalls(4),
+      closeExit(4), innerLWalls(5),
+      closeExit(5), innerLWalls(6),
+      closeExit(6), innerLWalls(7),
+      closeExit(7), innerLWalls(8),
+    )),
+    info:`
+<p>The pattern recurses: at each level k, the inner L runs along <b>row k + col k</b> of the remaining sub-grid (rows k–9, cols k–9).</p>
+<p>Level scores (inner steps + 1 exit):<br>
+L1: 16+1=17 &nbsp; L2: 14+1=15 &nbsp; L3: 12+1=13<br>
+L4: 10+1=11 &nbsp; L5: 8+1=9 &nbsp;&nbsp; L6: 6+1=7<br>
+L7: 4+1=5 &nbsp;&nbsp; L8: 2+1=3</p>
+<p>Total: <b>28</b> (outer L) + <b>17+15+13+11+9+7+5+3</b> (inner levels) = <b>28 + 80 = 108</b></p>
+<p>This visits all 81 interior cells exactly once in a <b>spiral order</b>.<br>
+The Hamiltonian snake also visits all 81 in a boustrophedon order — same score!</p>
+<div class="score-box"><b>Score = 108</b> — matches the current best (snake strategy).<br>
+This is a new, provably correct construction achieving the same bound.</div>`,
+    score:'Total: 108',
+  },
+];
+
+// ── drawing ────────────────────────────────────────────────────────────────
+function drawWall(key, color, lw) {
+  const [r1,c1,r2,c2] = key.split(',').map(Number);
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'butt';
+  ctx.beginPath();
+  if (r1 === r2) {
+    // horizontal adjacency → vertical wall line
+    const x = P + c2 * C;
+    ctx.moveTo(x, P + r1*C); ctx.lineTo(x, P + (r1+1)*C);
+  } else {
+    // vertical adjacency → horizontal wall line
+    const y = P + r2 * C;
+    ctx.moveTo(P + c1*C, y); ctx.lineTo(P + (c1+1)*C, y);
+  }
+  ctx.stroke();
+}
+
+function render(node) {
+  const W = N*C + 2*P;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, W);
+
+  // ── cell fills ──
+  for (let r=0; r<N; r++) {
+    for (let c=0; c<N; c++) {
+      let fill = '#10161e';
+
+      // sub-interior highlight
+      if (node.region) {
+        const {r1,c1,r2,c2} = node.region;
+        if (r>=r1 && r<=r2 && c>=c1 && c<=c2) fill = '#12182a';
+      }
+
+      // goal
+      if (r===9 && c===9) fill = '#0d2a0d';
+
+      ctx.fillStyle = fill;
+      ctx.fillRect(P+c*C+1, P+r*C+1, C-2, C-2);
+    }
+  }
+
+  // ── bait markers ──
+  for (const [br,bc] of (node.baits||[])) {
+    ctx.fillStyle = 'rgba(255,23,68,0.30)';
+    ctx.fillRect(P+bc*C+3, P+br*C+3, C-6, C-6);
+    // label
+    ctx.fillStyle = 'rgba(255,80,80,0.9)'; ctx.font = '8px monospace';
+    ctx.textAlign='center';
+    ctx.fillText('×', P+bc*C+C/2, P+br*C+C/2+3);
+  }
+
+  // ── goal marker ──
+  ctx.fillStyle = '#76ff03';
+  ctx.fillRect(P+9*C+6, P+9*C+6, C-12, C-12);
+
+  // ── grid lines ──
+  ctx.strokeStyle = '#1c2330'; ctx.lineWidth = 0.5;
+  for (let i=0; i<=N; i++) {
+    ctx.beginPath(); ctx.moveTo(P+i*C, P); ctx.lineTo(P+i*C, P+N*C); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(P, P+i*C); ctx.lineTo(P+N*C, P+i*C); ctx.stroke();
+  }
+
+  // ── perimeter ──
+  ctx.strokeStyle = '#3a444f'; ctx.lineWidth = 2;
+  ctx.strokeRect(P, P, N*C, N*C);
+
+  // ── walls ──
+  for (const key of node.walls) {
+    const isNew = node.newWalls.has(key);
+    drawWall(key, isNew ? '#ff9800' : 'rgba(180,180,180,0.50)', isNew ? 3 : 1.5);
+  }
+
+  // ── pawn ──
+  if (node.pawn) {
+    const [pr,pc] = node.pawn;
+    ctx.fillStyle = '#00e5ff';
+    ctx.beginPath();
+    ctx.arc(P+pc*C+C/2, P+pr*C+C/2, C/2-7, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  // ── axis labels ──
+  ctx.font = '9px monospace'; ctx.fillStyle = '#2a3340';
+  ctx.textAlign = 'center';
+  for (let c=0; c<N; c++) ctx.fillText(c, P+c*C+C/2, P-5);
+  ctx.textAlign = 'right';
+  for (let r=0; r<N; r++) ctx.fillText(r, P-4, P+r*C+C/2+3);
+}
+
+// ── tree rendering ─────────────────────────────────────────────────────────
+let activeId = null;
+
+function buildTree() {
+  const list = document.getElementById('tree-list');
+  for (const node of NODES) {
+    const div = document.createElement('div');
+    div.className = 'node-row';
+    div.dataset.id = node.id;
+
+    const ind = '  '.repeat(node.indent);
+    const connector = node.pid ? (node.indent > 0 ? '└ ' : '') : '';
+
+    div.innerHTML = `
+      <div class="node-label">
+        <span style="color:#2a3340;font-size:10px;white-space:pre">${ind}${connector}</span><span class="badge ${node.bc}">${node.badge}</span>${node.label}
+      </div>
+      <div class="node-sub" style="padding-left:${node.indent*16 + 4}px">${node.sub}</div>`;
+
+    div.addEventListener('click', () => selectNode(node.id));
+    list.appendChild(div);
+  }
+}
+
+function selectNode(id) {
+  activeId = id;
+  document.querySelectorAll('.node-row').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+
+  const node = NODES.find(n => n.id === id);
+  if (!node) return;
+
+  document.getElementById('node-title').textContent = node.label;
+  const chip = document.getElementById('score-chip');
+  if (node.score) {
+    chip.textContent = node.score; chip.style.display = '';
+  } else {
+    chip.style.display = 'none';
+  }
+  document.getElementById('info').innerHTML = node.info;
+  render(node);
+}
+
+// ── init ───────────────────────────────────────────────────────────────────
+buildTree();
+selectNode('root');
+</script>
+</body>
+</html>
