@@ -143,4 +143,183 @@ theorem not_wins_from_both
   have h_int_eq : (k₁ : ℤ) = (k₂ : ℤ) := by linarith
   exact_mod_cast h_int_eq
 
+/-! ### A bound for the non-identity part of `c`
+
+For `c` that is the identity past `N`, define a uniform bound `cBound c N` such that
+* `cBound c N ≥ N + 1`, and
+* `(c ⟨m, _⟩).val ≤ cBound c N` for every `1 ≤ m ≤ N`.
+
+We use this bound to show that for very large starting cells `2j > cBound c N`, signals
+at any cell in `[1, N]` are universally "Yes" once `t > cBound c N`. -/
+
+/-- Recursive bound: `cBound c n ≥ n + 1` and `cBound c n ≥ (c m).val` for every
+    `1 ≤ m ≤ n`. -/
+def cBound (c : Perm) : ℕ → ℕ
+  | 0     => 1
+  | n + 1 => (cBound c n) ⊔ (c ⟨n + 1, Nat.succ_pos n⟩).val ⊔ (n + 2)
+
+lemma cBound_ge_succ (c : Perm) (n : ℕ) : n + 1 ≤ cBound c n := by
+  induction n with
+  | zero      => simp [cBound]
+  | succ k ih => simp only [cBound]; omega
+
+lemma cBound_mono (c : Perm) : ∀ {m n : ℕ}, m ≤ n → cBound c m ≤ cBound c n := by
+  intro m n h
+  induction n with
+  | zero =>
+      interval_cases m
+      rfl
+  | succ k ih =>
+      rcases Nat.lt_succ_iff_lt_or_eq.mp (Nat.lt_succ_of_le h) with hlt | heq
+      · have hmk : m ≤ k := Nat.lt_succ_iff.mp hlt
+        have := ih hmk
+        simp only [cBound]
+        omega
+      · subst heq
+        rfl
+
+lemma cBound_apply_succ (c : Perm) (n : ℕ) :
+    (c ⟨n + 1, Nat.succ_pos n⟩).val ≤ cBound c (n + 1) := by
+  simp only [cBound]; omega
+
+lemma cBound_ge (c : Perm) {m n : ℕ} (hm : 0 < m) (hmn : m ≤ n) :
+    (c ⟨m, hm⟩).val ≤ cBound c n := by
+  cases m with
+  | zero => exact absurd hm (lt_irrefl 0)
+  | succ k =>
+      calc (c ⟨k + 1, Nat.succ_pos k⟩).val
+          ≤ cBound c (k + 1) := cBound_apply_succ c k
+        _ ≤ cBound c n        := cBound_mono c hmn
+
+/-! ### Static signal-match -/
+
+/-- Unfolding `signalOf` at a valid (positive) position. -/
+lemma signalOf_apply {c : Perm} {p : ℤ} (h : 1 ≤ p) (t : ℕ) :
+    signalOf c p t = decide ((c (Int.toPNat p h)).val < t) := by
+  unfold signalOf; rw [dif_pos h]
+
+/-- **Static signal-match.**  For an eventually-identity `c` past `N`, picking
+    `j > cBound c N` ensures that at any time `t` and any position `p : ℤ` with
+
+    * `1 ≤ p` (valid cell),
+    * `2j − t ≤ p` (reachable from `2j` by step ±1 in `t` steps, so the bound applies),
+    * `(t + p) % 2 = 0` (parity; this is supplied by the parity invariant),
+
+    the signals at `p` and `p + 1` at time `t` agree. -/
+lemma signal_match
+    {c : Perm} {N : ℕ}
+    (hN : ∀ n : ℕ+, N < n.val → c n = n)
+    {j : ℕ} (hj : cBound c N < j)
+    {p : ℤ} (h_p_pos : 1 ≤ p) {t : ℕ}
+    (h_lower : (2 * j : ℤ) - t ≤ p)
+    (h_parity : ((t : ℤ) + p) % 2 = 0) :
+    signalOf c p t = signalOf c (p + 1) t := by
+  have h_p1_pos : (1 : ℤ) ≤ p + 1 := by linarith
+  rw [signalOf_apply h_p_pos, signalOf_apply h_p1_pos, decide_eq_decide]
+  -- Useful: relate `.toNat` to the integer.
+  have h_p_nn : (0 : ℤ) ≤ p := by linarith
+  have h_p1_nn : (0 : ℤ) ≤ p + 1 := by linarith
+  have h_p_toNat : (p.toNat : ℤ) = p := Int.toNat_of_nonneg h_p_nn
+  have h_p1_toNat : ((p + 1).toNat : ℤ) = p + 1 := Int.toNat_of_nonneg h_p1_nn
+  -- `(Int.toPNat p h).val = p.toNat` by definition.
+  -- Case split on whether p > N or p ≤ N.
+  by_cases h_case : (N : ℤ) < p
+  · -- Case (a): p > N.  Both positions land in the identity region.
+    -- Show (toPNat p).val > N and (toPNat (p+1)).val > N.
+    have h_pN_gt : N < (Int.toPNat p h_p_pos).val := by
+      show N < p.toNat
+      have : (N : ℤ) < (p.toNat : ℤ) := by rw [h_p_toNat]; exact h_case
+      exact_mod_cast this
+    have h_p1N_gt : N < (Int.toPNat (p + 1) h_p1_pos).val := by
+      show N < (p + 1).toNat
+      have : (N : ℤ) < ((p + 1).toNat : ℤ) := by rw [h_p1_toNat]; linarith
+      exact_mod_cast this
+    have hc_p : c (Int.toPNat p h_p_pos) = Int.toPNat p h_p_pos := hN _ h_pN_gt
+    have hc_p1 : c (Int.toPNat (p + 1) h_p1_pos) = Int.toPNat (p + 1) h_p1_pos := hN _ h_p1N_gt
+    rw [hc_p, hc_p1]
+    -- Now goal: (Int.toPNat p _).val < t ↔ (Int.toPNat (p+1) _).val < t
+    -- i.e. p.toNat < t ↔ (p+1).toNat < t.
+    show p.toNat < t ↔ (p + 1).toNat < t
+    constructor
+    · intro hlt
+      -- p < t (as integers); want (p+1) < t.  Suffices p+1 ≠ t.
+      have hp_lt : (p : ℤ) < (t : ℤ) := by
+        have : (p.toNat : ℤ) < (t : ℤ) := by exact_mod_cast hlt
+        rwa [h_p_toNat] at this
+      have h_ne : (t : ℤ) ≠ p + 1 := by
+        intro heq
+        -- t = p + 1 ⇒ t + p = 2p + 1 (odd), contradicts parity.
+        have : ((t : ℤ) + p) = 2 * p + 1 := by linarith
+        omega
+      have h_p1_lt : (p + 1 : ℤ) < (t : ℤ) := by
+        have h_le : (p + 1 : ℤ) ≤ (t : ℤ) := by linarith
+        exact lt_of_le_of_ne h_le (fun e => h_ne e.symm)
+      have : ((p + 1).toNat : ℤ) < (t : ℤ) := by rw [h_p1_toNat]; exact h_p1_lt
+      exact_mod_cast this
+    · intro hlt
+      -- (p+1) < t ⇒ p < t.
+      have h_p1_lt : ((p + 1).toNat : ℤ) < (t : ℤ) := by exact_mod_cast hlt
+      rw [h_p1_toNat] at h_p1_lt
+      have h_p_lt : (p : ℤ) < (t : ℤ) := by linarith
+      have : (p.toNat : ℤ) < (t : ℤ) := by rw [h_p_toNat]; exact h_p_lt
+      exact_mod_cast this
+  · -- Case (b): p ≤ N.  Both c-values are bounded by `cBound c N`, hence < t.
+    push_neg at h_case  -- p ≤ (N : ℤ)
+    have h_p_le_N : p.toNat ≤ N := by
+      have : (p.toNat : ℤ) ≤ (N : ℤ) := by rw [h_p_toNat]; exact h_case
+      exact_mod_cast this
+    have h_p1_le_succ : (p + 1).toNat ≤ N + 1 := by
+      have : ((p + 1).toNat : ℤ) ≤ ((N + 1 : ℕ) : ℤ) := by
+        rw [h_p1_toNat]; push_cast; linarith
+      exact_mod_cast this
+    -- t > cBound c N.  Established from `h_lower`: t ≥ 2j - p ≥ 2j - N > cBound.
+    have h_t_gt_cBound : cBound c N < t := by
+      -- 2j - p ≤ t and p ≤ N ⇒ 2j - N ≤ t.
+      have h1 : (2 * j : ℤ) - N ≤ t := by
+        have : (2 * j : ℤ) - N ≤ (2 * j : ℤ) - p := by linarith
+        linarith
+      -- 2j > 2 cBound (since j > cBound); and cBound ≥ N+1, so 2 cBound > N + cBound.
+      have h_cBound_ge_N : N + 1 ≤ cBound c N := cBound_ge_succ c N
+      have h_step : (2 * (cBound c N : ℤ) + 2 - N : ℤ) ≤ (2 * j : ℤ) - N := by
+        have : 2 * (cBound c N : ℤ) + 2 ≤ 2 * (j : ℤ) := by
+          have : (cBound c N + 1 : ℤ) ≤ j := by exact_mod_cast hj
+          linarith
+        linarith
+      have h_combined : (2 * (cBound c N : ℤ) + 2 - N : ℤ) ≤ t := le_trans h_step h1
+      -- 2 cBound + 2 - N > cBound iff cBound + 2 > N, holds since cBound ≥ N+1 > N - 2.
+      have h_bound_arith : (cBound c N : ℤ) < 2 * (cBound c N : ℤ) + 2 - N := by
+        have : (N : ℤ) ≤ cBound c N := by exact_mod_cast (le_of_lt (Nat.lt_succ_iff.mp (Nat.lt_succ_of_le h_cBound_ge_N)))
+        linarith
+      have : (cBound c N : ℤ) < (t : ℤ) := lt_of_lt_of_le h_bound_arith h_combined
+      exact_mod_cast this
+    -- Both `c`-values are ≤ cBound.
+    -- (c (toPNat p)).val ≤ cBound c N, since (toPNat p).val = p.toNat ≤ N.
+    have h_pN_pos : 0 < p.toNat := by
+      have : (0 : ℤ) < (p.toNat : ℤ) := by rw [h_p_toNat]; linarith
+      exact_mod_cast this
+    have h_c_p_bound : (c (Int.toPNat p h_p_pos)).val ≤ cBound c N :=
+      cBound_ge c h_pN_pos h_p_le_N
+    have h_p1N_pos : 0 < (p + 1).toNat := by
+      have : (0 : ℤ) < ((p + 1).toNat : ℤ) := by rw [h_p1_toNat]; linarith
+      exact_mod_cast this
+    -- For `p+1`: if p+1 ≤ N, use cBound_ge.  If p+1 = N+1, then c(N+1) = N+1 ≤ cBound.
+    have h_c_p1_bound : (c (Int.toPNat (p + 1) h_p1_pos)).val ≤ cBound c N := by
+      by_cases h_p1_le : (p + 1).toNat ≤ N
+      · exact cBound_ge c h_p1N_pos h_p1_le
+      · push_neg at h_p1_le
+        -- (p+1).toNat > N and ≤ N+1, so (p+1).toNat = N+1.
+        have h_p1_eq : (p + 1).toNat = N + 1 := by omega
+        -- Then c(N+1) = N+1 ≤ cBound.
+        have h_NN1 : N < (Int.toPNat (p + 1) h_p1_pos).val := by
+          show N < (p + 1).toNat; omega
+        have hc : c (Int.toPNat (p + 1) h_p1_pos) = Int.toPNat (p + 1) h_p1_pos := hN _ h_NN1
+        rw [hc]
+        show (p + 1).toNat ≤ cBound c N
+        rw [h_p1_eq]
+        exact cBound_ge_succ c N
+    -- Both signals reduce to `true`.
+    constructor
+    · intro _; exact lt_of_le_of_lt h_c_p1_bound h_t_gt_cBound
+    · intro _; exact lt_of_le_of_lt h_c_p_bound h_t_gt_cBound
+
 end TrolleyRetrieval
