@@ -483,6 +483,26 @@ lemma shift_Delta_ge_2_contradiction {c : Perm} {Δ : ℕ} (hΔ : 2 ≤ Δ) {N�
 private lemma aD_pos (a : ℕ+) (D : ℕ) : 0 < a.val + D :=
   Nat.lt_of_lt_of_le a.property (Nat.le_add_right _ _)
 
+/-- **σ does not flip.**  Pure injectivity: along three positions `p, q, r` spaced by
+    `Δ ≥ 1` (so `q = p + Δ`, `r = q + Δ`), if the step `p → q` is ascending by `1` and the
+    step `q → r` is `±1` (consecutive), then `q → r` must also be ascending.
+
+If instead `q → r` descended, `c r` would equal `c p`, forcing `r = p` by injectivity,
+impossible since `r = p + 2Δ`. -/
+private lemma sigma_no_flip {c : Perm} {p q r : ℕ+} {Δ : ℕ} (hΔ : 1 ≤ Δ)
+    (hq : q.val = p.val + Δ) (hr : r.val = q.val + Δ)
+    (h_pq : (c q).val = (c p).val + 1)
+    (h_consec : (c r).val = (c q).val + 1 ∨ (c r).val + 1 = (c q).val) :
+    (c r).val = (c q).val + 1 := by
+  rcases h_consec with h | h
+  · exact h
+  · exfalso
+    have h_cr_eq_cp : (c r).val = (c p).val := by omega
+    have h_cr_cp : c r = c p := Subtype.ext h_cr_eq_cp
+    have h_rp : r = p := c.injective h_cr_cp
+    have h_rp_val : r.val = p.val := by rw [h_rp]
+    omega
+
 /-- **Bad-D propagation.**  If at displacement `D` the cell `a + D` is "below the time
     threshold" (`c(a+D).val < D`), then so is `b + D`.
 
