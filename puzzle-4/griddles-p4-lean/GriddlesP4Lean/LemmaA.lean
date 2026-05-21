@@ -483,6 +483,21 @@ lemma shift_Delta_ge_2_contradiction {c : Perm} {Δ : ℕ} (hΔ : 2 ≤ Δ) {N�
 private lemma aD_pos (a : ℕ+) (D : ℕ) : 0 < a.val + D :=
   Nat.lt_of_lt_of_le a.property (Nat.le_add_right _ _)
 
+/-- **Bad-D propagation.**  If at displacement `D` the cell `a + D` is "below the time
+    threshold" (`c(a+D).val < D`), then so is `b + D`.
+
+The signal from `a + D` is then `"Yes"` already at the minimal valid time `t = D`, and
+`Indistinguishable` forces the signal from `b + D` to be `"Yes"` there too — which says
+exactly `c(b+D).val < D`. -/
+lemma bad_D_propagates {c : Perm} {a b : ℕ+}
+    (h : Indistinguishable c a b) {D : ℕ}
+    (h_bad : (c ⟨a.val + D, aD_pos a D⟩).val < D) :
+    (c ⟨b.val + D, aD_pos b D⟩).val < D := by
+  have h_t_ge : (D : ℤ) ≥ (D : ℤ) := le_refl _
+  have h_t_par : ((D : ℤ) - (D : ℤ)) % 2 = 0 := by simp
+  have h_iff := h D D h_t_ge h_t_par
+  exact h_iff.mp h_bad
+
 /-- **Auxiliary sub-claim**: σ(D) is always `+1` (i.e. `c(b+D).val = c(a+D).val + 1`).
 
 This is the crux of LemmaA.  The full argument (verified by hand on multiple examples,
