@@ -520,6 +520,59 @@ private lemma sigma_no_flip_desc {c : Perm} {p q r : ℕ+} {Δ : ℕ} (hΔ : 1 �
     omega
   · exact h
 
+/-- **Self-avoiding ±1 walks ascend.**  If `f : ℕ → ℕ` is injective and every step changes
+    the value by exactly `1` (`f(k+1) = f k ± 1`), then in fact `f(k+1) = f k + 1` for all
+    `k`.
+
+Two ideas: (1) *no reversal* — an up-step then down-step (or vice versa) revisits a value,
+contradicting injectivity, so the direction is globally constant; (2) the descending
+direction is impossible on `ℕ` — it would force `f` below `0`.
+
+This is the structural engine behind "an everywhere-consecutive chain is an ascending
+ray", which (with `Δ ≥ 2`) yields the ray-overlap contradiction and (with `Δ = 1`) the
+identity. -/
+lemma pm1_injective_ascending (f : ℕ → ℕ) (hinj : Function.Injective f)
+    (hstep : ∀ k, f (k + 1) = f k + 1 ∨ f (k + 1) + 1 = f k) :
+    ∀ k, f (k + 1) = f k + 1 := by
+  -- Ascending propagates (no reversal).
+  have prop : ∀ k, f (k + 1) = f k + 1 → f (k + 1 + 1) = f (k + 1) + 1 := by
+    intro k hk
+    rcases hstep (k + 1) with h | h
+    · exact h
+    · exfalso
+      have hval : f (k + 1 + 1) = f k := by omega
+      have := hinj hval
+      omega
+  -- Descending propagates.
+  have propd : ∀ k, f (k + 1) + 1 = f k → f (k + 1 + 1) + 1 = f (k + 1) := by
+    intro k hk
+    rcases hstep (k + 1) with h | h
+    · exfalso
+      have hval : f (k + 1 + 1) = f k := by omega
+      have := hinj hval
+      omega
+    · exact h
+  rcases hstep 0 with h0 | h0
+  · -- Ascending start: propagate.
+    intro k
+    induction k with
+    | zero => exact h0
+    | succ n ih => exact prop n ih
+  · -- Descending start: impossible on ℕ.
+    exfalso
+    have hdesc : ∀ k, f (k + 1) + 1 = f k := by
+      intro k
+      induction k with
+      | zero => exact h0
+      | succ n ih => exact propd n ih
+    have hval : ∀ k, f k + k = f 0 := by
+      intro k
+      induction k with
+      | zero => simp
+      | succ n ih => have := hdesc n; omega
+    have := hval (f 0 + 1)
+    omega
+
 /-- **Pigeonhole core.**  If the `M + 1` cells `a, a+1, …, a+M` all map under `c` into the
     `M`-element value-set `{1, …, M}`, then `c` is not injective — contradiction.
 
