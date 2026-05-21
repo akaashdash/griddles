@@ -598,9 +598,23 @@ the chain's floor, contradicting injectivity (pigeonhole).
 basepoint `a + D` (rather than `a`) gives `σ(D) = +1` for every `D` — equivalently, the
 configuration is forced into the ascending regime everywhere.
 
-A full Lean formalization needs: (i) a descending-chain iterate analogous to
-`c_iter_Delta`, and (ii) the pigeonhole step bounding how many positions can map into
-a fixed finite value-set.  Both are routine but lengthy; left as the final gap. -/
+**Reassessment note (loop iteration).**  The building blocks `bad_D_propagates`,
+`sigma_no_flip`, `sigma_no_flip_desc`, and `maps_into_contradiction` are all proven.
+The pigeonhole `maps_into_contradiction` closes the `σ(0) = −1` case *cleanly for
+`Δ = 1`*: the descending walk `c(a+k) = c(a)−k` plus the bad-`D` tail (`bad_D_propagates`
+gives `c(a+k).val < k−1 ≤ c(a).val`) places all `c(a).val + 1` cells `a..a+c(a).val`
+into `{1,…,c(a).val}`.
+
+For `Δ ≥ 2` the σ-chain is `Δ`-spaced and the bad-tail bound grows faster than the
+position count, so the single-chain pigeonhole does *not* directly over-stuff; ruling
+out `Δ ≥ 2` needs either the parity-periodicity obstruction (clean for `Δ` even) or a
+multi-residue counting argument (`Δ` odd).  Also verified: moving left (`D < 0`) gives
+Bob no extra power here — reaching cell `p` needs time `t ≥ |D|`, by which point the
+signal `c p < t` is saturated — so the `D ≥ 0` definition of `Indistinguishable` is the
+correct notion (the losing direction already handles `D < 0` via `position_lower_bound`).
+
+This remains the final mathematical gap; the `Δ = 1` half is mechanically assemblable
+from the proven building blocks. -/
 private lemma sigma_eq_pos_one {c : Perm} {a b : ℕ+} (hab : a < b)
     (h : Indistinguishable c a b) (D : ℕ) :
     (c ⟨a.val + D, aD_pos a D⟩).val + 1 = (c ⟨b.val + D, aD_pos b D⟩).val := by
