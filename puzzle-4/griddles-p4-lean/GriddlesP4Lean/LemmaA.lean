@@ -476,6 +476,23 @@ lemma shift_Delta_ge_2_contradiction {c : Perm} {Δ : ℕ} (hΔ : 2 ≤ Δ) {N�
     -- N1.val + k·Δ = N₀.val, but N1.val = N₀.val + 1, so N₀.val + 1 + k·Δ = N₀.val.
     omega
 
+/-! ### Auxiliary: shift relation from Indistinguishable -/
+
+/-- **Auxiliary**: the key combinatorial content of LemmaA — under `Indistinguishable`,
+    there exists `N : ℕ+` past which the shift relation `c (n + Δ) = c n + 1` holds
+    (with `Δ := b.val − a.val`).
+
+This packages the σ ≡ +1 argument: indist_consec gives `c (b + D).val − c (a + D).val
+∈ {−1, +1}` for good D; bijectivity + Δ-periodicity force a consistent direction; and
+the positivity constraint of c (values ≥ 1) rules out the descending `σ ≡ −1` case for
+sufficiently large D. -/
+lemma shift_relation_of_indist {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h : Indistinguishable c a b) :
+    ∃ N : ℕ+, ∀ n : ℕ+, N ≤ n →
+      ∀ (h_pos : 0 < n.val + (b.val - a.val)),
+        (c ⟨n.val + (b.val - a.val), h_pos⟩).val = (c n).val + 1 := by
+  sorry
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
@@ -485,20 +502,72 @@ The proof combines:
 
 * `indist_consec` — for `D` such that both c-values are `≥ D`, the values are
   consecutive integers with the parity condition.
-* A counting argument: for sufficiently large `D` (specifically, those `D` such that
-  no position `≤ a + D` has c-value `< D`, of which there are cofinitely many), the
-  consecutive property holds.
-* The σ-periodicity / σ ≡ +1 / Δ = 1 / bijection-overlap chain converts the
-  consecutive property into the shift relation `c (n + 1) = c n + 1` past some
-  threshold `N`.
-* `shift_one_implies_eventually_identity` (proven above) finishes.
+* `shift_relation_of_indist` — for sufficiently large `n`, `c (n + Δ) = c n + 1`.
+* If `Δ ≥ 2`, `shift_Delta_ge_2_contradiction` derives False.
+* If `Δ = 1`, `shift_one_implies_eventually_identity` finishes. -/
 
--/
 theorem Indistinguishable_implies_eventually_identity
     {c : Perm} {a b : ℕ+} (hab : a < b)
     (h : Indistinguishable c a b) :
     (b = a + 1) ∧ (∀ n : ℕ+, a ≤ n → c n = n) := by
-  sorry
+  set Δ : ℕ := b.val - a.val with hΔ_def
+  have hΔ_pos : 1 ≤ Δ := by
+    have h_ab_val : a.val < b.val := hab
+    omega
+  -- Use the auxiliary to extract a threshold N where the shift relation `c(n+Δ) = c(n)+1` holds.
+  obtain ⟨N, h_shift_rel⟩ := shift_relation_of_indist hab h
+  -- Case split: Δ = 1 vs Δ ≥ 2.
+  rcases eq_or_lt_of_le hΔ_pos with hΔ_eq | hΔ_ge_2
+  · -- Δ = 1.  We have c(n + 1) = c n + 1 for n ≥ N (via the shift relation), so
+    -- `shift_one_implies_eventually_identity` gives c n = n for n ≥ N.
+    have hΔ_eq_1 : Δ = 1 := hΔ_eq.symm
+    -- First, the shift relation at "+ Δ" is "+ 1" since Δ = 1.
+    have h_shift_one : ∀ n : ℕ+, N ≤ n → c (n + 1) = c n + 1 := by
+      intro n hN_le_n
+      have h_pos : 0 < n.val + Δ := by
+        have := n.property
+        omega
+      have h_rel := h_shift_rel n hN_le_n h_pos
+      -- (c ⟨n.val + Δ, _⟩).val = (c n).val + 1 ; with Δ = 1, this position is `n + 1`.
+      have h_eq_pnat : (⟨n.val + Δ, h_pos⟩ : ℕ+) = n + (1 : ℕ+) := by
+        apply Subtype.ext
+        show n.val + Δ = (n + (1 : ℕ+)).val
+        have h_pnat_add : (n + (1 : ℕ+)).val = n.val + 1 := rfl
+        rw [h_pnat_add, hΔ_eq_1]
+      rw [h_eq_pnat] at h_rel
+      -- h_rel : (c (n + 1)).val = (c n).val + 1
+      apply Subtype.ext
+      show (c (n + (1 : ℕ+))).val = (c n + (1 : ℕ+)).val
+      have h_plus : ((c n + (1 : ℕ+))).val = (c n).val + 1 := rfl
+      rw [h_plus]
+      exact h_rel
+    -- Apply shift_one_implies_eventually_identity.
+    have h_id : ∀ n : ℕ+, N ≤ n → c n = n := shift_one_implies_eventually_identity h_shift_one
+    -- Conclude b = a + 1.
+    have h_b_eq : b = a + 1 := by
+      apply Subtype.ext
+      show b.val = (a + 1 : ℕ+).val
+      have h_pnat_add : (a + 1 : ℕ+).val = a.val + 1 := rfl
+      rw [h_pnat_add]
+      omega
+    refine ⟨h_b_eq, ?_⟩
+    -- Need: ∀ n ≥ a, c n = n.  We have it for n ≥ N (where N might be > a or ≤ a).
+    -- For n ≥ max(N, a), use h_id.  We need to extend to all n ≥ a.
+    intro n han
+    -- If N ≤ n, apply h_id directly.
+    by_cases hNn : N ≤ n
+    · exact h_id n hNn
+    · -- n < N.  We need to show c n = n in this case too.
+      -- The shift relation propagates upward, so c (n + k) = c n + k.  If c n ≠ n,
+      -- then eventually the values overlap, contradicting bijectivity.
+      sorry  -- Extending identity from `N` downward to `a` requires another bijection argument.
+  · -- Δ ≥ 2.  Apply shift_Delta_ge_2_contradiction.
+    have hΔ_ge_2' : 2 ≤ Δ := hΔ_ge_2
+    -- The shift relation at "+ Δ" with Δ ≥ 2 yields contradiction.
+    have h_for_lemma : ∀ n : ℕ+, N ≤ n → ∀ (h_pos : 0 < n.val + Δ),
+        (c ⟨n.val + Δ, h_pos⟩).val = (c n).val + 1 :=
+      fun n hN_le_n h_pos => h_shift_rel n hN_le_n h_pos
+    exact (shift_Delta_ge_2_contradiction hΔ_ge_2' h_for_lemma).elim
 
 /-- **Lemma A (corollary used by the winning direction).**  If `c` is not eventually
     identity, then *no* pair of starting cells is indistinguishable. -/
