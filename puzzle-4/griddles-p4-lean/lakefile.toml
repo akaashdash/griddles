@@ -1,0 +1,11 @@
+name = "griddles-p4-lean"
+version = "0.1.0"
+defaultTargets = ["GriddlesP4Lean"]
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+revision = "8850ed93863d6ce2"
+
+[[lean_lib]]
+name = "GriddlesP4Lean"
