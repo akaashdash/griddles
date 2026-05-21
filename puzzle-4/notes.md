@@ -155,6 +155,52 @@ Phase 2 succeeds against any (p₁, p₂) emerging from Phase 1.
 
 ---
 
+## Lean 4 Formalization
+
+The proof is formalized in `griddles-p4-lean/` (mirror of `puzzle-1/griddles-p1-lean/`
+layout).  Build with `lake build`.
+
+### Status
+
+**Fully proven:**
+
+| File | Content |
+|------|---------|
+| `Defs.lean` | Game semantics: `Perm`, `Strategy`, `Action`, `state`/`position`/`history`/`displacement`, `WinsFrom`, `BobWins`, `EventuallyIdentity`. |
+| `Parity.lean` | Parity invariant `(t − D_t) % 2 = 0` while Bob has not guessed.  Also `position_lower_bound`. |
+| `Losing.lean` | Entire losing direction: `parallel_evolution`, `cBound`, static `signal_match`, `parallel_for_eventually_identity`, and the headline theorem `EventuallyIdentity_loses : EventuallyIdentity c → ¬ BobWins c`. |
+| `Answer.lean` | The main `iff`: `BobWins c ↔ ¬ EventuallyIdentity c`. |
+
+**LemmaA.lean** has three sub-lemmas proven:
+
+* `c_shift_iter` — if `c(n+1) = c n + 1` past `N`, then `c(N + k) = c N + k`.
+* `c_shift_implies_cN_eq_N` — bijectivity of `c` forces `(c N).val = N.val` under the
+  shift property (proved via the bijection `m < c N ↔ c.symm m < N` and Finset
+  cardinality on `Iio`).
+* `shift_one_implies_eventually_identity` — combining the above, `c` is the identity
+  on `[N, ∞)`.
+
+**Two sorries remain:**
+
+1. `LemmaA.Indistinguishable_implies_eventually_identity`.  Combines the case analysis
+   on `Δ = b − a`:
+   - Derive σ-equation `c(a + D + Δ) = c(a + D) + σ(D)` from `Indistinguishable`.
+   - σ is Δ-periodic (iterating gives `c(n + 2Δ) − c(n) = σ + σ(•+Δ)`; injectivity
+     rules out `σ(•) + σ(• + Δ) = 0`).
+   - σ ≡ +1 (else c-values tend to `−∞`).
+   - Δ = 1 (else `Δ` arithmetic rays of step 1 overlap at `v_max`).
+   - Apply `shift_one_implies_eventually_identity`.
+
+2. `Winning.NotEventuallyIdentity_wins`.  Construct an explicit strategy:
+   - Phase 1: alternating right-left moves; track time of first "Yes" at even t.
+   - Phase 2: use `LemmaA.not_eventually_identity_implies_distinguishable` to extract
+     a discriminator `(D, t)` for the candidate pair, navigate there, observe, guess.
+
+Both sorries are isolated and well-documented; the math is laid out fully in this
+file and in the Lean file comments.
+
+---
+
 ## Notes on Corner Cases
 
 - **c = identity exactly:** Covered by the "eventually identity" case (N = 0). Bob loses.
