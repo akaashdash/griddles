@@ -707,6 +707,25 @@ private lemma maps_into_contradiction {c : Perm} {a : ℕ+} {M : ℕ}
   simp only [Fintype.card_fin] at hcard
   omega
 
+/-- **Good is symmetric.**  Under `Indistinguishable`, at every displacement `D` the
+    a-side cell is "above threshold" (`c(a+D).val ≥ D`) iff the b-side cell is.
+
+This follows from the signal-match at the minimal time `t = D`: the signal there is
+exactly "the cell is below threshold", and `Indistinguishable` forces these to agree. -/
+lemma good_symm {c : Perm} {a b : ℕ+}
+    (h : Indistinguishable c a b) (D : ℕ) :
+    (D ≤ (c ⟨a.val + D, aD_pos a D⟩).val) ↔ (D ≤ (c ⟨b.val + D, aD_pos b D⟩).val) := by
+  have hsig := h D D (le_refl (D : ℤ)) (by simp)
+  constructor
+  · intro ha
+    by_contra hb
+    push_neg at hb
+    exact absurd (hsig.mpr hb) (by omega)
+  · intro hb
+    by_contra ha
+    push_neg at ha
+    exact absurd (hsig.mp ha) (by omega)
+
 /-- **Bad-D propagation.**  If at displacement `D` the cell `a + D` is "below the time
     threshold" (`c(a+D).val < D`), then so is `b + D`.
 
