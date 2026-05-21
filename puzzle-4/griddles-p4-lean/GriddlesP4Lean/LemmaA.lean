@@ -364,6 +364,121 @@ lemma indist_consec {c : Perm} {a b : ℕ+} (hab : a < b)
       rw [← this]; exact h_nat
     omega
 
+/-! ### Sub-lemma: Δ ≥ 2 with global shift-by-Δ-equals-plus-one is impossible
+
+If `c (n + Δ) = c n + 1` for *every* `n : ℕ+` and `Δ ≥ 2`, then `c` cannot be a
+bijection.
+
+The argument: iterating the shift gives `c (N + k·Δ).val = c(N).val + k` and similarly
+`c (N + 1 + k·Δ).val = c(N + 1).val + k`.  These two arithmetic rays both eventually
+reach the value `max(c N, c (N+1))`, but at different positions, contradicting
+injectivity.
+-/
+
+/-- Iterated form of the shift-by-Δ relation. -/
+private lemma c_iter_Delta {c : Perm} {Δ : ℕ}
+    (h_shift : ∀ n : ℕ+, ∀ (h_pos : 0 < n.val + Δ),
+      (c ⟨n.val + Δ, h_pos⟩).val = (c n).val + 1)
+    (N : ℕ+) :
+    ∀ (k : ℕ) (h_pos : 0 < N.val + k * Δ),
+      (c ⟨N.val + k * Δ, h_pos⟩).val = (c N).val + k := by
+  intro k
+  induction k with
+  | zero =>
+      intro h_pos
+      have h_eq : (⟨N.val + 0 * Δ, h_pos⟩ : ℕ+) = N := by
+        apply Subtype.ext
+        show N.val + 0 * Δ = N.val
+        ring
+      rw [h_eq]
+      simp
+  | succ k ih =>
+      intro h_pos
+      have hN_pos : 0 < N.val := N.property
+      have h_prev_pos : 0 < N.val + k * Δ := Nat.add_pos_left hN_pos _
+      set m : ℕ+ := ⟨N.val + k * Δ, h_prev_pos⟩ with hm_def
+      have h_mΔ_pos : 0 < m.val + Δ := by
+        show 0 < N.val + k * Δ + Δ
+        exact Nat.add_pos_left h_prev_pos _
+      have h_step := h_shift m h_mΔ_pos
+      -- h_step : (c ⟨m.val + Δ, h_mΔ_pos⟩).val = (c m).val + 1
+      -- i.e.,  (c ⟨N.val + k*Δ + Δ, _⟩).val = (c ⟨N.val + k*Δ, _⟩).val + 1
+      have h_pos_eq : (⟨N.val + (k + 1) * Δ, h_pos⟩ : ℕ+) =
+                       ⟨m.val + Δ, h_mΔ_pos⟩ := by
+        apply Subtype.ext
+        show N.val + (k + 1) * Δ = m.val + Δ
+        show N.val + (k + 1) * Δ = N.val + k * Δ + Δ
+        ring
+      rw [h_pos_eq, h_step, ih h_prev_pos]
+      ring
+
+lemma shift_Delta_ge_2_contradiction {c : Perm} {Δ : ℕ} (hΔ : 2 ≤ Δ)
+    (h_shift : ∀ n : ℕ+, ∀ (h_pos : 0 < n.val + Δ),
+      (c ⟨n.val + Δ, h_pos⟩).val = (c n).val + 1) : False := by
+  -- Consider N = 1 and N1 = 2 (specific positions to test injectivity).
+  set N : ℕ+ := 1
+  set N1 : ℕ+ := 2
+  -- Iterated shift along both rays.
+  have h_iter_N : ∀ (k : ℕ) (h_pos : 0 < N.val + k * Δ),
+      (c ⟨N.val + k * Δ, h_pos⟩).val = (c N).val + k :=
+    c_iter_Delta h_shift N
+  have h_iter_N1 : ∀ (k : ℕ) (h_pos : 0 < N1.val + k * Δ),
+      (c ⟨N1.val + k * Δ, h_pos⟩).val = (c N1).val + k :=
+    c_iter_Delta h_shift N1
+  -- c N ≠ c N1 by injectivity (N ≠ N1 since 1 ≠ 2 as PNat).
+  have h_N_ne_N1 : N ≠ N1 := by
+    intro h
+    have : N.val = N1.val := congrArg _ h
+    show False
+    simp [N, N1] at this
+  have h_cN_ne : (c N).val ≠ (c N1).val := by
+    intro h_val
+    apply h_N_ne_N1
+    apply c.injective
+    exact Subtype.ext h_val
+  -- WLOG case-split on c N < c N1 vs c N > c N1.
+  rcases lt_or_gt_of_ne h_cN_ne with h_lt | h_gt
+  · -- c N < c N1. Pick k = c(N1).val - c(N).val ≥ 1.
+    set k := (c N1).val - (c N).val with hk_def
+    have hk_pos : 1 ≤ k := by omega
+    have hN_kD_pos : 0 < N.val + k * Δ := Nat.add_pos_left N.property _
+    have h_apply := h_iter_N k hN_kD_pos
+    -- (c ⟨N + k*Δ, _⟩).val = c(N).val + k = c(N1).val
+    have h_val_eq : (c ⟨N.val + k * Δ, hN_kD_pos⟩).val = (c N1).val := by
+      rw [h_apply]; omega
+    have h_pnat_eq : c ⟨N.val + k * Δ, hN_kD_pos⟩ = c N1 :=
+      Subtype.ext h_val_eq
+    have h_pos_eq : (⟨N.val + k * Δ, hN_kD_pos⟩ : ℕ+) = N1 := c.injective h_pnat_eq
+    have h_val_pos : N.val + k * Δ = N1.val := by
+      have := congrArg (fun (n : ℕ+) => n.val) h_pos_eq
+      simpa using this
+    -- N.val + k * Δ = N1.val with N = 1, N1 = 2: 1 + k*Δ = 2, so k*Δ = 1.
+    -- But k ≥ 1 and Δ ≥ 2, so k*Δ ≥ 2.
+    have h_N_val : N.val = 1 := rfl
+    have h_N1_val : N1.val = 2 := rfl
+    have h_kD_eq_1 : k * Δ = 1 := by omega
+    have h_kD_ge_2 : 2 ≤ k * Δ := by
+      calc 2 = 1 * 2 := by ring
+        _ ≤ k * Δ := Nat.mul_le_mul hk_pos hΔ
+    omega
+  · -- c N > c N1. Pick k = c(N).val - c(N1).val ≥ 1.
+    set k := (c N).val - (c N1).val with hk_def
+    have hk_pos : 1 ≤ k := by omega
+    have hN1_kD_pos : 0 < N1.val + k * Δ := Nat.add_pos_left N1.property _
+    have h_apply := h_iter_N1 k hN1_kD_pos
+    have h_val_eq : (c ⟨N1.val + k * Δ, hN1_kD_pos⟩).val = (c N).val := by
+      rw [h_apply]; omega
+    have h_pnat_eq : c ⟨N1.val + k * Δ, hN1_kD_pos⟩ = c N :=
+      Subtype.ext h_val_eq
+    have h_pos_eq : (⟨N1.val + k * Δ, hN1_kD_pos⟩ : ℕ+) = N := c.injective h_pnat_eq
+    have h_val_pos : N1.val + k * Δ = N.val := by
+      have := congrArg (fun (n : ℕ+) => n.val) h_pos_eq
+      simpa using this
+    -- N1.val + k * Δ = N.val with N = 1, N1 = 2: 2 + k*Δ = 1, impossible.
+    have h_N_val : N.val = 1 := rfl
+    have h_N1_val : N1.val = 2 := rfl
+    omega
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
