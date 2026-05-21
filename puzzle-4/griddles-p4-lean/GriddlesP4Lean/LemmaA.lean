@@ -573,6 +573,68 @@ lemma pm1_injective_ascending (f : ℕ → ℕ) (hinj : Function.Injective f)
     have := hval (f 0 + 1)
     omega
 
+/-- **Flat chain ⇒ ascending shift.**  If `|c(q+Δ) − c(q)| = 1` for *every* `q ≥ Q`
+    (an "everywhere-flat" Δ-chain), then in fact `c(q+Δ) = c(q) + 1` for every `q ≥ Q`.
+
+For each starting cell `n ≥ Q`, the forward chain `k ↦ c(n + kΔ).val` is an injective
+±1 walk, so by `pm1_injective_ascending` it ascends; reading off its first step gives
+`c(n+Δ) = c(n)+1`. -/
+lemma flat_imp_ascending {c : Perm} {Δ : ℕ} (hΔ : 1 ≤ Δ) {Q : ℕ+}
+    (hflat : ∀ q : ℕ+, Q ≤ q → ∀ (hq : 0 < q.val + Δ),
+      (c ⟨q.val + Δ, hq⟩).val = (c q).val + 1 ∨
+      (c ⟨q.val + Δ, hq⟩).val + 1 = (c q).val) :
+    ∀ n : ℕ+, Q ≤ n → ∀ (hn : 0 < n.val + Δ),
+      (c ⟨n.val + Δ, hn⟩).val = (c n).val + 1 := by
+  intro n hn_ge hn_pos
+  -- positions n + kΔ as ℕ+
+  have hpos : ∀ k : ℕ, 0 < n.val + k * Δ := by
+    intro k; exact Nat.lt_of_lt_of_le n.property (Nat.le_add_right _ _)
+  -- the forward chain value function
+  set f : ℕ → ℕ := fun k => (c ⟨n.val + k * Δ, hpos k⟩).val with hf_def
+  -- f is injective
+  have hf_inj : Function.Injective f := by
+    intro k1 k2 hk
+    simp only [hf_def] at hk
+    have hc : c ⟨n.val + k1 * Δ, hpos k1⟩ = c ⟨n.val + k2 * Δ, hpos k2⟩ := Subtype.ext hk
+    have hpe := c.injective hc
+    have : n.val + k1 * Δ = n.val + k2 * Δ := by
+      have := congrArg (fun (m : ℕ+) => m.val) hpe; simpa using this
+    have hk12 : k1 * Δ = k2 * Δ := by omega
+    have hΔ0 : Δ ≠ 0 := by omega
+    exact Nat.eq_of_mul_eq_mul_right (by omega) hk12
+  -- f steps by ±1
+  have hf_step : ∀ k, f (k + 1) = f k + 1 ∨ f (k + 1) + 1 = f k := by
+    intro k
+    -- position q_k = n + kΔ ≥ Q
+    have hqk_pos : 0 < n.val + k * Δ := hpos k
+    set qk : ℕ+ := ⟨n.val + k * Δ, hqk_pos⟩ with hqk_def
+    have hqk_ge : Q ≤ qk := by
+      show Q.val ≤ n.val + k * Δ
+      have : Q.val ≤ n.val := hn_ge
+      omega
+    have hqkΔ_pos : 0 < qk.val + Δ := by show 0 < n.val + k * Δ + Δ; omega
+    have hstep := hflat qk hqk_ge hqkΔ_pos
+    -- (c ⟨qk.val + Δ, _⟩) = (c ⟨n.val + (k+1)Δ, _⟩) and f(k+1)
+    have heq_pos : (⟨qk.val + Δ, hqkΔ_pos⟩ : ℕ+) = ⟨n.val + (k + 1) * Δ, hpos (k + 1)⟩ := by
+      apply Subtype.ext
+      show qk.val + Δ = n.val + (k + 1) * Δ
+      show n.val + k * Δ + Δ = n.val + (k + 1) * Δ
+      ring
+    rw [heq_pos] at hstep
+    -- now hstep relates f(k+1) and f(k) (= c qk)
+    simpa only [hf_def, hqk_def] using hstep
+  -- apply pm1
+  have hasc := pm1_injective_ascending f hf_inj hf_step 0
+  -- f 1 = f 0 + 1: c(n+Δ) = c(n) + 1
+  simp only [hf_def] at hasc
+  -- f 0 = c(n), f 1 = c(n + Δ)
+  have h0 : (⟨n.val + 0 * Δ, hpos 0⟩ : ℕ+) = n := by
+    apply Subtype.ext; show n.val + 0 * Δ = n.val; ring
+  have h1 : (⟨n.val + 1 * Δ, hpos 1⟩ : ℕ+) = ⟨n.val + Δ, hn_pos⟩ := by
+    apply Subtype.ext; show n.val + 1 * Δ = n.val + Δ; ring
+  rw [h0, h1] at hasc
+  exact hasc
+
 /-- **Pigeonhole core.**  If the `M + 1` cells `a, a+1, …, a+M` all map under `c` into the
     `M`-element value-set `{1, …, M}`, then `c` is not injective — contradiction.
 
