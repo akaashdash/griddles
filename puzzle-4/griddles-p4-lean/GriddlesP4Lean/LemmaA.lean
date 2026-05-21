@@ -520,6 +520,44 @@ private lemma sigma_no_flip_desc {c : Perm} {p q r : ℕ+} {Δ : ℕ} (hΔ : 1 �
     omega
   · exact h
 
+/-- **Pigeonhole core.**  If the `M + 1` cells `a, a+1, …, a+M` all map under `c` into the
+    `M`-element value-set `{1, …, M}`, then `c` is not injective — contradiction.
+
+This is the engine of the `σ(0) = −1` impossibility: a descending start forces exactly
+this over-stuffing of `{1, …, c(a).val}`. -/
+private lemma maps_into_contradiction {c : Perm} {a : ℕ+} {M : ℕ}
+    (h : ∀ D : ℕ, D ≤ M → (c ⟨a.val + D, aD_pos a D⟩).val ≤ M) : False := by
+  -- The map `D ↦ (c (a+D)).val − 1` injects `Fin (M+1)` into `Fin M`.
+  have key : ∀ D : Fin (M + 1), (c ⟨a.val + D.val, aD_pos a D.val⟩).val - 1 < M := by
+    intro D
+    have h1 := h D.val (Nat.lt_succ_iff.mp D.isLt)
+    have h2 : 0 < (c ⟨a.val + D.val, aD_pos a D.val⟩).val :=
+      (c ⟨a.val + D.val, aD_pos a D.val⟩).2
+    omega
+  let g : Fin (M + 1) → Fin M :=
+    fun D => ⟨(c ⟨a.val + D.val, aD_pos a D.val⟩).val - 1, key D⟩
+  have hg_inj : Function.Injective g := by
+    intro D1 D2 hD
+    have hv1 : 0 < (c ⟨a.val + D1.val, aD_pos a D1.val⟩).val :=
+      (c ⟨a.val + D1.val, aD_pos a D1.val⟩).2
+    have hv2 : 0 < (c ⟨a.val + D2.val, aD_pos a D2.val⟩).val :=
+      (c ⟨a.val + D2.val, aD_pos a D2.val⟩).2
+    have hD' : (c ⟨a.val + D1.val, aD_pos a D1.val⟩).val - 1 =
+               (c ⟨a.val + D2.val, aD_pos a D2.val⟩).val - 1 := by
+      simpa only [g, Fin.mk.injEq] using hD
+    have h_val_eq : (c ⟨a.val + D1.val, aD_pos a D1.val⟩).val =
+                    (c ⟨a.val + D2.val, aD_pos a D2.val⟩).val := by omega
+    have h_c_eq : c ⟨a.val + D1.val, aD_pos a D1.val⟩ =
+                  c ⟨a.val + D2.val, aD_pos a D2.val⟩ := Subtype.ext h_val_eq
+    have h_pos_eq := c.injective h_c_eq
+    have h_av : a.val + D1.val = a.val + D2.val := by
+      have := congrArg (fun (n : ℕ+) => n.val) h_pos_eq
+      simpa using this
+    exact Fin.val_injective (by omega)
+  have hcard := Fintype.card_le_of_injective g hg_inj
+  simp only [Fintype.card_fin] at hcard
+  omega
+
 /-- **Bad-D propagation.**  If at displacement `D` the cell `a + D` is "below the time
     threshold" (`c(a+D).val < D`), then so is `b + D`.
 
