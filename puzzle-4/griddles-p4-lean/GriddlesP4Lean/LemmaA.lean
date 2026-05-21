@@ -1,4 +1,5 @@
 import GriddlesP4Lean.Defs
+import Mathlib.Data.PNat.Interval
 
 /-!
 # Lemma A: distinguishability lemma
@@ -109,8 +110,94 @@ these prefixes have sizes `N.val - 1` and `(c N).val - 1` respectively, we get
 lemma c_shift_implies_cN_eq_N {c : Perm} {N : ℕ+}
     (h_shift : ∀ n : ℕ+, N ≤ n → c (n + 1) = c n + 1) :
     (c N).val = N.val := by
-  -- (Detailed proof via Finset cardinality omitted for now.)
-  sorry
+  -- **Step 1.** Establish the key bijection: m < c N ↔ c.symm m < N.
+  have h_bij : ∀ m : ℕ+, m < c N ↔ c.symm m < N := by
+    intro m
+    constructor
+    · -- m < c N → c.symm m < N.  By contradiction.
+      intro hm
+      by_contra h_not_lt
+      push_neg at h_not_lt
+      set n := c.symm m with hn_def
+      have h_n_ge_N : N ≤ n := h_not_lt
+      have h_n_val_ge : N.val ≤ n.val := h_n_ge_N
+      have h_n_eq : n.val = N.val + (n.val - N.val) := by omega
+      have h_cn : (c n).val = (c N).val + (n.val - N.val) :=
+        c_shift_iter h_shift (n.val - N.val) n h_n_eq
+      have h_cn_eq_m : c n = m := by rw [hn_def]; exact c.apply_symm_apply m
+      have h_m_val : m.val = (c N).val + (n.val - N.val) := by
+        rw [← h_cn_eq_m]; exact h_cn
+      have h_m_lt : m.val < (c N).val := hm
+      omega
+    · -- c.symm m < N → m < c N.  By contradiction.
+      intro hm
+      by_contra h_not_lt
+      push_neg at h_not_lt
+      have h_cN_le_m : (c N).val ≤ m.val := h_not_lt
+      set k := m.val - (c N).val with hk_def
+      have h_m_eq : m.val = (c N).val + k := by omega
+      have hN_pos : 0 < N.val := N.property
+      have h_Nk_pos : 0 < N.val + k := Nat.add_pos_left hN_pos k
+      set n_target : ℕ+ := ⟨N.val + k, h_Nk_pos⟩ with hn_target_def
+      have h_cn_val : (c n_target).val = (c N).val + k :=
+        c_shift_iter h_shift k n_target rfl
+      have h_cn_eq_m : c n_target = m := by
+        apply Subtype.ext
+        show (c n_target).val = m.val
+        rw [h_cn_val]; omega
+      have h_csym : c.symm m = n_target := by
+        rw [← h_cn_eq_m]; exact c.symm_apply_apply n_target
+      have h_n_target_ge : N ≤ n_target := by
+        show N.val ≤ N.val + k; omega
+      have h_csym_ge : N ≤ c.symm m := by rw [h_csym]; exact h_n_target_ge
+      have h_csym_lt : (c.symm m).val < N.val := hm
+      have : N.val ≤ (c.symm m).val := h_csym_ge
+      omega
+  -- **Step 2.** The bijection induces equal Finset cardinality.
+  have h_image_eq : (Finset.Iio (c N)).image c.symm = Finset.Iio N := by
+    apply Finset.ext
+    intro n
+    simp only [Finset.mem_image, Finset.mem_Iio]
+    constructor
+    · rintro ⟨m, hm, h_eq⟩
+      subst h_eq
+      exact (h_bij m).mp hm
+    · intro hn
+      refine ⟨c n, ?_, c.symm_apply_apply n⟩
+      have := (h_bij (c n)).mpr
+      rw [c.symm_apply_apply] at this
+      exact this hn
+  have h_card_eq : (Finset.Iio (c N)).card = (Finset.Iio N).card := by
+    rw [← h_image_eq]
+    exact (Finset.card_image_of_injective _ c.symm.injective).symm
+  -- **Step 3.** The cardinality formula `(Finset.Iio b).card = b.val - 1` for `b : ℕ+`.
+  -- We prove this by transporting to `ℕ` via the coercion (which is order-preserving
+  -- and injective).
+  have h_card_pnat_Iio : ∀ b : ℕ+, (Finset.Iio b).card = b.val - 1 := by
+    intro b
+    -- The Finset.Iio in PNat injects into ℕ via `PNat.val`, with image equal to
+    -- `Finset.Ico 1 b.val` of cardinality `b.val - 1`.
+    have h_inj : Function.Injective (PNat.val : ℕ+ → ℕ) := by
+      intro x y hxy
+      exact PNat.coe_injective hxy
+    have h_image : (Finset.Iio b).image PNat.val = Finset.Ico 1 b.val := by
+      apply Finset.ext
+      intro k
+      simp only [Finset.mem_image, Finset.mem_Iio, Finset.mem_Ico]
+      constructor
+      · rintro ⟨m, hm, rfl⟩
+        exact ⟨m.property, hm⟩
+      · rintro ⟨hk_pos, hk_lt⟩
+        exact ⟨⟨k, hk_pos⟩, hk_lt, rfl⟩
+    have h_card_image : ((Finset.Iio b).image PNat.val).card = (Finset.Iio b).card :=
+      Finset.card_image_of_injective _ h_inj
+    rw [h_image, Nat.card_Ico] at h_card_image
+    omega
+  have h_card_cN : (Finset.Iio (c N)).card = (c N).val - 1 := h_card_pnat_Iio (c N)
+  have h_card_N : (Finset.Iio N).card = N.val - 1 := h_card_pnat_Iio N
+  have hN_pos : 0 < N.val := N.property
+  have hcN_pos : 0 < (c N).val := (c N).property
+  omega
 
 /-! ### Sub-lemma: shift implies eventually identity -/
 
