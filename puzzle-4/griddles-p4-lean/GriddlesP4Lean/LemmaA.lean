@@ -503,6 +503,23 @@ private lemma sigma_no_flip {c : Perm} {p q r : ℕ+} {Δ : ℕ} (hΔ : 1 ≤ Δ
     have h_rp_val : r.val = p.val := by rw [h_rp]
     omega
 
+/-- **σ does not flip (descending version).**  Symmetric to `sigma_no_flip`: if the step
+    `p → q` descends by `1` and `q → r` is `±1`, then `q → r` also descends.  An ascending
+    `q → r` would give `c r = c p`, contradicting injectivity. -/
+private lemma sigma_no_flip_desc {c : Perm} {p q r : ℕ+} {Δ : ℕ} (hΔ : 1 ≤ Δ)
+    (hq : q.val = p.val + Δ) (hr : r.val = q.val + Δ)
+    (h_pq : (c q).val + 1 = (c p).val)
+    (h_consec : (c r).val = (c q).val + 1 ∨ (c r).val + 1 = (c q).val) :
+    (c r).val + 1 = (c q).val := by
+  rcases h_consec with h | h
+  · exfalso
+    have h_cr_eq_cp : (c r).val = (c p).val := by omega
+    have h_cr_cp : c r = c p := Subtype.ext h_cr_eq_cp
+    have h_rp : r = p := c.injective h_cr_cp
+    have h_rp_val : r.val = p.val := by rw [h_rp]
+    omega
+  · exact h
+
 /-- **Bad-D propagation.**  If at displacement `D` the cell `a + D` is "below the time
     threshold" (`c(a+D).val < D`), then so is `b + D`.
 
