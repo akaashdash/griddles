@@ -635,6 +635,40 @@ lemma flat_imp_ascending {c : Perm} {Δ : ℕ} (hΔ : 1 ≤ Δ) {Q : ℕ+}
   rw [h0, h1] at hasc
   exact hasc
 
+/-- **Flat chain with `Δ ≥ 2` is impossible.**  An everywhere-flat `Δ`-chain ascends
+    (`flat_imp_ascending`), but an ascending `Δ`-shift with `Δ ≥ 2` overlaps rays
+    (`shift_Delta_ge_2_contradiction`). -/
+lemma flat_Delta_ge_2 {c : Perm} {Δ : ℕ} (hΔ : 2 ≤ Δ) {Q : ℕ+}
+    (hflat : ∀ q : ℕ+, Q ≤ q → ∀ (hq : 0 < q.val + Δ),
+      (c ⟨q.val + Δ, hq⟩).val = (c q).val + 1 ∨
+      (c ⟨q.val + Δ, hq⟩).val + 1 = (c q).val) :
+    False :=
+  shift_Delta_ge_2_contradiction hΔ (flat_imp_ascending (by omega) hflat)
+
+/-- **Flat chain with `Δ = 1` forces eventual identity.**  An everywhere-flat `1`-chain
+    ascends (`flat_imp_ascending`), giving `c (n+1) = c n + 1` for `n ≥ Q`, whence
+    `shift_one_implies_eventually_identity` yields `c n = n` for `n ≥ Q`. -/
+lemma flat_Delta_one {c : Perm} {Q : ℕ+}
+    (hflat : ∀ q : ℕ+, Q ≤ q → ∀ (hq : 0 < q.val + 1),
+      (c ⟨q.val + 1, hq⟩).val = (c q).val + 1 ∨
+      (c ⟨q.val + 1, hq⟩).val + 1 = (c q).val) :
+    ∀ n : ℕ+, Q ≤ n → c n = n := by
+  have hasc := flat_imp_ascending (Δ := 1) (le_refl 1) hflat
+  apply shift_one_implies_eventually_identity
+  intro n hn
+  have hpos : 0 < n.val + 1 := by have := n.property; omega
+  have h := hasc n hn hpos
+  have h_eq : (⟨n.val + 1, hpos⟩ : ℕ+) = n + (1 : ℕ+) := by
+    apply Subtype.ext
+    show n.val + 1 = (n + (1 : ℕ+)).val
+    rfl
+  rw [h_eq] at h
+  apply Subtype.ext
+  show (c (n + (1 : ℕ+))).val = (c n + (1 : ℕ+)).val
+  have hplus : ((c n + (1 : ℕ+)).val) = (c n).val + 1 := rfl
+  rw [hplus]
+  exact h
+
 /-- **Pigeonhole core.**  If the `M + 1` cells `a, a+1, …, a+M` all map under `c` into the
     `M`-element value-set `{1, …, M}`, then `c` is not injective — contradiction.
 
