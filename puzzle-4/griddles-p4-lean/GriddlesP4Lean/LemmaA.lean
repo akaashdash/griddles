@@ -485,12 +485,32 @@ private lemma aD_pos (a : ℕ+) (D : ℕ) : 0 < a.val + D :=
 
 /-- **Auxiliary sub-claim**: σ(D) is always `+1` (i.e. `c(b+D).val = c(a+D).val + 1`).
 
-This is the crux of the proof.  Argument: σ(0) ∈ {-1, +1} by `indist_consec`.
-If `σ(0) = -1`, the descending chain `c(a+kΔ).val = c(a).val - k` eventually reaches
-value 1 (at `k = c(a).val − 1`), and continuing forces a value `0` — impossible.  But
-this contradicts the chain consistency provided by `indist_consec` at the breaking
-point.  Empirically, this rules out the descending case (verified by hand on small
-examples), but formalizing the chain argument is involved. -/
+This is the crux of LemmaA.  The full argument (verified by hand on multiple examples,
+e.g. `a=5, b=6, c(5)=7` forcing the descending chain `7,6,5,4,3,2,1` then a pigeonhole
+collapse) runs as follows.
+
+**Step 1 — σ propagates.**  By `indist_consec` at every *good* `D` (where both c-values
+are `≥ D`), the values `c(a+D)` and `c(b+D) = c(a+D+Δ)` are consecutive, so
+`σ(D) := c(a+D+Δ).val − c(a+D).val ∈ {−1, +1}`.  If `σ(D) = −1` at a good `D`, then at
+the next good step `σ(D+Δ) = −1` too: otherwise `c(a+D+2Δ).val = c(a+D).val`, and by
+injectivity `a+D+2Δ = a+D`, impossible (`Δ ≥ 1`).
+
+**Step 2 — σ(0) = −1 is impossible.**  Suppose `σ(0) = −1`.  By Step 1 the chain
+`c(a+kΔ).val = c(a).val − k` descends through `c(a).val, c(a).val−1, …` while `D = kΔ`
+stays good (i.e. while `c(a).val − k ≥ kΔ`).  These positions use up the value-block
+`{c(a).val − k_max, …, c(a).val}`.  Once `D` becomes *bad* (c-value `< D`), the signal
+from `a+D` is permanently "Yes" at every valid time, so `Indistinguishable` forces the
+signal from `b+D = a+D+Δ` to be "Yes" too, giving `c(a+D+Δ).val < D`.  Iterating this
+bad-`D` constraint forces *infinitely many* positions into the finite value-set below
+the chain's floor, contradicting injectivity (pigeonhole).
+
+**Step 3 — extend to all D.**  By Step 2, `σ(0) = +1`.  The same argument applied with
+basepoint `a + D` (rather than `a`) gives `σ(D) = +1` for every `D` — equivalently, the
+configuration is forced into the ascending regime everywhere.
+
+A full Lean formalization needs: (i) a descending-chain iterate analogous to
+`c_iter_Delta`, and (ii) the pigeonhole step bounding how many positions can map into
+a fixed finite value-set.  Both are routine but lengthy; left as the final gap. -/
 private lemma sigma_eq_pos_one {c : Perm} {a b : ℕ+} (hab : a < b)
     (h : Indistinguishable c a b) (D : ℕ) :
     (c ⟨a.val + D, aD_pos a D⟩).val + 1 = (c ⟨b.val + D, aD_pos b D⟩).val := by
