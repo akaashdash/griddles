@@ -478,20 +478,58 @@ lemma shift_Delta_ge_2_contradiction {c : Perm} {Δ : ℕ} (hΔ : 2 ≤ Δ) {N�
 
 /-! ### Auxiliary: shift relation from Indistinguishable -/
 
+/-- For every `D : ℕ`, both positions `a + D` and `b + D` lie in `[1, ∞)` (since
+    `a, b ≥ 1`). -/
+private lemma aD_pos (a : ℕ+) (D : ℕ) : 0 < a.val + D :=
+  Nat.lt_of_lt_of_le a.property (Nat.le_add_right _ _)
+
+/-- **Auxiliary sub-claim**: σ(D) is always `+1` (i.e. `c(b+D).val = c(a+D).val + 1`).
+
+This is the crux of the proof.  Argument: σ(0) ∈ {-1, +1} by `indist_consec`.
+If `σ(0) = -1`, the descending chain `c(a+kΔ).val = c(a).val - k` eventually reaches
+value 1 (at `k = c(a).val − 1`), and continuing forces a value `0` — impossible.  But
+this contradicts the chain consistency provided by `indist_consec` at the breaking
+point.  Empirically, this rules out the descending case (verified by hand on small
+examples), but formalizing the chain argument is involved. -/
+private lemma sigma_eq_pos_one {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h : Indistinguishable c a b) (D : ℕ) :
+    (c ⟨a.val + D, aD_pos a D⟩).val + 1 = (c ⟨b.val + D, aD_pos b D⟩).val := by
+  sorry
+
 /-- **Auxiliary**: the key combinatorial content of LemmaA — under `Indistinguishable`,
     the shift relation `c (n + Δ) = c n + 1` holds from position `a` onward (with
     `Δ := b.val − a.val`).
 
-This packages the σ ≡ +1 argument: indist_consec gives `c (b + D).val − c (a + D).val
-∈ {−1, +1}` for good D; bijectivity rules out the descending direction (`σ ≡ −1`
-would force c-values to decrease below 1 eventually). Since the chain starts at D = 0
-(always good), the shift relation holds globally from position a. -/
+The proof reduces to `sigma_eq_pos_one`: for every `D`, σ at D is `+1`, i.e.
+`(c (b + D)).val = (c (a + D)).val + 1`. -/
 lemma shift_relation_of_indist {c : Perm} {a b : ℕ+} (hab : a < b)
     (h : Indistinguishable c a b) :
     ∀ n : ℕ+, a ≤ n →
       ∀ (h_pos : 0 < n.val + (b.val - a.val)),
         (c ⟨n.val + (b.val - a.val), h_pos⟩).val = (c n).val + 1 := by
-  sorry
+  intro n han h_pos
+  set D : ℕ := n.val - a.val with hD_def
+  have hD : n.val = a.val + D := by
+    have : a.val ≤ n.val := han
+    omega
+  have h_pos_b : 0 < b.val + D := aD_pos b D
+  -- Identify n with ⟨a.val + D, _⟩ and the target with ⟨b.val + D, _⟩.
+  have h_n_pnat_eq : n = ⟨a.val + D, aD_pos a D⟩ := Subtype.ext hD
+  have h_target_pnat_eq :
+      (⟨n.val + (b.val - a.val), h_pos⟩ : ℕ+) = ⟨b.val + D, h_pos_b⟩ := by
+    apply Subtype.ext
+    show n.val + (b.val - a.val) = b.val + D
+    have h_ab_val : a.val ≤ b.val := le_of_lt hab
+    omega
+  -- Conclude using sigma_eq_pos_one.
+  have h_sigma := sigma_eq_pos_one hab h D
+  -- h_sigma : (c ⟨a.val + D, _⟩).val + 1 = (c ⟨b.val + D, _⟩).val
+  have h_c_n : (c n).val = (c ⟨a.val + D, aD_pos a D⟩).val := by
+    rw [h_n_pnat_eq]
+  have h_c_target : (c ⟨n.val + (b.val - a.val), h_pos⟩).val =
+                    (c ⟨b.val + D, h_pos_b⟩).val := by
+    rw [h_target_pnat_eq]
+  rw [h_c_n, h_c_target, ← h_sigma]
 
 /-! ### Main statement -/
 
