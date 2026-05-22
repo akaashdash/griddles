@@ -488,3 +488,34 @@ many interleaved bad positions. (Empirically certain: 0 twins in non-EI, N ≤ 2
 **Status:** `restricted_separation` stays a single, precisely-characterized, true-but-hard
 `sorry`. The monotone-right *strategy* around it (safety + timing + Phase-1/2 plumbing) is
 fully formalizable and is being built (`WinningGeneral.lean`).
+
+## CRITICAL CORRECTION (2026-05) — monotone-right route RETRACTED (was unsound)
+
+`restricted_separation` and the `WinningGeneral` "monotone-right" strategy were **FALSE / incomplete**
+and have been **deleted**. Counterexample: **`blkPerm`** (block 3-cycle `c(3k+1)=3k+2, c(3k+2)=3k+3,
+c(3k+3)=3k+1`), which is non-EI and a genuine Bob-win. Its candidate pair `(1,2)` (`T₁=4`) is a
+"twin" under rightward probes: since `c(n) ≤ n+1`, both `[c(1+D) < 4+D]` and `[c(2+D) < 4+D]` are
+*always true*, so no rightward displacement `D` separates them. Hence `restricted_separation`
+(∃ separating `D`) is false, and the monotone-right strategy does NOT win `blkPerm`.
+
+**Root-cause of the earlier mis-step.** I had claimed the abstract `LemmaA` route was "the wrong
+vehicle because of timing (`t ≥ T₁+D`)". That was backwards. Bob catches **early-wake
+discriminators** by *oscillating from `t=0`* (he need not finish a Phase 1 first): for `blkPerm`,
+cell 3 wakes at `t=3`, distinguishing `k₀=1` from `k₀=2` — this is exactly what the K=2/K=3 local
+decoders use. The monotone-right restriction `t = T₁+D` *discarded* these early discriminators,
+making the strategy strictly weaker and, in fact, incomplete.
+
+**Corrected understanding.** The right winning-direction lemma is the **abstract `LemmaA`**
+(`Indistinguishable c a b → b=a+1 ∧ EventuallyIdentity`), which quantifies over ALL reachable
+`(D,t)` with `t ≥ |D|` (early wakes included). Its contrapositive gives: non-EI ⇒ every candidate
+pair has *some* reachable discriminator; Bob reaches it by going to displacement `D` and padding
+with oscillation to the required time `t` (`t ≥ |D|`, parity `t ≡ D`). Any reachable discriminator
+is therefore usable — there is **no** `t ≥ T₁+D` obstruction. So:
+- the genuine open crux is `LemmaA`'s `Δ≥2` case (`odd_good_pair_gap`) — true, research-level; and
+- the winning strategy is "oscillate-to-narrow + reach-the-discriminator" (the WinningRestricted /
+  WinningKProbe local decoders are the correct, axiom-clean special cases; the general uniform
+  strategy plumbing is the remaining engineering).
+
+Still PROVEN & axiom-clean: losing direction; WinningRestricted (K=2); WinningKProbe (K=3) with
+worked examples (adjPerm, cyc3Perm, blkPerm — note blkPerm IS won, via the K-decoder, NOT
+monotone-right). The answer (Bob wins ⟺ not eventually identity) is unchanged and still confirmed.

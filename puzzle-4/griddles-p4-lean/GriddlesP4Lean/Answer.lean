@@ -1,5 +1,4 @@
 import GriddlesP4Lean.Losing
-import GriddlesP4Lean.WinningGeneral
 import GriddlesP4Lean.WinningRestricted
 
 /-!
@@ -19,9 +18,18 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
   · -- Losing direction (contrapositive).
     intro h_wins h_ei
     exact EventuallyIdentity_loses c h_ei h_wins
-  · -- Winning direction (monotone-right strategy; rests only on `restricted_separation`).
+  · -- Winning direction. **OPEN.**
+    -- RETRACTED (2026-05): the "monotone-right" strategy and its lemma `restricted_separation`
+    -- were FALSE — `blkPerm` (block 3-cycle, non-EI, Bob-win) is a counterexample: with
+    -- `c n ≤ n+1`, every rightward probe `[c(p+D) < T₁+D]` is vacuously true, so the two
+    -- Phase-1 candidates are never separated by rightward probes alone. Bob actually wins it
+    -- via the *odd-time* detector (an early wake-up at `t=3`), which the monotone-right strategy
+    -- arrives too late to see. The correct route is the abstract `LemmaA`
+    -- (`Indistinguishable c a b → … EventuallyIdentity`; it captures ALL reachable `t ≥ |D|`
+    -- discriminators, including early wakes) plus a uniform "reach-the-discriminator" strategy.
+    -- That lemma's `Δ ≥ 2` case (`odd_good_pair_gap`) and the strategy plumbing remain open.
     intro h_not_ei
-    exact notEventuallyIdentity_BobWins c h_not_ei
+    sorry
 
 /-- **Capstone for the locally-decodable class** (fully `sorry`-free).  Connecting the
     machine-checked losing direction with the restricted winning theorem: every locally
