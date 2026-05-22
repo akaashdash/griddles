@@ -463,4 +463,77 @@ lemma adjPerm_locallyDecodable : LocallyDecodable adjPerm := by
 theorem adjPerm_BobWins : BobWins adjPerm :=
   LocallyDecodable_BobWins adjPerm adjPerm_locallyDecodable
 
+/-- Local decodability follows from injectivity of `k₀ ↦ (T₁, T₁')` (a left inverse is the
+    decoder).  This is the clean way to verify the hypothesis for concrete permutations. -/
+lemma locallyDecodable_of_injective (c : Perm)
+    (hinj : Function.Injective
+      (fun k : ℕ+ => (evenThr (c k).val, oddThr (c (k + 1)).val))) :
+    LocallyDecodable c := by
+  refine ⟨fun T₁ T₁' => Function.invFun
+    (fun k : ℕ+ => (evenThr (c k).val, oddThr (c (k + 1)).val)) (T₁, T₁'), fun k₀ => ?_⟩
+  exact Function.leftInverse_invFun hinj k₀
+
+/-! ### Second concrete instance: 3-cycles `(3k-2, 3k-1, 3k) ↦ (3k-1, 3k, 3k-2)` -/
+
+/-- 3-cycle forward map. -/
+def cyc3F (n : ℕ+) : ℕ+ :=
+  ⟨if (n.val - 1) % 3 = 2 then n.val - 2 else n.val + 1, by
+    obtain ⟨v, hv⟩ := n
+    show 0 < if (v - 1) % 3 = 2 then v - 2 else v + 1
+    split_ifs with h <;> omega⟩
+
+/-- 3-cycle inverse map. -/
+def cyc3G (n : ℕ+) : ℕ+ :=
+  ⟨if (n.val - 1) % 3 = 0 then n.val + 2 else n.val - 1, by
+    obtain ⟨v, hv⟩ := n
+    show 0 < if (v - 1) % 3 = 0 then v + 2 else v - 1
+    split_ifs with h <;> omega⟩
+
+lemma cyc3F_val (n : ℕ+) :
+    (cyc3F n).val = if (n.val - 1) % 3 = 2 then n.val - 2 else n.val + 1 := rfl
+lemma cyc3G_val (n : ℕ+) :
+    (cyc3G n).val = if (n.val - 1) % 3 = 0 then n.val + 2 else n.val - 1 := rfl
+
+lemma cyc3_left (n : ℕ+) : cyc3G (cyc3F n) = n := by
+  have hn : 1 ≤ n.val := n.property
+  apply Subtype.ext
+  show (cyc3G (cyc3F n)).val = n.val
+  rw [cyc3G_val, cyc3F_val]
+  split_ifs <;> omega
+
+lemma cyc3_right (n : ℕ+) : cyc3F (cyc3G n) = n := by
+  have hn : 1 ≤ n.val := n.property
+  apply Subtype.ext
+  show (cyc3F (cyc3G n)).val = n.val
+  rw [cyc3F_val, cyc3G_val]
+  split_ifs <;> omega
+
+/-- 3-cycles as a permutation of `ℕ+`. -/
+def cyc3Perm : Perm := ⟨cyc3F, cyc3G, cyc3_left, cyc3_right⟩
+
+@[simp] lemma cyc3Perm_apply (n : ℕ+) : cyc3Perm n = cyc3F n := rfl
+
+set_option maxHeartbeats 1000000 in
+lemma cyc3_locallyDecodable : LocallyDecodable cyc3Perm := by
+  apply locallyDecodable_of_injective
+  intro a b hab
+  apply Subtype.ext
+  show a.val = b.val
+  have hna : 1 ≤ a.val := a.property
+  have hnb : 1 ≤ b.val := b.property
+  have ha1 : (a + 1).val = a.val + 1 := rfl
+  have hb1 : (b + 1).val = b.val + 1 := rfl
+  simp only [cyc3Perm_apply, cyc3F_val, ha1, hb1, Prod.mk.injEq, evenThr, oddThr] at hab
+  obtain ⟨he, ho⟩ := hab
+  have h6a : a.val % 6 = 0 ∨ a.val % 6 = 1 ∨ a.val % 6 = 2 ∨
+      a.val % 6 = 3 ∨ a.val % 6 = 4 ∨ a.val % 6 = 5 := by omega
+  have h6b : b.val % 6 = 0 ∨ b.val % 6 = 1 ∨ b.val % 6 = 2 ∨
+      b.val % 6 = 3 ∨ b.val % 6 = 4 ∨ b.val % 6 = 5 := by omega
+  rcases h6a with h | h | h | h | h | h <;> rcases h6b with h' | h' | h' | h' | h' | h' <;>
+    split_ifs at he ho <;> omega
+
+/-- **Second worked example.**  Bob wins against the 3-cycle permutation. -/
+theorem cyc3Perm_BobWins : BobWins cyc3Perm :=
+  LocallyDecodable_BobWins cyc3Perm cyc3_locallyDecodable
+
 end TrolleyRetrieval
