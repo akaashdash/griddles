@@ -360,4 +360,62 @@ lemma winStrat_state_eq (decode : ℕ → ℕ → ℕ+) (k₀ : ℕ+) :
           step_move c (winStrat decode) _ _ _ (oscDir n) hmove,
           step_move c oscStrat _ _ _ (oscDir n) hmove_osc, hpos, hhist]
 
+/-! ### The restricted winning theorem -/
+
+/-- **Restricted winning theorem.**  For every *locally decodable* permutation `c`, Bob
+    has a winning strategy.  The strategy oscillates, reads off `c k₀` and `c (k₀+1)` from
+    the first even/odd "Yes", decodes `k₀`, and guesses its position — all while the trolley
+    safely stays in `{k₀, k₀+1}`.  This is a complete, `sorry`-free `BobWins` covering, e.g.,
+    adjacent transpositions and 3-cycles. -/
+theorem LocallyDecodable_BobWins (c : Perm) (hdec : LocallyDecodable c) : BobWins c := by
+  obtain ⟨decode, hdecode⟩ := hdec
+  refine ⟨winStrat decode, fun k₀ => ?_⟩
+  set T₁ := evenThr (c k₀).val with hT₁def
+  set T₁' := oddThr (c (k₀ + 1)).val with hT₁'def
+  set Tg := max T₁ T₁' with hTgdef
+  have hT₁le : T₁ ≤ Tg := le_max_left _ _
+  have hT₁'le : T₁' ≤ Tg := le_max_right _ _
+  refine ⟨Tg, ?_, ?_, ?_⟩
+  · -- positions valid through Tg
+    intro t ht
+    have hst := winStrat_state_eq decode k₀ t ht
+    have hp : position c (winStrat decode) (k₀ : ℤ) t = position c oscStrat (k₀ : ℤ) t := by
+      unfold position; rw [hst]
+    rw [hp]; exact position_oscStrat_pos k₀ t
+  · -- no guess before Tg
+    intro t ht g
+    have hst := winStrat_state_eq decode k₀ t (le_of_lt ht)
+    have hhist : history c (winStrat decode) (k₀ : ℤ) t = history c oscStrat (k₀ : ℤ) t := by
+      unfold history; rw [hst]
+    rw [hhist]
+    by_cases hT₁t : T₁ ≤ t
+    · have hT₁'t : ¬ T₁' ≤ t := by omega
+      have hfo : firstOddYes (history c oscStrat (k₀ : ℤ) t) = none := by
+        rw [firstOddYes_oscStrat, if_neg hT₁'t]
+      rw [winStrat_move_of_odd_none _ _ hfo]; simp
+    · have hfe : firstEvenYes (history c oscStrat (k₀ : ℤ) t) = none := by
+        rw [firstEvenYes_oscStrat, if_neg hT₁t]
+      rw [winStrat_move_of_even_none _ _ hfe]; simp
+  · -- correct guess at Tg
+    have hst := winStrat_state_eq decode k₀ Tg (le_refl Tg)
+    have hhist : history c (winStrat decode) (k₀ : ℤ) Tg = history c oscStrat (k₀ : ℤ) Tg := by
+      unfold history; rw [hst]
+    have hlen : (history c oscStrat (k₀ : ℤ) Tg).length = Tg := history_length_oscStrat _ _
+    have hfe : firstEvenYes (history c oscStrat (k₀ : ℤ) Tg) = some T₁ := by
+      rw [firstEvenYes_oscStrat, if_pos hT₁le]
+    have hfo : firstOddYes (history c oscStrat (k₀ : ℤ) Tg) = some T₁' := by
+      rw [firstOddYes_oscStrat, if_pos hT₁'le]
+    have hk0 : decode T₁ T₁' = k₀ := hdecode k₀
+    refine ⟨if Tg % 2 = 0 then decode T₁ T₁' else decode T₁ T₁' + 1, ?_, ?_⟩
+    · rw [hhist, winStrat_guess_of_both decode _ hfe hfo, hlen]
+    · have hp : position c (winStrat decode) (k₀ : ℤ) Tg = position c oscStrat (k₀ : ℤ) Tg := by
+        unfold position; rw [hst]
+      rw [hp, position_oscStrat]
+      by_cases hpar : Tg % 2 = 0
+      · rw [if_pos hpar, hk0, hpar]; simp
+      · have h1 : Tg % 2 = 1 := by omega
+        rw [if_neg hpar, hk0, h1]
+        push_cast
+        ring
+
 end TrolleyRetrieval
