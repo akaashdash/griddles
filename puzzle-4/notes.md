@@ -519,3 +519,28 @@ is therefore usable — there is **no** `t ≥ T₁+D` obstruction. So:
 Still PROVEN & axiom-clean: losing direction; WinningRestricted (K=2); WinningKProbe (K=3) with
 worked examples (adjPerm, cyc3Perm, blkPerm — note blkPerm IS won, via the K-decoder, NOT
 monotone-right). The answer (Bob wins ⟺ not eventually identity) is unchanged and still confirmed.
+
+## BREAKTHROUGH (2026-05) — the Δ≥2 distinguishability lemma is PROVEN (was "research-level")
+
+Stepping back per "do the research", the supposedly research-level crux fell to an ELEMENTARY
+argument. The wrong mental model was "good/bad displacements interleave"; in fact:
+
+1. `bad_D_propagates` (already proven): `c(a+D)<D ⟹ c(a+D+Δ)<D`. So "bad" is **forward-closed**
+   on each residue mod Δ ⇒ active (good) displacements form a **prefix**, never interleaved.
+2. On the active prefix, `indist_consec` gives `|c(a+D)−c(a+D+Δ)|=1`, so by triangle inequality
+   `c(a+r+kΔ) ≤ c(a+r)+k`  (`chain_bound`).
+3. Active means `c(a+r+kΔ) ≥ r+kΔ`. Combine: `k(Δ−1) ≤ c(a+r)`. **For Δ≥2 the prefix is finite.**
+4. Δ residues × finite prefixes ⇒ cofinitely many displacements bad ⇒ `c` maps `[1,N]` into
+   `[1,N−a−1]` for large `N` ⇒ injectivity contradiction (`cofinitely_bad_impossible`).
+
+This subsumes BOTH parities (no even/odd split, no parity argument, no good-pair gap, no
+value-hogging bookkeeping). Lean: `indist_Delta_ge_2_impossible`. Result:
+`Indistinguishable_implies_eventually_identity` and `not_eventually_identity_implies_distinguishable`
+are now **axiom-clean** (`[propext, Classical.choice, Quot.sound]`, no `sorryAx`). LemmaA.lean is
+fully `sorry`-free.
+
+**Status now:** losing direction ✓; abstract LemmaA (the combinatorial heart) ✓ axiom-clean;
+WinningRestricted K=2 / WinningKProbe K=3 ✓. The ONLY remaining gap for `Answer.main`'s winning
+direction is the *uniform winning strategy* turning "no indistinguishable pair" into `BobWins`
+(oscillate-to-narrow + reach-the-discriminator; intricate but NOT research-level — discriminators
+at any reachable `t≥|D|`, including early wakes caught during oscillation, are usable).
