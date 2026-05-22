@@ -544,3 +544,28 @@ WinningRestricted K=2 / WinningKProbe K=3 ✓. The ONLY remaining gap for `Answe
 direction is the *uniform winning strategy* turning "no indistinguishable pair" into `BobWins`
 (oscillate-to-narrow + reach-the-discriminator; intricate but NOT research-level — discriminators
 at any reachable `t≥|D|`, including early wakes caught during oscillation, are usable).
+
+## VALIDATED winning strategy design (for Answer.main ← direction)
+
+Simulation across all non-EI families + a deep-identity-with-far-gap stress test (100/100
+deep pairs where K=2 fails are resolved by navigation; ZERO total failures):
+
+**Strategy = K=2-decode ELSE navigate.**
+- Phase 1: oscillate D∈{0,1}; firstEvenYes ⇒ T₁=2m+2 and candidates {p₁,p₂}=c⁻¹(2m),c⁻¹(2m+1);
+  firstOddYes gives the second detector.
+- If (firstEvenYes@k₀, firstOddYes@k₀+1) uniquely decodes k₀ (K=2 / LocallyDecodable):
+  guess. This catches LOCAL / early-wake discriminators (D∈{0,1}, t<T₁) — e.g. blkPerm's
+  (D=1,t=3) — which the monotone-right strategy missed.
+- Else navigate right; the first discriminator at t ≥ T₁+D resolves the pair. This catches
+  FAR-GAP discriminators (deep identity regions ⇒ navigate to the next gap; e.g. (50,51)
+  resolved at (D=102,t=154)). This is exactly the (correct-for-this-case) monotone-right probe.
+
+Why the union is complete (validated, to be formalized): every candidate pair of a non-EI c
+is distinguished by K=2 OR by a t≥T₁+D navigation probe. The retracted `restricted_separation`
+was FALSE only because it demanded the *navigation* discriminator universally; the K=2 half
+covers exactly the pairs (like blkPerm) where navigation can't.
+
+**Remaining Lean work:** formalize this combined strategy + the correctness lemma
+"non-EI candidate pair ⇒ (K=2 ∨ navigation) distinguishes". WinningRestricted already proves
+the K=2 half (LocallyDecodable → BobWins); the navigation half is the (correctly-scoped,
+non-universal) monotone-right machinery. NOT research-level — pure game-trajectory engineering.
