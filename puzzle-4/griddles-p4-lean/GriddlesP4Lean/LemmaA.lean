@@ -823,6 +823,51 @@ lemma shift_relation_of_indist {c : Perm} {a b : ℕ+} (hab : a < b)
     rw [h_target_pnat_eq]
   rw [h_c_n, h_c_target, ← h_sigma]
 
+/-- **Δ = 1 ascending.**  For the pair `(a, a+1)` (so `b.val = a.val + 1`), if
+    `Indistinguishable` holds and the first step ascends (`c(a) < c(a+1)`, i.e.
+    `σ(0) = +1`), then the whole a-chain ascends: `c(a+D).val = c(a).val + D`.
+
+`good_symm` keeps every `D` "good" (the ascending values stay above the time
+threshold), so `indist_consec` applies at every `D`, and `sigma_no_flip` forbids the
+chain from ever turning down. -/
+lemma indist_ascending_Delta1 {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (hab : a < b) (h : Indistinguishable c a b)
+    (hσ0 : (c (aD a 0)).val + 1 = (c (aD a 1)).val) :
+    ∀ D : ℕ, (c (aD a D)).val = (c (aD a 0)).val + D := by
+  have hbridge : ∀ D : ℕ, aD b D = aD a (D + 1) := by
+    intro D
+    apply Subtype.ext
+    show b.val + D = a.val + (D + 1)
+    omega
+  suffices h2 : ∀ n : ℕ,
+      (c (aD a n)).val = (c (aD a 0)).val + n ∧
+      (c (aD a (n + 1))).val = (c (aD a 0)).val + (n + 1) by
+    intro D; exact (h2 D).1
+  intro n
+  induction n with
+  | zero =>
+      refine ⟨by omega, ?_⟩
+      rw [← hσ0]
+  | succ m ih =>
+      obtain ⟨hm, hm1⟩ := ih
+      refine ⟨hm1, ?_⟩
+      have h_a_ge : (m + 1) ≤ (c (aD a (m + 1))).val := by rw [hm1]; omega
+      have h_b_ge : (m + 1) ≤ (c (aD b (m + 1))).val :=
+        (good_symm h (m + 1)).mp h_a_ge
+      have hcons := (indist_consec hab h h_a_ge h_b_ge).1
+      rw [hbridge (m + 1)] at hcons
+      rcases hcons with hasc | hdesc
+      · rw [← hasc, hm1]; ring
+      · exfalso
+        have h_eq_val : (c (aD a (m + 1 + 1))).val = (c (aD a m)).val := by
+          rw [hm]; omega
+        have h_eq : c (aD a (m + 1 + 1)) = c (aD a m) := Subtype.ext h_eq_val
+        have h_pos_eq : aD a (m + 1 + 1) = aD a m := c.injective h_eq
+        have hcontra : a.val + (m + 1 + 1) = a.val + m := by
+          have := congrArg (fun (p : ℕ+) => p.val) h_pos_eq
+          simpa [aD_val] using this
+        omega
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
