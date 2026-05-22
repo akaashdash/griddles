@@ -201,6 +201,32 @@ file and in the Lean file comments.
 
 ---
 
+## Computational Verification of LemmaA (D ≥ 0 definition)
+
+A search (`/tmp/indist_*.py`, see git history) settled two questions that the prose proof
+glossed over:
+
+1. **The signal-based `Indistinguishable` definition with `D ≥ 0` is correct.**  Moving
+   left (`D < 0`) gives Bob no extra power: reaching cell `p` costs time `t ≥ |D|`, by
+   which point the signal `c(p) < t` is saturated.  The losing direction already handles
+   `D < 0` via `position_lower_bound`.
+
+2. **LemmaA holds for all Δ (no infinite counterexample).**  Enumerating every permutation
+   of `{1,…,7}` (all eventually-identity): the *only* indistinguishable pairs have `Δ = 1`
+   — the identity tail discriminates every `Δ ≥ 2` pair.  Backtracking construction of an
+   infinite `Δ ≥ 2` indistinguishable bijection:
+   - **`Δ = 2`** (even): dies at depth 5 — killed by the parity argument (`D=0` and `D=Δ`
+     over-constrain `c(b)`'s parity; the bad sub-case forces `c(a) ≤ 0`).
+   - **`Δ = 3`** (odd): a depth-30 prefix exists but is a *dead end* — its residue-0 chain
+     `c(3),c(6),… = 22,23,…` ascends with large values, hogging the ray `[22,∞)` and
+     leaving only finitely many values for the other two residue classes (value-hogging /
+     ray-overlap contradiction).  Extending past depth ~32 explodes the search (no
+     solution), confirming impossibility.
+
+So the rigorous `Δ ≥ 2` contradiction is **ray overlap** (an ascending `Δ`-ray covers a
+cofinite set), exactly `shift_Delta_ge_2_contradiction`.  The Lean gap is establishing the
+ascending shift on a cofinite tail despite finitely-interrupting "bad" displacements.
+
 ## Notes on Corner Cases
 
 - **c = identity exactly:** Covered by the "eventually identity" case (N = 0). Bob loses.
