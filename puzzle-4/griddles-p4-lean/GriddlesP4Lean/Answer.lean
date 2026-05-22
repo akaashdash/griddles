@@ -73,13 +73,30 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
     -- `k₀ + displacement` (Bob reconstructs his own displacement from the history). Localisation
     -- therefore suffices for the guess, but the no-fall-off safety must be discharged simultaneously.
     --
+    -- WHY ADAPTIVITY IS UNAVOIDABLE (three negative results, all by exact-dynamics simulation):
+    --   (1) NO FIXED TRAJECTORY is universal. A deterministic displacement schedule `D_t` (any of:
+    --       fixed-K triangle, growing triangle, slow "dwelling sweep", or sawtooth "right a / left
+    --       1") was tested against random period-`B` permutations: the sawtooth a=2,b=1 — which
+    --       distinguishes all `k₀≤40` for block-5/rev-block-5/block-3/swap-2 — STILL collides on
+    --       71 / 1247 random periodic non-EI `c`. So a one-line "sweep + decode" cannot work.
+    --   (2) TWO-PHASE ("localise `c(k₀)` to two candidates via the `D=0` oscillation, then navigate
+    --       to a discriminator") FAILS. The `D=0` oscillation pins `c(k₀) ∈ {τ-2, τ-1}` only at the
+    --       first-Yes time `τ` (even), so the surviving pair has consecutive `c`-values; e.g. block-5
+    --       `(1,2)`'s only discriminators sit at SLACK `t - D ≤ 2` (D=3,t=3 / D=4,t=4 …), all of
+    --       which have already EXPIRED by `τ = 4`. Bob cannot navigate back in time.
+    --   (3) "FINITE BELIEF ⇒ winnable" is FALSE as a free-standing induction: a 2-element belief at a
+    --       late state whose discriminators are all in the past is genuinely lost. Winnability is a
+    --       property of *reachable, non-stranding* states, not of belief size.
+    --   ROOT CAUSE: catching low-slack discriminators needs Bob riding the diagonal (`D ≈ t`), while
+    --   bounding `k₀` needs Bob near the origin (`D` small, slack large). These conflict at every
+    --   single instant; only a belief-guided interleaving (genuine foresight) reconciles them. The
+    --   minimax/belief-state solver does win every family tested (incl. the sawtooth counterexamples).
+    --
     -- CONCLUSION: closing this `sorry` is a substantial *separate* Lean project — formalise the
-    -- belief-state strategy (belief evolution from history given `c`), prove it shrinks the belief
-    -- to a singleton in finite time (shrinkage from LemmaA's reachable-discriminator existence) and
-    -- discharge the left-edge safety, with a well-founded measure over an INITIALLY INFINITE belief.
-    -- The infinite-belief termination schedule is the genuine open piece — LemmaA gives pairwise
-    -- discriminators, but a single trajectory must resolve infinitely many candidates safely. The
-    -- math content is done (LemmaA, the losing direction, and the arbitrary-K decodable class are
+    -- belief-state strategy and prove an inductive `Winnable (belief, D, t)` predicate holds at the
+    -- initial (INFINITE) belief. The termination is the open piece: it is NOT a simple measure but a
+    -- foresight invariant ("never enter a stranding state"), since (1)-(3) rule out every shortcut.
+    -- The math content is done (LemmaA, the losing direction, and the arbitrary-K decodable class are
     -- all axiom-clean); what remains is packaging it into one explicit, provably-complete strategy.
     -- (The `→` direction of `main` is the open piece; `←` is proven in `Losing.lean`.)
     intro h_not_ei
