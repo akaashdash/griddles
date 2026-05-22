@@ -184,6 +184,30 @@ layout).  Build with `lake build`.
   e.g. `adjPerm`). The real proof must **adaptively** switch between local-decode (bounded
   growth) and navigation (unbounded growth) — substantial new mathematics.
 
+### Deep-dive on the Δ≥2 contradiction (precise characterization of the crux)
+
+Call displacement `D` *good* iff `c(a+D) ≥ D` (symmetric in a/b by `good_symm`). The parity
+kill needs a **good pair** `(D, D+Δ)` (both `D` and `D+Δ` good). Two regimes:
+
+1. **A good pair exists.** Then `c(a+D+Δ)` is consecutive to both `c(a+D)` and `c(a+D+2Δ)`,
+   and injectivity gives `{c(a+D), c(a+D+2Δ)} = {c(a+D+Δ) ± 1}`.
+   - **Δ even**: the two minima are both `≡ D`, pinning `c(a+D+Δ)` to both parities →
+     contradiction. *Formalized* as `indist_Delta_even_good`.
+   - **Δ odd**: the two minima are `≡ D` and `≡ D+1`; both arrangements are *consistent*
+     (`Y ≡ D+1` either way). **Parity cannot kill odd Δ** — this is the essential reason
+     the odd case is genuinely harder.
+
+2. **No good pair.** Then every good `p` has `p+Δ` bad, and `indist_consec` + consecutiveness
+   yield the sharp bound **`c(p) ≤ (p − a) + Δ` for all `p ≥ a`** (i.e. `c(p) − p ≤ Δ − a`).
+
+**Why regime 2 resists a clean kill.** The bound `c(p) − p ≤ Δ − a` is *necessary but
+sum-consistent* with bijectivity: `Σ_{p∈[a,a+N]} c(p) ≥ (N+1)(N+2)/2` together with the bound
+gives only `1 ≤ Δ` (true). It also does **not** forbid "bad" cells (large `p`, small `c(p)`),
+which let `c⁻¹([1,M])` contain arbitrarily large positions — defeating every pigeonhole. So the
+genuine odd-Δ contradiction must combine the *full* "consecutive at every good `D`" structure
+with global ℕ⁺ surjectivity bookkeeping across unboundedly many bad regions; no finite-window,
+parity, or simple-counting form survives. This is the precise research-level gap.
+
 **LemmaA.lean** has three sub-lemmas proven:
 
 * `c_shift_iter` — if `c(n+1) = c n + 1` past `N`, then `c(N + k) = c N + k`.
