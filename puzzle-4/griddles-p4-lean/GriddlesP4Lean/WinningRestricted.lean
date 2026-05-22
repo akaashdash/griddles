@@ -113,4 +113,35 @@ lemma signal_odd_oscStrat (k₀ : ℕ+) (t : ℕ) (ht : t % 2 = 1) :
   have hk : (1 : ℤ) ≤ ((k₀ + 1 : ℕ+) : ℤ) := by exact_mod_cast (k₀ + 1).property
   rw [signalOf, dif_pos hk, toPNat_coe (k₀ + 1) hk]
 
+/-! ### Phase-1 detection: first even-time "Yes"
+
+`firstEvenYes h` returns the *earliest* even time at which a "Yes" was observed (or `none`).
+The trolley's even-time signals are monotone (`c k₀ < t` once `t > c k₀`), so the first
+even-Yes pins down `c k₀ ∈ {T₁−2, T₁−1}` where `T₁` is that time.  Crucially the value is
+*stable*: once it is `some T₁`, the cons-recurrence preserves it — so the detector keeps
+reporting `T₁` throughout Phase 2, no matter what Bob does there. -/
+
+/-- Scan a most-recent-first signal list (whose head has time `t`) for the *oldest*
+    even-time "Yes". -/
+def lastEvenYesFrom : List Bool → ℕ → Option ℕ
+  | [], _ => none
+  | (b :: bs), t =>
+      match lastEvenYesFrom bs (t - 1) with
+      | some s => some s
+      | none => if t % 2 = 0 ∧ b then some t else none
+
+/-- The first (earliest) even time with a "Yes" signal in history `h`, or `none`. -/
+def firstEvenYes (h : List Bool) : Option ℕ := lastEvenYesFrom h h.length
+
+/-- **Cons-recurrence for the detector.**  Prepending the most-recent signal `b` (at time
+    `(b :: bs).length`) keeps any earlier even-Yes, else checks the new signal. -/
+lemma firstEvenYes_cons (b : Bool) (bs : List Bool) :
+    firstEvenYes (b :: bs) =
+      match firstEvenYes bs with
+      | some s => some s
+      | none =>
+          if (b :: bs).length % 2 = 0 ∧ b then some ((b :: bs).length) else none := by
+  show lastEvenYesFrom (b :: bs) (bs.length + 1) = _
+  simp only [lastEvenYesFrom, Nat.add_sub_cancel, firstEvenYes, List.length_cons]
+
 end TrolleyRetrieval
