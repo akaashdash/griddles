@@ -170,7 +170,19 @@ layout).  Build with `lake build`.
 | `Parity.lean` | Parity invariant `(t − D_t) % 2 = 0` while Bob has not guessed.  Also `position_lower_bound`. |
 | `Losing.lean` | Entire losing direction: `parallel_evolution`, `cBound`, static `signal_match`, `parallel_for_eventually_identity`, and the headline theorem `EventuallyIdentity_loses : EventuallyIdentity c → ¬ BobWins c`. |
 | `Answer.lean` | The main `iff`: `BobWins c ↔ ¬ EventuallyIdentity c` (winning direction still via the `Δ≥2` sorry in LemmaA). |
-| `WinningRestricted.lean` | **Complete, axiom-clean winning theorem** for a natural class. Builds the full adaptive strategy (oscillation Phase 1 + first-even/odd-Yes detectors + decode + guess + safety + timing) and proves `LocallyDecodable_BobWins : LocallyDecodable c → BobWins c`. Concrete worked example `adjPerm_BobWins` (adjacent transpositions). `#print axioms` shows only `propext, Classical.choice, Quot.sound` — no `sorryAx`. The trolley never leaves `{k₀, k₀+1}`, so safety is automatic. Covers the "locally 2-distinguishable" class (e.g. adjacent transpositions, 3-cycles). Wild permutations with large jumps fall outside it and need Phase-2 navigation (future work). |
+| `WinningRestricted.lean` | **Complete, axiom-clean winning theorem** for a natural class. Builds the full adaptive strategy (oscillation Phase 1 + first-even/odd-Yes detectors + decode + guess + safety + timing) and proves `LocallyDecodable_BobWins : LocallyDecodable c → BobWins c`. Concrete worked examples `adjPerm_BobWins` (adjacent transpositions) and `cyc3Perm_BobWins` (3-cycles). `#print axioms` shows only `propext, Classical.choice, Quot.sound` — no `sorryAx`. The trolley never leaves `{k₀, k₀+1}`, so safety is automatic. Covers the "locally 2-distinguishable" class. Wild permutations with large jumps fall outside it and need more probes / navigation. |
+| `WinningKProbe.lean` | **Axiom-clean K=3 generalization.** `LocallyK3Decodable_BobWins : LocallyK3Decodable c → BobWins c`, using a period-4 triangle-wave sweep (displacements 0,1,2,1,…) and three detectors (first-Yes at displacements 0, 1, 2). Strictly wider class than K=2 (can use a third probed label). Worked example `blkPerm_BobWins` (block 3-cycle). Safety still automatic (displacement ∈ [0,2]). |
+| `Answer.lean` (capstone) | `locallyDecodable_main : LocallyDecodable c → BobWins c ∧ ¬ EventuallyIdentity c`, tying the losing direction to the restricted winning theorem (and confirming locally-decodable ⇒ not eventually identity). Axiom-clean. |
+
+**Remaining gaps (research-level, confirmed by parallel sub-agent investigation):**
+- `LemmaA.sigma_eq_pos_one` (Δ≥2): `σ≡+1` is genuinely false at "bad" displacements, so the
+  shift-relation route is structurally dead. The Δ-**even** sub-case is tractable (~100 lines:
+  parity forces a step reversal → injectivity via `sigma_no_flip`); the Δ-**odd** sub-case is
+  genuine global value-hogging needing full ℕ⁺ surjectivity bookkeeping across bad regions.
+- `Winning.NotEventuallyIdentity_wins` (general navigation): a uniform navigation strategy
+  cannot meet the Phase-1 timing `t ≥ T₁+D` (would require `c(n)−n` unbounded above, false for
+  e.g. `adjPerm`). The real proof must **adaptively** switch between local-decode (bounded
+  growth) and navigation (unbounded growth) — substantial new mathematics.
 
 **LemmaA.lean** has three sub-lemmas proven:
 
