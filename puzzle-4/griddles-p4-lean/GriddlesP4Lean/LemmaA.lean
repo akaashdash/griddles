@@ -939,6 +939,136 @@ lemma indist_Delta_even_good_at {c : Perm} {a b : ℕ+} (hab : a < b)
   obtain ⟨hcons2, hpar2⟩ := hc2
   rcases hcons1 with h1 | h1 <;> rcases hcons2 with h2 | h2 <;> omega
 
+/-- **Counting / over-stuffing (pure pigeonhole).**  If `c(a+D) < D` for all `D ≥ T`
+    (cofinitely many displacements "bad"), then `c` maps the initial segment `[1, N]` into the
+    smaller set `[1, N − a − 1]` for large `N` — contradicting injectivity.  No
+    `Indistinguishable` hypothesis is needed; this is the engine behind `regime2_impossible`
+    and the `Δ ≥ 2` impossibility. -/
+lemma cofinitely_bad_impossible {c : Perm} {a : ℕ+} {T : ℕ}
+    (hbound : ∀ D : ℕ, T ≤ D → (c (aD a D)).val < D) : False := by
+  set B : ℕ := (Finset.range (a.val + T)).sup (fun n => (c ⟨n + 1, Nat.succ_pos n⟩).val)
+    with hBdef
+  have hBbound : ∀ p : ℕ+, p.val < a.val + T → (c p).val ≤ B := by
+    intro p hp
+    have hp1 : 1 ≤ p.val := p.property
+    have hmem : p.val - 1 ∈ Finset.range (a.val + T) := Finset.mem_range.mpr (by omega)
+    have hval_eq : (c p).val = (c ⟨(p.val - 1) + 1, Nat.succ_pos _⟩).val := by
+      have hpeq : (⟨(p.val - 1) + 1, Nat.succ_pos _⟩ : ℕ+) = p := by
+        apply Subtype.ext; show (p.val - 1) + 1 = p.val; omega
+      rw [hpeq]
+    rw [hBdef, hval_eq]
+    exact Finset.le_sup (f := fun n => (c ⟨n + 1, Nat.succ_pos n⟩).val) hmem
+  set N : ℕ := B + a.val + T + 1 with hNdef
+  have haval : 1 ≤ a.val := a.property
+  have hval : ∀ i : Fin N, (c ⟨i.val + 1, Nat.succ_pos _⟩).val ≤ N - a.val - 1 := by
+    intro i
+    by_cases hge : a.val + T ≤ i.val + 1
+    · have hposeq : (⟨i.val + 1, Nat.succ_pos _⟩ : ℕ+) = aD a (i.val + 1 - a.val) := by
+        apply Subtype.ext; show i.val + 1 = a.val + (i.val + 1 - a.val); omega
+      have hb := hbound (i.val + 1 - a.val) (by omega)
+      rw [hposeq]
+      have := i.isLt
+      omega
+    · have := hBbound ⟨i.val + 1, Nat.succ_pos _⟩ (by simp; omega)
+      omega
+  let g : Fin N → Fin (N - a.val - 1) := fun i =>
+    ⟨(c ⟨i.val + 1, Nat.succ_pos _⟩).val - 1, by
+      have h1 := hval i
+      have h2 : 0 < (c ⟨i.val + 1, Nat.succ_pos _⟩).val := (c ⟨i.val + 1, Nat.succ_pos _⟩).2
+      omega⟩
+  have hg_inj : Function.Injective g := by
+    intro i j hij
+    have hval_eq : (c ⟨i.val + 1, Nat.succ_pos _⟩).val - 1
+        = (c ⟨j.val + 1, Nat.succ_pos _⟩).val - 1 := by
+      simpa only [g, Fin.mk.injEq] using hij
+    have h2i : 0 < (c ⟨i.val + 1, Nat.succ_pos _⟩).val := (c ⟨i.val + 1, Nat.succ_pos _⟩).2
+    have h2j : 0 < (c ⟨j.val + 1, Nat.succ_pos _⟩).val := (c ⟨j.val + 1, Nat.succ_pos _⟩).2
+    have hcv : (c ⟨i.val + 1, Nat.succ_pos _⟩).val = (c ⟨j.val + 1, Nat.succ_pos _⟩).val := by
+      omega
+    have hc : c ⟨i.val + 1, Nat.succ_pos _⟩ = c ⟨j.val + 1, Nat.succ_pos _⟩ := Subtype.ext hcv
+    have hpe := c.injective hc
+    have : i.val + 1 = j.val + 1 := by
+      have := congrArg (fun (p : ℕ+) => p.val) hpe; simpa using this
+    exact Fin.ext (by omega)
+  have hcard := Fintype.card_le_of_injective g hg_inj
+  simp only [Fintype.card_fin] at hcard
+  omega
+
+/-- **One backward step on a residue.**  If displacement `D ≥ Δ` is *active* (`c(a+D) ≥ D`),
+    then `D − Δ` is active too and `c(a+D) ≤ c(a+(D−Δ)) + 1` (consecutive values, via
+    `good_symm` and `indist_consec`).  Key engine: "bad" is forward-closed, so active
+    displacements form a prefix on each residue class. -/
+lemma active_step {c : Perm} {a b : ℕ+} (hab : a < b) (h : Indistinguishable c a b)
+    {Δ : ℕ} (hΔ : b.val = a.val + Δ) {D : ℕ} (hDΔ : Δ ≤ D)
+    (hact : D ≤ (c (aD a D)).val) :
+    (D - Δ ≤ (c (aD a (D - Δ))).val) ∧ (c (aD a D)).val ≤ (c (aD a (D - Δ))).val + 1 := by
+  have hbridge : aD a D = aD b (D - Δ) := by
+    apply Subtype.ext; show a.val + D = b.val + (D - Δ); omega
+  have hb_ge : D - Δ ≤ (c (aD b (D - Δ))).val := by rw [← hbridge]; omega
+  have ha_ge : D - Δ ≤ (c (aD a (D - Δ))).val := (good_symm h (D - Δ)).mpr hb_ge
+  refine ⟨ha_ge, ?_⟩
+  have hcons := (indist_consec hab h (D := D - Δ) ha_ge hb_ge).1
+  rw [← hbridge] at hcons
+  rcases hcons with h1 | h1 <;> omega
+
+/-- **Chain bound.**  On the active prefix of a residue, c-values grow by at most `1` per
+    `Δ`-step: if `r + kΔ` is active, then `c(a + r + kΔ) ≤ c(a + r) + k`. -/
+lemma chain_bound {c : Perm} {a b : ℕ+} (hab : a < b) (h : Indistinguishable c a b)
+    {Δ : ℕ} (hΔ : b.val = a.val + Δ) (hΔ1 : 1 ≤ Δ) (r : ℕ) :
+    ∀ k : ℕ, (r + k * Δ ≤ (c (aD a (r + k * Δ))).val) →
+      (c (aD a (r + k * Δ))).val ≤ (c (aD a r)).val + k := by
+  intro k
+  induction k with
+  | zero => intro _; simp
+  | succ n ih =>
+      intro hact
+      have hexp : (n + 1) * Δ = n * Δ + Δ := by ring
+      have hDΔ : Δ ≤ r + (n + 1) * Δ := by omega
+      have hstep := active_step hab h hΔ hDΔ hact
+      have heq : r + (n + 1) * Δ - Δ = r + n * Δ := by omega
+      rw [heq] at hstep
+      obtain ⟨hact_prev, hbound_step⟩ := hstep
+      have hih := ih hact_prev
+      omega
+
+/-- **Δ ≥ 2 is impossible.**  By `chain_bound`, an active displacement `D = r + kΔ` satisfies
+    `D ≤ c(a+D) ≤ c(a+r) + k`, so `k(Δ−1) ≤ c(a+r) ≤ M := maxᵣ c(a+r)`; for `Δ ≥ 2` this
+    bounds `k`, hence `D < (M+1)Δ`.  So all displacements past `(M+1)Δ` are bad, and
+    `cofinitely_bad_impossible` finishes.  (Subsumes both the even and odd `Δ ≥ 2` cases, with
+    no parity argument and no good-pair gap.) -/
+lemma indist_Delta_ge_2_impossible {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h : Indistinguishable c a b) {Δ : ℕ} (hΔ : b.val = a.val + Δ) (hΔ2 : 2 ≤ Δ) : False := by
+  set M : ℕ := (Finset.range Δ).sup (fun r => (c (aD a r)).val) with hMdef
+  apply cofinitely_bad_impossible (a := a) (T := (M + 1) * Δ)
+  intro D hD
+  by_contra hcon
+  push_neg at hcon
+  have hΔpos : 0 < Δ := by omega
+  set r := D % Δ with hrdef
+  set k := D / Δ with hkdef
+  have hDeq : D = r + k * Δ := by
+    rw [hrdef, hkdef, Nat.mul_comm, Nat.add_comm]; exact (Nat.div_add_mod D Δ).symm
+  have hrlt : r < Δ := Nat.mod_lt _ hΔpos
+  have hact' : r + k * Δ ≤ (c (aD a (r + k * Δ))).val := by rw [← hDeq]; exact hcon
+  have hcb := chain_bound hab h hΔ (by omega) r k hact'
+  rw [← hDeq] at hcb
+  have hM : (c (aD a r)).val ≤ M := by
+    rw [hMdef]
+    exact Finset.le_sup (f := fun r => (c (aD a r)).val) (Finset.mem_range.mpr hrlt)
+  -- D ≤ c(a+D) ≤ c(a+r) + k ≤ M + k
+  have hDMk : D ≤ M + k := le_trans hcon (le_trans hcb (by omega))
+  -- k ≤ M  (since D = r + kΔ and Δ ≥ 2 ⇒ 2k ≤ kΔ ≤ M + k)
+  have h2k : 2 * k ≤ k * Δ := by nlinarith [hΔ2, Nat.zero_le k]
+  have hkM : k ≤ M := by
+    have hkΔ : k * Δ ≤ M + k := by omega
+    omega
+  -- D = r + kΔ < (M+1)Δ = T ≤ D : contradiction
+  have hkMΔ : k * Δ ≤ M * Δ := by
+    have := Nat.mul_le_mul_right (k := Δ) hkM
+    simpa using this
+  have hTexp : (M + 1) * Δ = M * Δ + Δ := by ring
+  omega
+
 /-- **Regime-2 bound.**  If no "good pair" `(D, D+Δ)` exists (every `D` has `c(a+D) < D`
     or `c(a+D+Δ) < D+Δ`), then *every* displacement `≥ Δ` is bad: `c(a+D) < D` for `D ≥ Δ`.
     (Good `D` forces `D+Δ` bad by hypothesis; bad `D` forces `D+Δ` bad by `bad_D_propagates`.) -/
@@ -1030,17 +1160,6 @@ lemma indist_Delta_even {c : Perm} {a b : ℕ+} (hab : a < b)
     · right; have := hge D hD; omega
     · left; omega
 
-/-- **The sole remaining gap** (research-level).  Δ *odd* (`≥ 2`, i.e. `≥ 3`) with a good
-    pair `(D₀, D₀+Δ)` present.  Here the parity argument is provably *consistent* (unlike the
-    even case), and the "no good pair" regime is already excluded (`regime2_impossible`), so
-    the contradiction requires the global value-hogging / ℕ⁺-surjectivity bookkeeping across
-    unboundedly many bad regions.  See the deep-dive in `notes.md`.  This is the only `sorry`
-    in the development; everything else (losing direction, Δ=1, Δ-even, regime 2) is complete. -/
-lemma odd_good_pair_gap {c : Perm} {a b : ℕ+} (hab : a < b)
-    (h : Indistinguishable c a b) {Δ : ℕ} (hbΔ : b.val = a.val + Δ) (hodd : ¬ Δ % 2 = 0)
-    (hge : ∃ D : ℕ, D ≤ (c (aD a D)).val ∧ D + Δ ≤ (c (aD a (D + Δ))).val) : False := by
-  sorry
-
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
@@ -1083,25 +1202,15 @@ theorem Indistinguishable_implies_eventually_identity
       · exact indist_Delta1_pos hb1 hab h hpos
       · exact (indist_Delta1_neg hb1 hab h hneg).elim
     exact ⟨hb_eq, h_id⟩
-  · -- **Δ ≥ 2**: derive `False`.  Δ-even is fully closed; for Δ-odd the "no good pair"
-    -- regime is killed by `regime2_impossible`, leaving only the Δ-odd "good pair" case.
+  · -- **Δ ≥ 2**: impossible.  `bad` is forward-closed (`bad_D_propagates`), so active
+    -- displacements form a finite prefix on each residue (chain bound + active lower bound);
+    -- hence cofinitely many displacements are bad, contradicting injectivity
+    -- (`indist_Delta_ge_2_impossible`).  No parity split, no good-pair gap.
     exfalso
     have hΔ_ge_2' : 2 ≤ Δ := hΔ_ge_2
     have hab' : a.val < b.val := hab
     have hbΔ : b.val = a.val + Δ := by omega
-    by_cases hpar : Δ % 2 = 0
-    · exact indist_Delta_even hab h hbΔ hpar hΔ_ge_2'
-    · -- Δ odd
-      by_cases hge : ∃ D : ℕ, D ≤ (c (aD a D)).val ∧ D + Δ ≤ (c (aD a (D + Δ))).val
-      · -- Δ odd with a good pair — the sole remaining research-level gap (value-hogging).
-        exact (odd_good_pair_gap hab h hbΔ hpar hge).elim
-      · -- no good pair: regime 2 contradiction
-        push_neg at hge
-        apply regime2_impossible h hbΔ hΔ_ge_2'
-        intro D
-        by_cases hD : D ≤ (c (aD a D)).val
-        · right; have := hge D hD; omega
-        · left; omega
+    exact indist_Delta_ge_2_impossible hab h hbΔ hΔ_ge_2'
 
 /-- **Lemma A (corollary used by the winning direction).**  If `c` is not eventually
     identity, then *no* pair of starting cells is indistinguishable. -/
