@@ -240,4 +240,49 @@ lemma firstEvenYes_oscStrat (k₀ : ℕ+) (t : ℕ) :
             rintro ⟨h1, -⟩; exact hpar h1
           rw [if_neg hcond, if_neg hno]
 
+/-- **Odd detector on the trajectory.**  The first odd-time "Yes" occurs at
+    `T₁' = oddThr (c (k₀ + 1))` — the smallest odd `> c(k₀+1)`. -/
+lemma firstOddYes_oscStrat (k₀ : ℕ+) (t : ℕ) :
+    firstOddYes (history c oscStrat (k₀ : ℤ) t) =
+      if oddThr (c (k₀ + 1)).val ≤ t then some (oddThr (c (k₀ + 1)).val) else none := by
+  set T₁' := oddThr (c (k₀ + 1)).val with hT₁'
+  induction t with
+  | zero =>
+      have : ¬ T₁' ≤ 0 := by have := oddThr_gt (c (k₀ + 1)).val; omega
+      simp [firstOddYes, lastOddYesFrom, this]
+  | succ n ih =>
+      rw [history_oscStrat_succ, firstOddYes_cons]
+      have hlen : (history c oscStrat (k₀ : ℤ) n).length = n := history_length_oscStrat _ _
+      rw [List.length_cons, hlen, ih]
+      by_cases hTn : T₁' ≤ n
+      · simp only [hTn, if_true]
+        have : T₁' ≤ n + 1 := by omega
+        simp [this]
+      · rw [if_neg hTn]
+        by_cases hpar : (n + 1) % 2 = 1
+        · have hsig : signalOf c (position c oscStrat (k₀ : ℤ) (n + 1)) (n + 1)
+              = decide ((c (k₀ + 1)).val < (n + 1)) := signal_odd_oscStrat k₀ (n + 1) hpar
+          rw [hsig]
+          by_cases hyes : (c (k₀ + 1)).val < (n + 1)
+          · have hge : T₁' ≤ n + 1 := oddThr_minimal _ _ hpar hyes
+            have heq : T₁' = n + 1 := by omega
+            have hcond : (n + 1) % 2 = 1 ∧ decide ((c (k₀ + 1)).val < (n + 1)) = true :=
+              ⟨hpar, by simpa using hyes⟩
+            rw [if_pos hcond, heq, if_pos (le_refl (n + 1))]
+          · have hno : ¬ T₁' ≤ n + 1 := by
+              intro h
+              have : (c (k₀ + 1)).val < T₁' := oddThr_gt _
+              omega
+            have hcond : ¬ ((n + 1) % 2 = 1 ∧ decide ((c (k₀ + 1)).val < (n + 1)) = true) := by
+              simp [hyes]
+            rw [if_neg hcond, if_neg hno]
+        · have hno : ¬ T₁' ≤ n + 1 := by
+            intro h
+            have hodd : T₁' % 2 = 1 := oddThr_odd _
+            omega
+          have hcond : ¬ ((n + 1) % 2 = 1 ∧
+              (signalOf c (position c oscStrat (k₀ : ℤ) (n + 1)) (n + 1)) = true) := by
+            rintro ⟨h1, -⟩; exact hpar h1
+          rw [if_neg hcond, if_neg hno]
+
 end TrolleyRetrieval
