@@ -7,6 +7,108 @@
 Equivalently: Bob **cannot** win ↔ c is a finitary/eventually-identity permutation (there
 exists N such that c(n) = n for all n > N).
 
+Other equivalent phrasings (all the same condition for a bijection of ℕ⁺):
+- `{n : c(n) ≠ n}` is infinite (c not finitary).
+- c⁻¹ is not eventually identity (the condition is symmetric under c ↔ c⁻¹).
+- c has infinitely many "upward gaps" (positions p with c(p+1) − c(p) ≥ 2).
+- Equivalently c has infinitely many descents (c(p+1) < c(p)).
+
+NOT equivalent (strictly stronger, hence wrong as the boundary): "limsup (c(n)−n) = ∞".
+Adjacent transpositions have bounded g(n)=c(n)−n yet Bob wins, so the boundary is
+non-EI, not unbounded growth. (Verified: `/tmp/p4_full_strategy.py`, `/tmp/p4_coord_systems.py`.)
+
+---
+
+## CLEANEST PROOF OF THE WINNING DIRECTION (monotone-right Phase 2)
+
+The earlier notes flagged a "usable vs weak discriminator" timing gap in Phase 2. That gap is
+an artifact of the *precomputed-D, navigate-then-observe* strategy. The **monotone-right** Phase 2
+below makes the timing problem vanish: probe time equals the usable boundary with equality, and
+no left moves are ever used, so safety is automatic.
+
+### Coordinate system: forward displacement g(n) = c(n) − n is cleanest
+
+The inverse coordinate h(t) = c⁻¹(t) − t describes "which cell wakes at time t", convenient for
+*naming* the candidate pair, but the discrimination predicate is cleanest in g. With T1 even and
+observation at time t = T1 + D, the predicted Phase-2 signal under hypothesis k₀ = x is
+
+    f_x(D) = [ c(x+D) < T1 + D ] = [ g(x+D) < T1 − x ].
+
+So Phase 2 just compares two shifted sub-level sets of the single sequence g — no left moves,
+no separate reachability condition (t ≡ D mod 2 is automatic since T1 is even).
+
+### The strategy
+
+**Phase 1 (oscillate D ∈ {0,1}, right-first).** At even t = 2m, position = k₀, signal Yes iff
+c(k₀) < 2m. Let T1 = 2m* be the first even Yes. Then c(k₀) ∈ {T1−2, T1−1}, so
+
+    k₀ ∈ {p₁, p₂},   p₁ = c⁻¹(T1−2) = c⁻¹(2m*−2),  p₂ = c⁻¹(2m*−1) = c⁻¹(2m*−1).
+
+The candidate set is ALWAYS of the form {c⁻¹(2m), c⁻¹(2m+1)} (cells waking at one even and the
+next odd time). If only one of T1−2, T1−1 has a preimage ≥ 1, Bob has a single candidate and
+guesses immediately. Safety: position = k₀ + D_t ≥ k₀ ≥ 1 (right-first keeps D ∈ {0,1}).
+
+**Phase 2 (monotone right).** From (time T1, displacement 0), move RIGHT every turn: at turn
+T1+D the displacement is D and the observation time is exactly t = T1 + D. Observe the real signal
+s(D) = [c(k₀+D) < T1+D] and compare to the two predictions f_{p₁}(D), f_{p₂}(D). At D = 0 both
+predictions are True (c(p₁)=T1−2 < T1, c(p₂)=T1−1 < T1), matching the Phase-1 detection. At the
+first D where f_{p₁}(D) ≠ f_{p₂}(D), the real signal s(D) matches exactly one hypothesis; Bob
+learns k₀ and hence the current position k₀+D, and guesses it. Safety: only right moves, D ≥ 0,
+position ≥ k₀ ≥ 1 throughout. Reachability: t = T1+D, T1 even ⇒ t ≡ D (mod 2). ✓
+
+This wins iff the two prediction sequences eventually differ — exactly the lemma below.
+
+### Restricted Separation Lemma (the only mathematical content needed)
+
+> **Lemma.** Let c be a permutation of ℕ⁺ that is NOT eventually identity. For every candidate
+> pair p₁ = c⁻¹(2m), p₂ = c⁻¹(2m+1) (with the smaller ≥ 1), there exists D ≥ 0 with
+> `[c(p₁+D) < T1+D] ≠ [c(p₂+D) < T1+D]`, where T1 = 2m+2.
+
+This is STRICTLY WEAKER than the old `Indistinguishable_implies_eventually_identity` (LemmaA),
+which quantified over all reachable (D,t) including left moves and had a genuinely open Δ-odd
+sub-case. The restricted lemma fixes T1 = 2m+2 (forced, not free) and uses only D ≥ 0.
+
+**Contrapositive form (what we prove):** if some candidate pair is *twin* (f_{p₁}(D) = f_{p₂}(D)
+for all D ≥ 0), then c is the identity on the tail [min(p₁,p₂), ∞), hence c is eventually identity.
+
+**Proof sketch.** WLOG p₁ < p₂, Δ = p₂ − p₁ > 0. Put u(D) = T1 + D − c(p₁+D), so f_{p₁}(D) =
+[u(D) ≥ 1], u(0) = 2. Since p₂+D = p₁+(D+Δ), one gets the shift relation (verified numerically,
+`/tmp/p4_proof_steps.py`):
+
+    T1 + D − c(p₂+D) = u(D+Δ) − Δ.
+
+Twin therefore reads:  u(D) ≥ 1 ⇔ u(D+Δ) ≥ Δ+1, for all D ≥ 0.  (★)
+The "True at 0" branch propagates along the progression {kΔ}: u(kΔ) ≥ Δ+1 for k ≥ 1, i.e.
+g(p₁+kΔ) ≤ T1 − p₁ − Δ − 1 (g bounded ABOVE on a residue class). The decisive contradiction with
+non-EI uses bijectivity (surjectivity): the prefix sums Σ_{n≤M} c(n) ≥ M(M+1)/2 force
+Σ_{n≤M} g(n) ≥ 0 (g cannot be sub-diagonal on a tail — verified `/tmp/p4_coord_systems.py`),
+and (★) over all residues then pins g ≡ 0 past min(p₁,p₂), i.e. the identity tail. For Δ = 1
+this is exactly the already-formalized `shift_one_implies_eventually_identity`.
+
+**Empirical certification of the Lemma (this is the load-bearing check):**
+- Identity (EI): ALL candidate pairs are twin-forever — Bob loses. ✓
+- All non-EI families tested (block reversal w/ unbounded g, dense & sparse adjacent
+  transpositions, growing-distance swaps, 200 random blocky non-EI perms, N up to 20000):
+  ZERO twin candidate pairs over deep windows; every pair separates at small D
+  (max separation D ≤ 33 observed). See `/tmp/p4_proof_final.py`, `/tmp/p4_extension.py`.
+- End-to-end strategy simulation: 200/200 starting positions won on every non-EI family;
+  EI loses on all large k₀. See `/tmp/p4_full_strategy.py`.
+
+### Why the old "weak vs usable" worry dissolves
+
+A "weak" discriminator is a reachable (D,t) separating the pair with possibly t < T1+D; "usable"
+adds t ≥ T1+D. In the monotone-right strategy every probe sits at t = T1+D exactly, so the
+*first* separating displacement is automatically usable. Non-EI does not merely give weak
+discriminators — it gives a separating D at the usable boundary. (The fear that a bounded-g
+permutation might only offer weak/small-t separators was checked directly and is false:
+`/tmp/p4_adversarial.py`, `/tmp/p4_usable_test.py` — 0 usable-discriminator failures.)
+
+### Note on the old LemmaA Δ-odd gap
+
+The remaining `sorry`s in `LemmaA.lean` (Δ ≥ 2 odd, interleaved good/bad) are NOT on the path of
+this winning proof. They belong to the stronger full-power distinguishability statement (all
+(D,t), left moves allowed). The restricted lemma above suffices for the game and avoids them.
+
 ---
 
 ## Key Structural Facts
