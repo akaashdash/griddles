@@ -418,4 +418,49 @@ theorem LocallyDecodable_BobWins (c : Perm) (hdec : LocallyDecodable c) : BobWin
         push_cast
         ring
 
+/-! ### Concrete instance: adjacent transpositions
+
+`c` swaps `2k-1 ↔ 2k` for every `k` — a non-eventually-identity permutation.  We show it is
+locally decodable, hence `BobWins`, giving a fully concrete worked example. -/
+
+/-- Adjacent-transposition map: `n ↦ n+1` if `n` is odd, `n-1` if `n` is even. -/
+def adjF (n : ℕ+) : ℕ+ :=
+  ⟨if n.val % 2 = 1 then n.val + 1 else n.val - 1, by
+    obtain ⟨v, hv⟩ := n
+    show 0 < if v % 2 = 1 then v + 1 else v - 1
+    split_ifs with h <;> omega⟩
+
+lemma adjF_val (n : ℕ+) : (adjF n).val = if n.val % 2 = 1 then n.val + 1 else n.val - 1 := rfl
+
+lemma adjF_involutive : Function.Involutive adjF := by
+  intro n
+  have hn : 1 ≤ n.val := n.property
+  apply Subtype.ext
+  show (adjF (adjF n)).val = n.val
+  rw [adjF_val, adjF_val]
+  split_ifs <;> omega
+
+/-- Adjacent transpositions as a permutation of `ℕ+`. -/
+def adjPerm : Perm := adjF_involutive.toPerm
+
+@[simp] lemma adjPerm_apply (n : ℕ+) : adjPerm n = adjF n := rfl
+
+/-- Clamp a natural to `ℕ+` (mapping `0 ↦ 1`); the identity on positives. -/
+def clampPos (n : ℕ) : ℕ+ := ⟨max 1 n, Nat.lt_of_lt_of_le one_pos (le_max_left 1 n)⟩
+
+/-- Adjacent transpositions are locally decodable: `(c k₀, c (k₀+1))` determines `k₀`. -/
+lemma adjPerm_locallyDecodable : LocallyDecodable adjPerm := by
+  refine ⟨fun T₁ T₁' => clampPos (if T₁ < T₁' then T₁ else T₁' - 2), fun k₀ => ?_⟩
+  obtain ⟨v, hv⟩ := k₀
+  apply Subtype.ext
+  have e1 : (adjPerm ⟨v, hv⟩).val = if v % 2 = 1 then v + 1 else v - 1 := rfl
+  have e2 : (adjPerm (⟨v, hv⟩ + 1)).val
+      = if (v + 1) % 2 = 1 then (v + 1) + 1 else (v + 1) - 1 := rfl
+  simp only [e1, e2, clampPos, evenThr, oddThr]
+  split_ifs <;> omega
+
+/-- **Worked example.**  Bob wins against adjacent transpositions. -/
+theorem adjPerm_BobWins : BobWins adjPerm :=
+  LocallyDecodable_BobWins adjPerm adjPerm_locallyDecodable
+
 end TrolleyRetrieval
