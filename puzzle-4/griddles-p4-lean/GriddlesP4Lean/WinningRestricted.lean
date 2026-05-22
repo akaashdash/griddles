@@ -113,6 +113,17 @@ lemma signal_odd_oscStrat (k₀ : ℕ+) (t : ℕ) (ht : t % 2 = 1) :
   have hk : (1 : ℤ) ≤ ((k₀ + 1 : ℕ+) : ℤ) := by exact_mod_cast (k₀ + 1).property
   rw [signalOf, dif_pos hk, toPNat_coe (k₀ + 1) hk]
 
+/-- One-step unfolding of the oscillation history: prepend the new signal. -/
+lemma history_oscStrat_succ (k₀ : ℤ) (t : ℕ) :
+    history c oscStrat k₀ (t + 1) =
+      signalOf c (position c oscStrat k₀ (t + 1)) (t + 1) :: history c oscStrat k₀ t := by
+  have hlen : (history c oscStrat k₀ t).length = t := history_length_oscStrat k₀ t
+  have hmove : oscStrat (history c oscStrat k₀ t) = .move (oscDir t) := by
+    simp only [oscStrat, hlen]
+  rw [history_succ_of_move hmove]
+  congr 1
+  rw [position_succ_of_move hmove]
+
 /-! ### Phase-1 detection: first even-time "Yes"
 
 `firstEvenYes h` returns the *earliest* even time at which a "Yes" was observed (or `none`).
@@ -164,5 +175,69 @@ lemma firstEvenYes_cons (b : Bool) (bs : List Bool) :
           if (b :: bs).length % 2 = 0 ∧ b then some ((b :: bs).length) else none := by
   show lastEvenYesFrom (b :: bs) (bs.length + 1) = _
   simp only [lastEvenYesFrom, Nat.add_sub_cancel, firstEvenYes, List.length_cons]
+
+/-! ### Detector behaviour along the oscillation trajectory -/
+
+/-- The smallest even number strictly greater than `v` — the time the even-probe first
+    says "Yes" when `c k₀ = v`. -/
+def evenThr (v : ℕ) : ℕ := 2 * (v / 2) + 2
+
+/-- The smallest odd number strictly greater than `v`. -/
+def oddThr (v : ℕ) : ℕ := 2 * ((v + 1) / 2) + 1
+
+lemma evenThr_even (v : ℕ) : evenThr v % 2 = 0 := by unfold evenThr; omega
+lemma evenThr_gt (v : ℕ) : v < evenThr v := by unfold evenThr; omega
+lemma evenThr_minimal (v s : ℕ) (hs : s % 2 = 0) (hvs : v < s) : evenThr v ≤ s := by
+  unfold evenThr; omega
+lemma oddThr_odd (v : ℕ) : oddThr v % 2 = 1 := by unfold oddThr; omega
+lemma oddThr_gt (v : ℕ) : v < oddThr v := by unfold oddThr; omega
+lemma oddThr_minimal (v s : ℕ) (hs : s % 2 = 1) (hvs : v < s) : oddThr v ≤ s := by
+  unfold oddThr; omega
+
+/-- **Even detector on the trajectory.**  Along the oscillation, the first even-time "Yes"
+    occurs exactly at `T₁ = evenThr (c k₀)`: the detector is `none` before `T₁` and
+    `some T₁` from `T₁` onward. -/
+lemma firstEvenYes_oscStrat (k₀ : ℕ+) (t : ℕ) :
+    firstEvenYes (history c oscStrat (k₀ : ℤ) t) =
+      if evenThr (c k₀).val ≤ t then some (evenThr (c k₀).val) else none := by
+  set T₁ := evenThr (c k₀).val with hT₁
+  induction t with
+  | zero =>
+      have : ¬ T₁ ≤ 0 := by have := evenThr_gt (c k₀).val; omega
+      simp [firstEvenYes, lastEvenYesFrom, this]
+  | succ n ih =>
+      rw [history_oscStrat_succ, firstEvenYes_cons]
+      have hlen : (history c oscStrat (k₀ : ℤ) n).length = n := history_length_oscStrat _ _
+      rw [List.length_cons, hlen, ih]
+      by_cases hTn : T₁ ≤ n
+      · simp only [hTn, if_true]
+        have : T₁ ≤ n + 1 := by omega
+        simp [this]
+      · rw [if_neg hTn]
+        by_cases hpar : (n + 1) % 2 = 0
+        · have hsig : signalOf c (position c oscStrat (k₀ : ℤ) (n + 1)) (n + 1)
+              = decide ((c k₀).val < (n + 1)) := signal_even_oscStrat k₀ (n + 1) hpar
+          rw [hsig]
+          by_cases hyes : (c k₀).val < (n + 1)
+          · have hge : T₁ ≤ n + 1 := evenThr_minimal _ _ hpar hyes
+            have heq : T₁ = n + 1 := by omega
+            have hcond : (n + 1) % 2 = 0 ∧ decide ((c k₀).val < (n + 1)) = true :=
+              ⟨hpar, by simpa using hyes⟩
+            rw [if_pos hcond, heq, if_pos (le_refl (n + 1))]
+          · have hno : ¬ T₁ ≤ n + 1 := by
+              intro h
+              have : (c k₀).val < T₁ := evenThr_gt _
+              omega
+            have hcond : ¬ ((n + 1) % 2 = 0 ∧ decide ((c k₀).val < (n + 1)) = true) := by
+              simp [hyes]
+            rw [if_neg hcond, if_neg hno]
+        · have hno : ¬ T₁ ≤ n + 1 := by
+            intro h
+            have hT₁even : T₁ % 2 = 0 := evenThr_even _
+            omega
+          have hcond : ¬ ((n + 1) % 2 = 0 ∧
+              (signalOf c (position c oscStrat (k₀ : ℤ) (n + 1)) (n + 1)) = true) := by
+            rintro ⟨h1, -⟩; exact hpar h1
+          rw [if_neg hcond, if_neg hno]
 
 end TrolleyRetrieval
