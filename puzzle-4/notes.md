@@ -596,3 +596,33 @@ This is the right target to formalize for Answer.main's ← direction: define th
 staircase-sweep strategy, prove it catches firstYes@(k₀+D) at each D, narrow via D=0, and
 discharge WinsFrom using the proven D-discriminator existence. Engineering (sizeable, like
 WinningKProbe generalized to growing window) but NOT research-level, and CORRECTNESS-CLEAN.
+
+## STRATEGY IS GENUINELY HARD — three incomplete designs, the real obstruction
+
+Correction to the previous note: the sequential staircase is ALSO incomplete. Simulated exact
+dynamics: on blkPerm, doing D=0 first (oscillate until firstYes@k₀ at t=4) means Bob reaches
+D=1 only at t≥4, AFTER cell 3's wake at t=3 — so both worlds give the identical observed vector
+{0:4,1:5,2:6,3:7}. NOT distinguished. (K=2 succeeds precisely because it monitors D=0 AND D=1
+*simultaneously* from t=0, catching the early t=3 wake.)
+
+**Three incomplete designs, all caught by simulation before formalizing:**
+1. monotone-right (nav only): misses local D=1 (blkPerm).
+2. K=2 ∨ nav: misses mid-range local D=2,3,4 (block-5-cycle).
+3. sequential staircase: misses EARLY wakes at D≥1 (does D=0 first, arrives at D≥1 too late).
+
+**The real obstruction (timing/resolution/reach tension):** Bob is at ONE displacement per
+tick, so he can finely monitor (period ~2) only O(1) displacements at once. Monitoring D=0..K
+simultaneously (triangle wave) costs resolution ~2K, which can blur a discriminator's O(1)
+window for large K. Catching an EARLY wake at displacement D requires fine monitoring of D from
+t=0 (can't be reached later). Catching a FAR wake requires reaching large D (can't fine-monitor
+all small D meanwhile). So: small-D discriminators with early wakes need fine simultaneous
+monitoring (small-K triangle wave); far discriminators need navigation. The "complete" strategy
+must combine these AND its completeness lemma must rule out the pairs that fall in the gap
+(distinguishable only by a mid/large-D early-wake discriminator that neither fine-K nor nav
+catches). This is the genuine remaining difficulty — research-adjacent engineering, not routine.
+
+**Honest status:** answer SOLVED & confirmed; losing direction + the research-level
+distinguishability crux (LemmaA) + K=2/K=3 winning classes all PROVEN & axiom-clean. The general
+uniform winning strategy (one sorry in Answer.main) is a genuinely hard open formalization with a
+real timing/resolution/reach tension; the existence of *some* winning strategy is confirmed by
+the belief-state game solver, but an explicit, provably-complete uniform strategy remains open.
