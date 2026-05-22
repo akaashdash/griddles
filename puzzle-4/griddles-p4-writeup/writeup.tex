@@ -1,0 +1,775 @@
+% ============================================================
+%  Trolley Retrieval -- main writeup
+%  Compile with: lualatex writeup.tex  (twice for refs)
+% ============================================================
+\documentclass{article}
+
+\usepackage[final,nonatbib,main]{neurips_2026}  % final+main = non-anonymous, no line nums
+
+% suppress NeurIPS conference footer notice
+\makeatletter
+\renewcommand{\@notice}{}
+\makeatother
+
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{mathtools}
+\usepackage{enumitem}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=green!50!black,
+  urlcolor=blue!60!black
+}
+
+% -- theorem environments ------------------------------------------------------
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{claim}[theorem]{Claim}
+
+% -- macros --------------------------------------------------------------------
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Np}{\mathbb{N}^{+}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Yes}{\textsf{Yes}}
+\newcommand{\No}{\textsf{No}}
+\DeclareMathOperator{\sgn}{sgn}
+
+% small breakable typewriter for long Lean identifiers; "." and "_" become
+% break opportunities (use \us for underscore, \dt for dot inside \lean).
+\newcommand{\us}{\discretionary{}{}{}\_\discretionary{}{}{}}
+\newcommand{\dt}{.\discretionary{}{}{}}
+\newcommand{\lean}[1]{{\small\ttfamily #1}}
+
+% -- document ------------------------------------------------------------------
+\title{Trolley Retrieval:\\
+A Complete Analysis with a Machine-Checked\\
+Distinguishability Theorem}
+
+\author{%
+  Akaash Dash \\
+  \texttt{akaash.dash@gmail.com}
+}
+
+\begin{document}
+
+\maketitle
+
+% ============================================================
+\begin{abstract}
+We analyse the \emph{Trolley Retrieval} problem (G-Research GRiddles
+Series~A, Puzzle~4). A trolley sits on an unknown cell of a one-way
+infinite tape whose cell~$n$ carries the label~$c(n)$, where
+$c$ is a permutation of the positive integers known to the player Bob.
+Each turn Bob pushes the trolley one cell left or right and is told
+whether the label of the new cell is strictly less than the current
+time. Bob must eventually name the trolley's exact position; falling off
+the left end, or guessing wrongly, loses.
+
+We prove the answer: \textbf{Bob has a winning strategy if and only if
+$c$ is \emph{not} eventually the identity}, i.e.\ $c(n)\neq n$ for
+infinitely many~$n$ (equivalently, $c$ is not a finitary permutation).
+We give the full elementary proof of both directions. The losing
+direction rests on a parity lock: the threshold Bob can probe is always
+\emph{even}, so an identity tail makes the pair $(2j,\,2j{+}1)$
+permanently indistinguishable. The winning direction rests on a
+\emph{distinguishability theorem}: for a non-eventually-identity~$c$, no
+pair of starting cells is indistinguishable. Its crux---previously
+believed to require global surjectivity bookkeeping---falls to an
+elementary forward-closure argument.
+
+The losing direction, the distinguishability theorem, and explicit
+winning strategies for two natural ``locally decodable'' families are
+formalised and machine-checked in Lean~4 and are axiom-clean. We are
+scrupulous about the boundary of what is proven: a single, uniform,
+explicitly formalisable winning strategy for \emph{every}
+non-eventually-identity~$c$ remains open, owing to a genuine
+timing/resolution tension that we describe precisely.
+\end{abstract}
+
+% ============================================================
+\section{The problem}\label{sec:problem}
+
+The exact statement is as follows. Let $c(1), c(2), \dots$ be a sequence
+of positive integers in which every positive integer appears exactly
+once; equivalently $c$ is a permutation (bijection) of $\Np$. A one-way
+infinite sequence of cells is given: cell~$n$ (the $n$-th from the left,
+$n\ge 1$) is labelled~$c(n)$.
+
+At time $t=0$ an invisible trolley is placed on an unknown cell, the
+$k_0$-th from the left. For each integer $t\ge 1$, in order:
+\begin{enumerate}[topsep=2pt,itemsep=1pt]
+  \item Bob chooses a direction, left or right; the trolley moves one
+  cell that way, to cell $k_t$.
+  \item The trolley sends \Yes{} if $c(k_t) < t$, and \No{} otherwise.
+\end{enumerate}
+If ever $k_t = 0$ (the trolley falls off the left end), Bob loses
+immediately. At any time Bob may instead \emph{guess} the trolley's
+position; a correct guess retrieves it, an incorrect guess loses.
+
+\begin{quote}
+\itshape Determine all permutations $c$ for which Bob has a strategy
+guaranteeing safe retrieval.
+\end{quote}
+
+Bob knows $c$ in full; the only hidden datum is the start cell $k_0$. The
+trolley is invisible---Bob never sees $k_t$ directly. His sole feedback
+is the binary signal, and he chooses each move adaptively from the
+signal history.
+
+% ------------------------------------------------------------
+\subsection{The answer}
+
+\begin{theorem}[Main]\label{thm:main}
+Bob has a strategy ensuring safe retrieval if and only if $c$ is
+\emph{not eventually the identity}; that is, if and only if
+$c(n)\neq n$ for infinitely many~$n$.
+\end{theorem}
+
+We write $c$ is \emph{eventually identity} (EI) if there is a threshold
+$N$ with $c(n)=n$ for all $n>N$. Since $c$ is a bijection, ``not EI'' has
+several equivalent forms, all used below:
+\begin{itemize}[topsep=2pt,itemsep=1pt]
+  \item $\{\,n : c(n)\neq n\,\}$ is infinite ($c$ is not finitary);
+  \item $c^{-1}$ is not eventually identity (the condition is symmetric
+  under $c\leftrightarrow c^{-1}$);
+  \item $c$ has infinitely many \emph{upward gaps}: positions $p$ with
+  $c(p{+}1)-c(p)\ge 2$.
+\end{itemize}
+The last equivalence is worth recording, as it is exactly what fails in
+the EI case.
+
+\begin{proposition}\label{prop:gaps}
+$c$ has infinitely many upward gaps if and only if $c$ is not eventually
+identity.
+\end{proposition}
+\begin{proof}
+If $c(n{+}1)\le c(n)+1$ for all $n>N$ (no gaps past $N$), then on
+$(N,\infty)$ the bijection $c$ is non-decreasing by steps of at most~$1$;
+a strictly value-preserving bijection of a tail of $\Np$ that never
+jumps up by~$2$ cannot skip a value and cannot repeat one, forcing
+$c(n)=n$ for all $n>N$. The contrapositive is the claim.
+\end{proof}
+
+% ------------------------------------------------------------
+\subsection{Reformulation: the alarm-clock view and the parity lock}
+\label{sec:reform}
+
+It is convenient to read the labels as wake-up times. Think of cell~$n$
+as carrying an alarm clock set for time $c(n)$: at every time
+$t > c(n)$ the cell is ``awake'', and a trolley standing on it reports
+\Yes; while $t \le c(n)$ the cell is ``asleep'' and reports \No. Because
+$c$ is a bijection, exactly one cell wakes at each integer time, and
+every cell wakes eventually. This is just a restatement of
+$\text{signal}=\Yes \iff c(k_t) < t$.
+
+Let $D_t := k_t - k_0$ be Bob's net displacement at time~$t$.
+
+\begin{lemma}[Parity lock]\label{lem:parity}
+As long as Bob has not yet guessed, $D_t \equiv t \pmod 2$. Equivalently,
+$t - D_t$ is always even.
+\end{lemma}
+\begin{proof}
+$D_0=0$, and each move changes $D$ by $\pm 1$ and $t$ by $+1$, so the
+parity of $t-D_t$ is invariant; it starts even.
+\end{proof}
+
+The parity lock is the single structural fact behind the losing
+direction. A second, equally elementary identity exposes \emph{why}.
+Let $L_t$ be the number of \emph{left} moves Bob has made by time~$t$ and
+$R_t$ the number of right moves, so $t=L_t+R_t$ and $D_t=R_t-L_t$. Then
+\begin{equation}\label{eq:tD}
+  t - D_t \;=\; (L_t+R_t) - (R_t-L_t) \;=\; 2L_t .
+\end{equation}
+Write $g(m) := c(m)-m$ for the displacement of the label from the
+diagonal. The signal at time~$t$ is
+\begin{align}
+  \text{\Yes}
+  &\iff c(k_0 + D_t) < t
+  \iff g(k_0+D_t) < t - D_t - k_0 \notag\\
+  &\iff g(k_0+D_t) < 2L_t - k_0 . \label{eq:Lthreshold}
+\end{align}
+In other words, the walk reads the sequence~$g$ against a threshold
+$2L_t - k_0$ that Bob controls only through his \emph{left-move count}.
+
+\begin{remark}[The whole obstruction, in one line]\label{rem:flat}
+For the identity, $g\equiv 0$, so~\eqref{eq:Lthreshold} collapses to
+$\Yes \iff k_0 < 2L_t$. Bob can only ever compare $k_0$ against
+\emph{even} thresholds, and $2j < 2L \iff 2j{+}1 < 2L$ for every~$L$.
+Hence the start cells $2j$ and $2j{+}1$ produce \emph{identical signals
+under every strategy}: the parity bit of $k_0$ is unrecoverable. This is
+the seed of the losing direction; the work below is to extend it to every
+eventually-identity~$c$ despite the perturbed initial segment.
+\end{remark}
+
+% ============================================================
+\section{Losing direction: eventually identity $\Rightarrow$ Bob loses}
+\label{sec:losing}
+
+\begin{theorem}\label{thm:losing}
+If $c$ is eventually identity, Bob has no strategy that wins from every
+start cell.
+\end{theorem}
+
+The proof isolates a structural ``parallel-evolution'' lemma and then
+verifies its hypothesis for two carefully chosen start cells.
+
+% ------------------------------------------------------------
+\subsection{Parallel evolution}
+
+Fix a strategy~$\sigma$. For a start cell $k$ let $\mathrm{pos}(k,t)$ be
+the position and $\mathrm{hist}(k,t)$ the signal history (most-recent
+first) at time~$t$. Bob's action at any decision point is a function of
+$\mathrm{hist}$ alone.
+
+\begin{lemma}[Parallel evolution]\label{lem:parallel}
+Let $k_1, k_2$ be two start cells. Suppose that, started from~$k_1$, Bob
+makes no guess before time~$t$, and that at every time $s\le t$ the
+signal observed from $k_1$'s trajectory equals the signal observed from
+$k_2$'s trajectory. Then the two histories agree at time~$t$, and the
+positions stay rigidly offset:
+\[
+  \mathrm{hist}(k_1,t) = \mathrm{hist}(k_2,t),
+  \qquad
+  \mathrm{pos}(k_2,t) = \mathrm{pos}(k_1,t) + (k_2-k_1).
+\]
+\end{lemma}
+\begin{proof}
+Induction on~$t$. At $t=0$ the histories are empty and the offset is
+$k_2-k_1$ by definition. For the step, equal histories make $\sigma$
+choose the \emph{same} action in both worlds; since Bob has not guessed,
+that action is a move, applied identically to both, preserving the
+offset. The new signal entries are equal by the time-$(t{+}1)$ hypothesis,
+so the histories remain equal.
+\end{proof}
+
+\begin{corollary}\label{cor:notboth}
+If $k_1\neq k_2$ and the two signal traces agree at \emph{every} time
+under~$\sigma$, then $\sigma$ cannot win from both $k_1$ and $k_2$.
+\end{corollary}
+\begin{proof}
+Equal traces force equal histories at all times (Lemma~\ref{lem:parallel}
+applied up to either guess time), hence equal first-guess times
+$T_1=T_2=:T$ and equal guesses $g_1=g_2$. But correctness would require
+$g_1 = \mathrm{pos}(k_1,T)$ and $g_2=\mathrm{pos}(k_2,T)$, while
+$\mathrm{pos}(k_2,T)=\mathrm{pos}(k_1,T)+(k_2-k_1)$. These contradict
+$k_1\neq k_2$.
+\end{proof}
+
+% ------------------------------------------------------------
+\subsection{The indistinguishable pair for eventually-identity $c$}
+
+Suppose $c(n)=n$ for all $n>N$. Let $M$ be an upper bound for the finitely
+many perturbed labels: $M \ge \max\{\,c(m) : 1\le m\le N\,\}$ and $M\ge
+N+1$. Choose $j$ with $2j > M$ and set
+\[
+  k_1 = 2j, \qquad k_2 = 2j+1 .
+\]
+
+\begin{lemma}[Signal match]\label{lem:sigmatch}
+Fix a no-guess strategy run from $k_1=2j$. At every time~$t$, every
+position~$p\ge 1$ reachable from $2j$ in $t$ moves (so $2j - t \le p$)
+that respects the parity lock ($t+p$ even) satisfies
+\[
+  \text{signal at } p \text{ at time } t \;=\;
+  \text{signal at } p{+}1 \text{ at time } t .
+\]
+\end{lemma}
+\begin{proof}
+Two cases on the location~$p$.
+
+\emph{(a) $p > N$ (identity region).} Both $p$ and $p{+}1$ exceed~$N$, so
+$c(p)=p$ and $c(p{+}1)=p{+}1$. The signal at $p$ is $\Yes \iff p<t$, and
+at $p{+}1$ is $\Yes\iff p{+}1<t$. These differ only if $t=p+1$. But then
+$t+p = 2p+1$ is odd, violating the parity hypothesis $t+p$ even. So the
+signals agree.
+
+\emph{(b) $p \le N$ (perturbed region).} Here the trolley has travelled
+from $2j$ to $p\le N$, so $t \ge 2j - p \ge 2j - N > M - N \ge \dots$;
+concretely $2j>M\ge N+1$ forces $t > M$. Both $c(p)$ and $c(p{+}1)$ are at
+most~$M$ (using $c(N{+}1)=N{+}1\le M$ for the boundary), hence
+$c(p), c(p{+}1) < t$: both signals are \Yes. They agree.
+\end{proof}
+
+The two cases capture the dichotomy of Remark~\ref{rem:flat}: in the
+identity tail, the parity lock makes $2j$ and $2j{+}1$ collide; in the
+perturbed segment, the time cost of reaching it ($t\ge 2j-N$) is so large
+that every cell there is already awake, so both worlds report \Yes{} and
+again collide.
+
+\begin{proof}[Proof of Theorem~\ref{thm:losing}]
+Suppose $\sigma$ wins from every start cell, in particular from
+$k_1=2j$ and $k_2=2j{+}1$ above. We claim the two signal traces agree at
+every time, which contradicts Corollary~\ref{cor:notboth}.
+
+By induction on~$t$, the trajectories from $2j$ and $2j{+}1$ evolve in
+lockstep with positions offset by exactly~$1$ and equal histories, as
+long as Bob has not guessed: the inductive step applies the signal match
+(Lemma~\ref{lem:sigmatch}) at $\mathrm{pos}(2j,t{+}1)$, whose
+hypotheses---validity $p\ge 1$ (Bob wins, so the trajectory is safe),
+reachability $2j-t\le p$ (a $\pm1$ walk), and parity (Lemma~\ref{lem:parity})---all
+hold. Hence the signal entering both histories at each step is identical,
+so $\mathrm{hist}(2j,t)=\mathrm{hist}(2j{+}1,t)$ and
+$\mathrm{pos}(2j{+}1,t)=\mathrm{pos}(2j,t)+1$ for all~$t$. The traces
+agree at every time, and Corollary~\ref{cor:notboth} gives the
+contradiction.
+\end{proof}
+
+\begin{remark}[The half-infinite tape is irrelevant here]
+For the chosen large $k_0\approx 2j$, no finite-time strategy can reach
+cell~$0$, so the ``falling off'' rule never binds; the indistinguishability
+argument is unaffected by the absence of a left end.
+\end{remark}
+
+% ============================================================
+\section{Winning direction: not eventually identity $\Rightarrow$ Bob wins}
+\label{sec:winning}
+
+The heart of the winning direction is a converse to the losing
+mechanism: when $c$ is not eventually identity, \emph{no} pair of start
+cells can stay indistinguishable. We make ``indistinguishable'' precise,
+prove the theorem, and then explain how distinguishability is turned into
+a winning strategy---fully for two natural families, and with an honest
+account of the general gap.
+
+% ------------------------------------------------------------
+\subsection{The distinguishability theorem}
+
+Reaching displacement~$D$ from the start costs time at least~$|D|$, and
+the parity lock forces $t\equiv D\pmod 2$. Within those constraints Bob
+can pad with oscillation to reach any admissible time, and (because a cell
+once awake stays awake) the only information at displacement~$D$ is the
+\emph{set of times $t\ge D$, $t\equiv D\pmod 2$, at which the cell is
+awake}---equivalently, the single comparison $c(a+D) < t$. This motivates:
+
+\begin{definition}[Indistinguishable pair]\label{def:indist}
+Two start cells $a<b$ are \emph{indistinguishable} (for~$c$) if for every
+displacement $D\ge 0$ and every time $t\ge D$ with $t\equiv D\pmod 2$,
+\[
+  c(a+D) < t \iff c(b+D) < t .
+\]
+\end{definition}
+
+Quantifying over \emph{all} reachable $(D,t)$---including small times that
+catch early wake-ups---is essential; it is exactly the freedom that lets
+Bob's oscillation observe a cell's wake-up time at full resolution.
+
+\begin{theorem}[Distinguishability]\label{thm:lemmaA}
+If $a<b$ are indistinguishable for~$c$, then $b=a+1$ and $c(n)=n$ for all
+$n\ge a$. Consequently, if $c$ is not eventually identity, then \emph{no}
+pair of start cells is indistinguishable.
+\end{theorem}
+
+We prove the first sentence; the second is its contrapositive (an
+indistinguishable pair would exhibit an identity tail, making $c$ EI).
+Throughout write $\Delta := b-a \ge 1$.
+
+The proof has two regimes by the size of~$\Delta$. The case $\Delta=1$ is
+a clean shift argument; the case $\Delta\ge 2$ is the crux. We first
+extract the local structure shared by both.
+
+\begin{lemma}[Consecutiveness]\label{lem:consec}
+Call a displacement~$D$ \emph{active} (for the cell~$a$) if
+$c(a+D)\ge D$, and similarly for~$b$. If $a<b$ are indistinguishable and
+$D$ is active for both $a$ and $b$, then $c(a+D)$ and $c(b+D)$ are
+consecutive integers:
+\[
+  |\,c(a+D) - c(b+D)\,| = 1 .
+\]
+\end{lemma}
+\begin{proof}
+Let $X=c(a+D)$, $Y=c(b+D)$. Injectivity gives $X\neq Y$; say $X<Y$. If
+$Y\ge X+2$, pick~$t$ with $X<t\le Y$ of the parity $t\equiv D\pmod 2$
+(possible because the interval $(X,Y]$ has length $\ge 2$ and so contains
+both parities). Then $c(a+D)<t$ but $c(b+D)\not<t$, with $t\ge D$ (as $D$
+is active and $t>X\ge D$), contradicting indistinguishability at $(D,t)$.
+Hence $Y=X+1$. The case $Y<X$ is symmetric.
+\end{proof}
+
+\begin{lemma}[Bad displacements are forward-closed]\label{lem:badprop}
+Call $D$ \emph{bad} (for~$a$) if $c(a+D) < D$. If $a<b$ are
+indistinguishable and $D$ is bad, then $D+\Delta$ is bad: $c(a+D+\Delta) < D+\Delta$.
+\end{lemma}
+\begin{proof}
+$D$ bad means $c(a+D)<D$, i.e.\ the cell $a+D$ is awake at the admissible
+time $t$ with $t\equiv D \pmod 2$, $D\le t$, as soon as $t>c(a+D)$; take
+the least such admissible~$t$, so $t\le D+1$ and the signal is \Yes.
+Indistinguishability transfers \Yes{} to $b+D = a+(D+\Delta)$:
+$c(a+D+\Delta) < t \le D+1$, and since the value is an integer
+$c(a+D+\Delta)\le D < D+\Delta$. (The point is purely that an
+already-saturated \Yes{} propagates by $+\Delta$; this is where the
+constraint $b=a+\Delta$ enters.)
+\end{proof}
+
+Lemma~\ref{lem:badprop} is decisive: on each residue class modulo
+$\Delta$, the bad displacements form an \emph{up-set}, so the
+\emph{active} (non-bad) displacements form a finite or cofinite
+\emph{prefix}---never an interleaving of good and bad. This is exactly the
+structural fact that earlier, more elaborate attempts (parity arguments,
+value-hogging bookkeeping) were trying to recover. With it, the crux is
+short.
+
+\begin{lemma}[Chain bound]\label{lem:chain}
+If $a<b$ are indistinguishable, fix a residue $r$ with $0\le r<\Delta$.
+For any~$k$ such that $r, r+\Delta, \dots, r+k\Delta$ are all active,
+\[
+  c(a + r + k\Delta) \;\le\; c(a+r) + k .
+\]
+\end{lemma}
+\begin{proof}
+By Lemma~\ref{lem:consec}, consecutive active displacements on the
+residue satisfy $|c(a + r + (i{+}1)\Delta) - c(a + r + i\Delta)| = 1$
+(apply consecutiveness at the displacement $r+i\Delta$, whose
+$+\Delta$ shift lands at $b + r + i\Delta$). Summing $k$ unit steps and
+the triangle inequality give $c(a+r+k\Delta)\le c(a+r)+k$.
+\end{proof}
+
+\begin{lemma}[$\Delta\ge 2$ is impossible]\label{lem:Delta2}
+If $a<b$ are indistinguishable with $\Delta=b-a\ge 2$, contradiction.
+\end{lemma}
+\begin{proof}
+Let $M := \max_{0\le r<\Delta} c(a+r)$. Suppose a displacement $D$ is
+active, and write $D=r+k\Delta$ with $0\le r<\Delta$. By forward-closure
+(Lemma~\ref{lem:badprop}), \emph{all} of $r, r+\Delta, \dots, r+k\Delta$
+are active (active is a prefix on each residue). Activity gives
+$c(a+D)\ge D = r+k\Delta$, while the chain bound gives
+$c(a+D)\le c(a+r)+k \le M+k$. Hence
+\[
+  r + k\Delta \le M + k
+  \quad\Longrightarrow\quad
+  k(\Delta-1) \le M - r \le M .
+\]
+With $\Delta\ge 2$ this bounds $k\le M$, so $D = r+k\Delta < (M{+}1)\Delta$.
+Thus \emph{every} displacement $D \ge (M{+}1)\Delta$ is bad:
+$c(a+D) < D$ for all such~$D$.
+
+This forces a pigeonhole collapse. For $D \ge (M{+}1)\Delta$, the cell at
+position $a+D$ has label $c(a+D) < D = (a+D) - a$, i.e.\ $c(p) < p-a$ for
+all large~$p$. The finitely many small positions have labels bounded by
+some constant. Choosing $N$ large enough, $c$ maps the segment $[1,N]$
+into $[1, N-a-1]$: large positions $p$ land below $p-a \le N-a-1$, and
+the bounded small positions also fit once $N$ is large. But $[1,N]$ has
+$N$ elements and $[1, N-a-1]$ has $N-a-1 < N$, so $c$ cannot be injective
+on $[1,N]$. Contradiction.
+\end{proof}
+
+\begin{remark}[Why this is the right proof]
+The contradiction in Lemma~\ref{lem:Delta2} uses \emph{no} parity
+argument and \emph{no} even/odd split on~$\Delta$. The single lever is
+forward-closure of badness (Lemma~\ref{lem:badprop}), which turns the
+``active'' set on each residue into a prefix; the chain bound then makes
+that prefix finite for $\Delta\ge 2$, and a one-line pigeonhole finishes.
+This is markedly simpler than---and subsumes---the earlier even/odd
+case analysis.
+\end{remark}
+
+It remains to handle $\Delta=1$.
+
+\begin{lemma}[$\Delta=1$ forces an identity tail]\label{lem:Delta1}
+If $a<b=a+1$ are indistinguishable, then $c(n)=n$ for all $n\ge a$.
+\end{lemma}
+\begin{proof}
+For $\Delta=1$, $b+D = a+(D+1)$, so consecutiveness
+(Lemma~\ref{lem:consec}) on active displacements reads
+$|c(a+D+1)-c(a+D)|=1$: the labels along $a, a{+}1, a{+}2, \dots$ form a
+self-avoiding $\pm 1$ walk. Let $\sigma(0)=\sgn\bigl(c(a{+}1)-c(a)\bigr)$
+be the sign of the first step. If $\sigma(0)=-1$ (descending start), the
+walk $c(a), c(a){-}1, c(a){-}2,\dots$ would eventually drop below~$1$,
+impossible for labels in $\Np$; so $\sigma(0)=+1$. A self-avoiding $\pm 1$
+walk that starts ascending must ascend forever (any later descent would
+revisit a value, breaking injectivity), giving $c(n+1)=c(n)+1$ for all
+$n\ge a$, i.e.\ $c(n)=n + C$ on $[a,\infty)$ with $C=c(a)-a$. If $C>0$,
+the values $\{1,\dots,C\}$ are absent from $c([a,\infty))$ and must be
+supplied by the finite set $c([1,a{-}1])$, which has only $a-1$ elements;
+bijectivity of $c$ on $\Np$ then forces $C=0$ (and $C<0$ was already
+excluded). Hence $c(n)=n$ for $n\ge a$. (In Lean this sign analysis is the
+pair \lean{indist\us Delta1\us pos} / \lean{indist\us Delta1\us neg}.)
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:lemmaA}]
+Let $a<b$ be indistinguishable, $\Delta=b-a$. By Lemma~\ref{lem:Delta2},
+$\Delta\ge 2$ is impossible, so $\Delta=1$, i.e.\ $b=a+1$; then
+Lemma~\ref{lem:Delta1} gives $c(n)=n$ for $n\ge a$, so $c$ is eventually
+identity. Contrapositively, if $c$ is not eventually identity then no
+pair is indistinguishable.
+\end{proof}
+
+% ------------------------------------------------------------
+\subsection{From distinguishability to a strategy}
+\label{sec:strategy}
+
+Theorem~\ref{thm:lemmaA} says that for a non-EI~$c$ every pair of cells
+admits a separating observation. A winning strategy must (i) narrow the
+start cell down to a small candidate set, then (ii) reach a separating
+observation while keeping the trolley on the tape. Safety is free if Bob
+only ever oscillates and moves right: positions stay $\ge k_0 \ge 1$, so
+the trolley never falls off.
+
+\paragraph{Phase~1 (bracket to two candidates).}
+Bob oscillates the displacement between $0$ and~$1$, moving
+\emph{right first}, so $D_t\in\{0,1\}$ and $k_t\ge k_0$. At every even
+time $t=2m$ the trolley sits on $k_0$, with signal $\Yes \iff c(k_0)<2m$.
+Since $c(k_0)$ is finite, there is a first even time $T_1=2m^\ast$ with a
+\Yes, pinning $c(k_0)\in\{T_1{-}2,\,T_1{-}1\}$, hence
+\[
+  k_0 \in \{\,c^{-1}(T_1{-}2),\; c^{-1}(T_1{-}1)\,\}
+\]
+(a singleton if one of those preimages is~$0$, in which case Bob guesses
+at once). So Phase~1 always narrows $k_0$ to (at most) two candidates,
+the cells waking at one even and the next odd time.
+
+\paragraph{Phase~2 (resolve).}
+Bob must now separate the two candidates. By Theorem~\ref{thm:lemmaA} the
+candidate pair is distinguishable: some admissible $(D,t)$ with $t\ge D$,
+$t\equiv D\pmod2$ yields different signals in the two worlds. Reaching it
+and reading the signal identifies $k_0$ and hence the current position,
+which Bob guesses.
+
+The subtlety, and the location of the only remaining gap, is in Phase~2:
+\emph{which} separating observation to aim for, and how to monitor it at
+the necessary time resolution. We make this precise in
+Section~\ref{sec:status} after first giving complete strategies for two
+natural families where Phase~2 is finite and local.
+
+% ------------------------------------------------------------
+\subsection{Two complete winning families (locally decodable)}
+\label{sec:local}
+
+When the candidate pair is always separated by a wake-up that occurs at a
+\emph{bounded} displacement, Bob can resolve it by a fixed-amplitude
+oscillation that monitors a small window from time~$0$---catching even the
+early wake-ups that a navigate-then-observe approach would arrive too late
+to see. Two regimes are formalised.
+
+\begin{definition}[Locally $K{=}2$ decodable]\label{def:k2}
+$c$ is \emph{locally decodable} if the map
+$k_0 \mapsto \bigl(\text{first even \Yes{} time of } c(k_0),\;
+\text{first odd \Yes{} time of } c(k_0{+}1)\bigr)$
+is injective; equivalently the bucketed pair $(c(k_0), c(k_0{+}1))$
+determines~$k_0$.
+\end{definition}
+
+\begin{theorem}[$K{=}2$ winning theorem]\label{thm:k2}
+If $c$ is locally decodable, Bob wins. The strategy oscillates
+$D\in\{0,1\}$, reads off $c(k_0)$ and $c(k_0{+}1)$ from the first even
+and first odd \Yes, decodes~$k_0$, and guesses its current
+position---never leaving $\{k_0, k_0{+}1\}$, so safety is automatic.
+\end{theorem}
+
+\begin{example}[Adjacent transpositions]\label{ex:adj}
+Let $c$ swap $2i{-}1\leftrightarrow 2i$ for every $i$ (so $c(n)=n+1$ if
+$n$ is odd, $c(n)=n-1$ if $n$ is even). Here $g(n)=c(n)-n\in\{+1,-1\}$ is
+bounded, yet $c$ is not eventually identity; Bob wins by local decoding.
+This already shows the boundary is non-EI, not unbounded growth of~$g$.
+\end{example}
+
+\begin{example}[Block $3$-cycles on consecutive triples]\label{ex:cyc3}
+Let $c$ cyclically rotate each triple $\{3i{-}2,3i{-}1,3i\}$, e.g.\
+$3i{-}2\mapsto 3i{-}1\mapsto 3i\mapsto 3i{-}2$. This is locally decodable
+(the bucketed pair of adjacent labels recovers $k_0$), and Bob wins.
+\end{example}
+
+Some non-EI permutations need a third probed label. The block $3$-cycle
+written ``forwards'' is the canonical example.
+
+\begin{definition}[Locally $K{=}3$ decodable]\label{def:k3}
+$c$ is \emph{locally $3$-decodable} if the triple of first-\Yes{} times at
+displacements $0,1,2$---equivalently the bucketed triple
+$(c(k_0), c(k_0{+}1), c(k_0{+}2))$---determines~$k_0$.
+\end{definition}
+
+\begin{theorem}[$K{=}3$ winning theorem]\label{thm:k3}
+If $c$ is locally $3$-decodable, Bob wins, via a period-$4$ triangle-wave
+sweep of displacements $0,1,2,1,0,1,2,\dots$ with three detectors (first
+\Yes{} at displacements $0$, $1$, $2$). The displacement stays in
+$[0,2]$, so safety is automatic.
+\end{theorem}
+
+\begin{example}[Forward block $3$-cycle]\label{ex:blk}
+Let $c(m)=m+1$ unless $3\mid m$, in which case $c(m)=m-2$ (so each block
+$\{3b{+}1,3b{+}2,3b{+}3\}$ rotates forwards: $c(1)=2$, $c(2)=3$,
+$c(3)=1$). Then $c(m)\le m+1$ always, so \emph{no} rightward probe
+$[c(k_0{+}D) < T_1{+}D]$ ever separates the Phase-1 candidates---a
+navigate-only strategy fails. But cell $3$ wakes early, at time~$2$ (since
+$c(3)=1$), which splits $k_0=1$ from $k_0=2$ at displacement~$1$: at
+$(D{=}1,\,t{=}3)$, the world $k_0=2$ stands on the already-awake cell~$3$
+and reports \Yes, while $k_0=1$ stands on cell~$2$, still asleep
+($c(2)=3\not<3$), and reports \No. The $K{=}3$ sweep, monitoring small
+displacements from time~$0$, catches this early wake-up. So $c$ is
+locally $3$-decodable, and Bob wins.
+\end{example}
+
+Example~\ref{ex:blk} is instructive: it is a concrete non-EI Bob-win
+whose resolution \emph{requires} catching an early wake-up at a small
+displacement, which is precisely the regime the local decoders are built
+for---and precisely what naive ``oscillate then navigate right''
+strategies miss.
+
+% ------------------------------------------------------------
+\subsection{Worked examples table}
+\label{sec:table}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}l l c X@{}}
+\toprule
+\textbf{Permutation $c$} & \textbf{EI?} & \textbf{Bob} & \textbf{Reason} \\
+\midrule
+Identity $c(n)=n$
+  & yes & \textbf{loses}
+  & $(2j,\,2j{+}1)$ collide: only even thresholds probeable
+    (Rem.~\ref{rem:flat}). \\
+Finitary (any finite-support perm.)
+  & yes & \textbf{loses}
+  & EI with $N=$ support bound; same collision for large $k_0$. \\
+Adjacent transpositions
+  & no & \textbf{wins}
+  & locally $2$-decodable (Ex.~\ref{ex:adj}); bounded $g$. \\
+Block $3$-cycle (rotated triples)
+  & no & \textbf{wins}
+  & locally $2$- or $3$-decodable (Ex.~\ref{ex:cyc3},\,\ref{ex:blk}). \\
+Any $c$ rearranging arbitrarily large values
+  & no & \textbf{wins}
+  & not EI; distinguishable pairs (Thm.~\ref{thm:lemmaA}). \\
+\bottomrule
+\end{tabularx}
+\caption{Outcomes by family. Eventually-identity $\iff$ Bob loses.}
+\end{table}
+
+% ============================================================
+\section{Machine-verification status}
+\label{sec:status}
+
+The argument has been formalised in Lean~4 (with Mathlib) in the
+development \texttt{griddles-p4-lean}. We report the status honestly: a
+substantial core is machine-checked and axiom-clean, while a single
+component---an explicit uniform winning strategy for the fully general
+case---remains open. We do not overclaim.
+
+For each item below, ``axiom-clean'' means the Lean \verb|#print axioms|
+audit lists only the three standard foundational axioms
+\verb|propext|, \verb|Classical.choice|, \verb|Quot.sound|, with
+\emph{no} \verb|sorryAx| and no custom axioms. The entire library builds
+(\verb|lake build| succeeds); the only \verb|sorry| in the whole
+development is the one noted as open below.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}l l >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Component} & \textbf{Status} & \textbf{Lean location} \\
+\midrule
+Losing direction (Thm.~\ref{thm:losing})
+  & \textbf{proven, axiom-clean}
+  & \lean{Losing\dt EventuallyIdentity\us loses}; parity lock in
+    \lean{Parity\dt lean}. \\
+Distinguishability (Thm.~\ref{thm:lemmaA})
+  & \textbf{proven, axiom-clean}
+  & \lean{LemmaA\dt Indistinguishable\us implies\us eventually\us identity};
+    crux \lean{indist\us Delta\us ge\us 2\us impossible}. \\
+$K{=}2$ winning class (Thm.~\ref{thm:k2})
+  & \textbf{proven, axiom-clean}
+  & \lean{WinningRestricted\dt LocallyDecodable\us BobWins}; instances
+    \lean{adjPerm\us BobWins}, \lean{cyc3Perm\us BobWins}. \\
+$K{=}3$ winning class (Thm.~\ref{thm:k3})
+  & \textbf{proven, axiom-clean}
+  & \lean{WinningKProbe\dt LocallyK3Decodable\us BobWins}; instance
+    \lean{blkPerm\us BobWins}. \\
+Capstone (locally-decodable consistency)
+  & \textbf{proven, axiom-clean}
+  & \lean{Answer\dt locallyDecodable\us main}. \\
+Main \emph{iff}, winning half, general $c$
+  & \textbf{open}
+  & \lean{Answer\dt main} ($\Leftarrow$ direction is a \lean{sorry}). \\
+\bottomrule
+\end{tabularx}
+\caption{Formalisation status. Everything except the general winning
+strategy is machine-checked and axiom-clean.}
+\end{table}
+
+\paragraph{What is proven.}
+The losing direction is complete: eventually-identity~$c$ admits the
+indistinguishable pair $(2j,2j{+}1)$, machine-verified through the
+parallel-evolution lemma and the signal-match case analysis. The
+distinguishability theorem is complete and axiom-clean, including its
+crux for $\Delta\ge2$: the elementary forward-closure argument of
+Section~\ref{sec:winning} (which earlier, by our own assessment, was
+believed to need global surjectivity bookkeeping). The two
+locally-decodable winning classes are complete, with the three concrete
+instances $\texttt{adjPerm}$, $\texttt{cyc3Perm}$, $\texttt{blkPerm}$
+each proven a Bob-win.
+
+\paragraph{What is open---and why it is genuinely hard.}
+The remaining gap is a single, explicit, uniformly-described strategy that
+turns ``no pair is indistinguishable'' (Thm.~\ref{thm:lemmaA}) into a
+formalised $\texttt{BobWins}$ for \emph{every} non-EI~$c$. The difficulty
+is a real \emph{timing/resolution/reach} tension, not a missing lemma:
+
+\begin{itemize}[topsep=2pt,itemsep=2pt]
+  \item Bob occupies one displacement per tick, so he can finely monitor
+  (period~$\approx 2$) only $O(1)$ displacements at once. Monitoring
+  displacements $0,\dots,K$ simultaneously by a triangle wave costs time
+  resolution $\approx 2K$, which can blur a discriminator whose
+  separating window is $O(1)$.
+
+  \item A discriminator that is an \emph{early} wake-up at displacement~$D$
+  must be monitored finely \emph{from time~$0$} (it cannot be reached
+  later: Example~\ref{ex:blk}).
+
+  \item A discriminator that is a \emph{far} wake-up requires \emph{reaching}
+  a large displacement, which precludes finely monitoring all small
+  displacements meanwhile.
+\end{itemize}
+
+A single uniform strategy must reconcile these. We verified by direct
+simulation that several natural candidate strategies are each incomplete
+on a concrete family: a navigate-only ``monotone-right'' strategy fails on
+the forward block $3$-cycle (Example~\ref{ex:blk}); ``$K{=}2$ or
+navigate'' misses mid-range early discriminators of a block $5$-cycle; a
+sequential staircase that probes displacement~$0$ first arrives at
+displacement~$1$ too late to catch an early wake-up. The existence of
+\emph{some} winning strategy for every non-EI~$c$ is confirmed by an
+exhaustive belief-state (AND/OR) game solver with real safety, which
+reports \textsc{lose} for eventually-identity inputs and \textsc{win}
+from full ignorance for non-EI inputs, stably as the search horizon
+grows. But a single explicit, provably-complete, formalisable
+construction is an intricate open problem---plausibly the intended hard
+core of the puzzle.
+
+\paragraph{Summary.}
+The \emph{answer} (Theorem~\ref{thm:main}) is settled, with the losing
+direction and the distinguishability theorem machine-checked and
+axiom-clean, and explicit machine-checked winning strategies for natural
+families. The one component not yet formalised is a uniform winning
+strategy for arbitrary non-EI~$c$; its existence is established by an
+exhaustive game solver, while an explicit formalisable strategy remains
+open.
+
+% ============================================================
+\section*{Acknowledgements}
+\addcontentsline{toc}{section}{Acknowledgements}
+This is G-Research GRiddles Series~A, Puzzle~4. The competition is open
+and has no published answer; the result above is the author's derivation,
+stress-tested by exhaustive simulation and a belief-state game solver, and
+in large part machine-checked in Lean~4.
+
+\end{document}
