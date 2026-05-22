@@ -757,88 +757,6 @@ lemma bad_D_propagates {c : Perm} {a b : ℕ+}
   have h_iff := h D D h_t_ge h_t_par
   exact h_iff.mp h_bad
 
-/-- **Auxiliary sub-claim**: σ(D) is always `+1` (i.e. `c(b+D).val = c(a+D).val + 1`).
-
-This is the crux of LemmaA.  The full argument (verified by hand on multiple examples,
-e.g. `a=5, b=6, c(5)=7` forcing the descending chain `7,6,5,4,3,2,1` then a pigeonhole
-collapse) runs as follows.
-
-**Step 1 — σ propagates.**  By `indist_consec` at every *good* `D` (where both c-values
-are `≥ D`), the values `c(a+D)` and `c(b+D) = c(a+D+Δ)` are consecutive, so
-`σ(D) := c(a+D+Δ).val − c(a+D).val ∈ {−1, +1}`.  If `σ(D) = −1` at a good `D`, then at
-the next good step `σ(D+Δ) = −1` too: otherwise `c(a+D+2Δ).val = c(a+D).val`, and by
-injectivity `a+D+2Δ = a+D`, impossible (`Δ ≥ 1`).
-
-**Step 2 — σ(0) = −1 is impossible.**  Suppose `σ(0) = −1`.  By Step 1 the chain
-`c(a+kΔ).val = c(a).val − k` descends through `c(a).val, c(a).val−1, …` while `D = kΔ`
-stays good (i.e. while `c(a).val − k ≥ kΔ`).  These positions use up the value-block
-`{c(a).val − k_max, …, c(a).val}`.  Once `D` becomes *bad* (c-value `< D`), the signal
-from `a+D` is permanently "Yes" at every valid time, so `Indistinguishable` forces the
-signal from `b+D = a+D+Δ` to be "Yes" too, giving `c(a+D+Δ).val < D`.  Iterating this
-bad-`D` constraint forces *infinitely many* positions into the finite value-set below
-the chain's floor, contradicting injectivity (pigeonhole).
-
-**Step 3 — extend to all D.**  By Step 2, `σ(0) = +1`.  The same argument applied with
-basepoint `a + D` (rather than `a`) gives `σ(D) = +1` for every `D` — equivalently, the
-configuration is forced into the ascending regime everywhere.
-
-**Reassessment note (loop iteration).**  The building blocks `bad_D_propagates`,
-`sigma_no_flip`, `sigma_no_flip_desc`, and `maps_into_contradiction` are all proven.
-The pigeonhole `maps_into_contradiction` closes the `σ(0) = −1` case *cleanly for
-`Δ = 1`*: the descending walk `c(a+k) = c(a)−k` plus the bad-`D` tail (`bad_D_propagates`
-gives `c(a+k).val < k−1 ≤ c(a).val`) places all `c(a).val + 1` cells `a..a+c(a).val`
-into `{1,…,c(a).val}`.
-
-For `Δ ≥ 2` the σ-chain is `Δ`-spaced and the bad-tail bound grows faster than the
-position count, so the single-chain pigeonhole does *not* directly over-stuff; ruling
-out `Δ ≥ 2` needs either the parity-periodicity obstruction (clean for `Δ` even) or a
-multi-residue counting argument (`Δ` odd).  Also verified: moving left (`D < 0`) gives
-Bob no extra power here — reaching cell `p` needs time `t ≥ |D|`, by which point the
-signal `c p < t` is saturated — so the `D ≥ 0` definition of `Indistinguishable` is the
-correct notion (the losing direction already handles `D < 0` via `position_lower_bound`).
-
-This remains the final mathematical gap; the `Δ = 1` half is mechanically assemblable
-from the proven building blocks. -/
-private lemma sigma_eq_pos_one {c : Perm} {a b : ℕ+} (hab : a < b)
-    (h : Indistinguishable c a b) (D : ℕ) :
-    (c ⟨a.val + D, aD_pos a D⟩).val + 1 = (c ⟨b.val + D, aD_pos b D⟩).val := by
-  sorry
-
-/-- **Auxiliary**: the key combinatorial content of LemmaA — under `Indistinguishable`,
-    the shift relation `c (n + Δ) = c n + 1` holds from position `a` onward (with
-    `Δ := b.val − a.val`).
-
-The proof reduces to `sigma_eq_pos_one`: for every `D`, σ at D is `+1`, i.e.
-`(c (b + D)).val = (c (a + D)).val + 1`. -/
-lemma shift_relation_of_indist {c : Perm} {a b : ℕ+} (hab : a < b)
-    (h : Indistinguishable c a b) :
-    ∀ n : ℕ+, a ≤ n →
-      ∀ (h_pos : 0 < n.val + (b.val - a.val)),
-        (c ⟨n.val + (b.val - a.val), h_pos⟩).val = (c n).val + 1 := by
-  intro n han h_pos
-  set D : ℕ := n.val - a.val with hD_def
-  have hD : n.val = a.val + D := by
-    have : a.val ≤ n.val := han
-    omega
-  have h_pos_b : 0 < b.val + D := aD_pos b D
-  -- Identify n with ⟨a.val + D, _⟩ and the target with ⟨b.val + D, _⟩.
-  have h_n_pnat_eq : n = ⟨a.val + D, aD_pos a D⟩ := Subtype.ext hD
-  have h_target_pnat_eq :
-      (⟨n.val + (b.val - a.val), h_pos⟩ : ℕ+) = ⟨b.val + D, h_pos_b⟩ := by
-    apply Subtype.ext
-    show n.val + (b.val - a.val) = b.val + D
-    have h_ab_val : a.val ≤ b.val := le_of_lt hab
-    omega
-  -- Conclude using sigma_eq_pos_one.
-  have h_sigma := sigma_eq_pos_one hab h D
-  -- h_sigma : (c ⟨a.val + D, _⟩).val + 1 = (c ⟨b.val + D, _⟩).val
-  have h_c_n : (c n).val = (c ⟨a.val + D, aD_pos a D⟩).val := by
-    rw [h_n_pnat_eq]
-  have h_c_target : (c ⟨n.val + (b.val - a.val), h_pos⟩).val =
-                    (c ⟨b.val + D, h_pos_b⟩).val := by
-    rw [h_target_pnat_eq]
-  rw [h_c_n, h_c_target, ← h_sigma]
-
 /-- **Δ = 1 ascending.**  For the pair `(a, a+1)` (so `b.val = a.val + 1`), if
     `Indistinguishable` holds and the first step ascends (`c(a) < c(a+1)`, i.e.
     `σ(0) = +1`), then the whole a-chain ascends: `c(a+D).val = c(a).val + D`.
@@ -967,8 +885,8 @@ lemma indist_Delta1_neg {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
 `c(b)` is consecutive to both `c(a)` (displacement `0`) and `c(a+2Δ)` (displacement `Δ`),
 and by injectivity `c(a) ≠ c(a+2Δ)`, so `{c(a), c(a+2Δ)} = {c(b)−1, c(b)+1}`.  Both
 minima must be even (since `0` and `Δ` are even), which pins `c(b)` to both parities —
-contradiction.  (This is the clean half of the `Δ ≥ 2` story; the "bad" sub-case
-`c(b) < Δ` and the odd-`Δ` case remain — see `sigma_eq_pos_one`.) -/
+contradiction.  (Superseded by `indist_Delta_even_good_at` for general displacement;
+kept as the `D = 0` instance.  The full Δ-even closure is `indist_Delta_even`.) -/
 lemma indist_Delta_even_good {c : Perm} {a b : ℕ+} (hab : a < b)
     (h : Indistinguishable c a b) (Δ : ℕ) (hΔ : b.val = a.val + Δ)
     (hΔeven : Δ % 2 = 0) (hΔ2 : 2 ≤ Δ) (hgood : Δ ≤ (c b).val) : False := by
@@ -992,6 +910,34 @@ lemma indist_Delta_even_good {c : Perm} {a b : ℕ+} (hab : a < b)
   obtain ⟨hcons0, hpar0⟩ := h0
   obtain ⟨hconsΔ, hparΔ⟩ := hΔc
   rcases hcons0 with h1 | h1 <;> rcases hconsΔ with h2 | h2 <;> omega
+
+/-- **Δ even, general "good pair".**  If `Δ` is even and a good pair `(D₀, D₀+Δ)` exists
+    (`c(a+D₀) ≥ D₀` and `c(a+D₀+Δ) ≥ D₀+Δ`), the same parity argument (now at displacement
+    `D₀`) gives a contradiction.  The two minima are `≡ D₀` and `≡ D₀+Δ ≡ D₀` (Δ even). -/
+lemma indist_Delta_even_good_at {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h : Indistinguishable c a b) (Δ : ℕ) (hΔ : b.val = a.val + Δ) (hΔeven : Δ % 2 = 0)
+    (D₀ : ℕ) (hg1 : D₀ ≤ (c (aD a D₀)).val) (hg2 : D₀ + Δ ≤ (c (aD a (D₀ + Δ))).val) :
+    False := by
+  have hΔpos : 1 ≤ Δ := by have h' : a.val < b.val := hab; omega
+  have br1 : aD b D₀ = aD a (D₀ + Δ) := by
+    apply Subtype.ext; show b.val + D₀ = a.val + (D₀ + Δ); omega
+  have br2 : aD b (D₀ + Δ) = aD a (D₀ + Δ + Δ) := by
+    apply Subtype.ext; show b.val + (D₀ + Δ) = a.val + (D₀ + Δ + Δ); omega
+  have hb1 : D₀ ≤ (c (aD b D₀)).val := by rw [br1]; omega
+  have hc1 := indist_consec hab h (D := D₀) hg1 hb1
+  rw [br1] at hc1
+  have hb2 : D₀ + Δ ≤ (c (aD b (D₀ + Δ))).val := (good_symm h (D₀ + Δ)).mp hg2
+  have hc2 := indist_consec hab h (D := D₀ + Δ) hg2 hb2
+  rw [br2] at hc2
+  have hne : (c (aD a D₀)).val ≠ (c (aD a (D₀ + Δ + Δ))).val := by
+    intro heq
+    have hpe : aD a D₀ = aD a (D₀ + Δ + Δ) := c.injective (Subtype.ext heq)
+    have : a.val + D₀ = a.val + (D₀ + Δ + Δ) := by
+      have := congrArg (fun p : ℕ+ => p.val) hpe; simpa [aD_val] using this
+    omega
+  obtain ⟨hcons1, hpar1⟩ := hc1
+  obtain ⟨hcons2, hpar2⟩ := hc2
+  rcases hcons1 with h1 | h1 <;> rcases hcons2 with h2 | h2 <;> omega
 
 /-- **Regime-2 bound.**  If no "good pair" `(D, D+Δ)` exists (every `D` has `c(a+D) < D`
     or `c(a+D+Δ) < D+Δ`), then *every* displacement `≥ Δ` is bad: `c(a+D) < D` for `D ≥ Δ`.
@@ -1069,18 +1015,44 @@ lemma regime2_impossible {c : Perm} {a b : ℕ+} (h : Indistinguishable c a b) {
   simp only [Fintype.card_fin] at hcard
   omega
 
+/-- **Δ even is fully impossible.**  Case on whether a good pair exists: if so, the parity
+    kill (`indist_Delta_even_good_at`); if not, `regime2_impossible`.  No `sorry`. -/
+lemma indist_Delta_even {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h : Indistinguishable c a b) {Δ : ℕ} (hΔ : b.val = a.val + Δ)
+    (hΔeven : Δ % 2 = 0) (hΔ2 : 2 ≤ Δ) : False := by
+  by_cases hge : ∃ D : ℕ, D ≤ (c (aD a D)).val ∧ D + Δ ≤ (c (aD a (D + Δ))).val
+  · obtain ⟨D₀, hg1, hg2⟩ := hge
+    exact indist_Delta_even_good_at hab h Δ hΔ hΔeven D₀ hg1 hg2
+  · push_neg at hge
+    apply regime2_impossible h hΔ hΔ2
+    intro D
+    by_cases hD : D ≤ (c (aD a D)).val
+    · right; have := hge D hD; omega
+    · left; omega
+
+/-- **The sole remaining gap** (research-level).  Δ *odd* (`≥ 2`, i.e. `≥ 3`) with a good
+    pair `(D₀, D₀+Δ)` present.  Here the parity argument is provably *consistent* (unlike the
+    even case), and the "no good pair" regime is already excluded (`regime2_impossible`), so
+    the contradiction requires the global value-hogging / ℕ⁺-surjectivity bookkeeping across
+    unboundedly many bad regions.  See the deep-dive in `notes.md`.  This is the only `sorry`
+    in the development; everything else (losing direction, Δ=1, Δ-even, regime 2) is complete. -/
+lemma odd_good_pair_gap {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h : Indistinguishable c a b) {Δ : ℕ} (hbΔ : b.val = a.val + Δ) (hodd : ¬ Δ % 2 = 0)
+    (hge : ∃ D : ℕ, D ≤ (c (aD a D)).val ∧ D + Δ ≤ (c (aD a (D + Δ))).val) : False := by
+  sorry
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
     `b = a + 1` and `c` is eventually identity from position `a`.
 
-The proof combines:
+The proof case-splits on `Δ = b − a`:
 
-* `indist_consec` — for `D` such that both c-values are `≥ D`, the values are
-  consecutive integers with the parity condition.
-* `shift_relation_of_indist` — for sufficiently large `n`, `c (n + Δ) = c n + 1`.
-* If `Δ ≥ 2`, `shift_Delta_ge_2_contradiction` derives False.
-* If `Δ = 1`, `shift_one_implies_eventually_identity` finishes. -/
+* `Δ = 1`: the σ(0) case split (`indist_Delta1_pos` / `indist_Delta1_neg`) gives eventual
+  identity.  Fully proven.
+* `Δ` even (`≥ 2`): `indist_Delta_even` derives `False` (parity kill + `regime2_impossible`).
+* `Δ` odd (`≥ 3`): the "no good pair" regime is killed by `regime2_impossible`; the
+  remaining "good pair" case is the single `sorry` (`odd_good_pair_gap`). -/
 
 theorem Indistinguishable_implies_eventually_identity
     {c : Perm} {a b : ℕ+} (hab : a < b)
@@ -1111,14 +1083,25 @@ theorem Indistinguishable_implies_eventually_identity
       · exact indist_Delta1_pos hb1 hab h hpos
       · exact (indist_Delta1_neg hb1 hab h hneg).elim
     exact ⟨hb_eq, h_id⟩
-  · -- **Δ ≥ 2** (still via the documented `shift_relation_of_indist`, whose only gap is
-    -- `sigma_eq_pos_one`).
-    have h_shift_rel := shift_relation_of_indist hab h
+  · -- **Δ ≥ 2**: derive `False`.  Δ-even is fully closed; for Δ-odd the "no good pair"
+    -- regime is killed by `regime2_impossible`, leaving only the Δ-odd "good pair" case.
+    exfalso
     have hΔ_ge_2' : 2 ≤ Δ := hΔ_ge_2
-    have h_for_lemma : ∀ n : ℕ+, a ≤ n → ∀ (h_pos : 0 < n.val + Δ),
-        (c ⟨n.val + Δ, h_pos⟩).val = (c n).val + 1 :=
-      fun n hN_le_n h_pos => h_shift_rel n hN_le_n h_pos
-    exact (shift_Delta_ge_2_contradiction hΔ_ge_2' h_for_lemma).elim
+    have hab' : a.val < b.val := hab
+    have hbΔ : b.val = a.val + Δ := by omega
+    by_cases hpar : Δ % 2 = 0
+    · exact indist_Delta_even hab h hbΔ hpar hΔ_ge_2'
+    · -- Δ odd
+      by_cases hge : ∃ D : ℕ, D ≤ (c (aD a D)).val ∧ D + Δ ≤ (c (aD a (D + Δ))).val
+      · -- Δ odd with a good pair — the sole remaining research-level gap (value-hogging).
+        exact (odd_good_pair_gap hab h hbΔ hpar hge).elim
+      · -- no good pair: regime 2 contradiction
+        push_neg at hge
+        apply regime2_impossible h hbΔ hΔ_ge_2'
+        intro D
+        by_cases hD : D ≤ (c (aD a D)).val
+        · right; have := hge D hD; omega
+        · left; omega
 
 /-- **Lemma A (corollary used by the winning direction).**  If `c` is not eventually
     identity, then *no* pair of starting cells is indistinguishable. -/
