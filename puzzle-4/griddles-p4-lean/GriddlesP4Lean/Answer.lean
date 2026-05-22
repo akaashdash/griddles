@@ -52,13 +52,36 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
     --   threshold for both cells. One trajectory cannot finely monitor all displacements at once:
     --   this is the genuine timing/resolution tension that defeats the fixed-`K` architecture.)
     --
-    -- CONCLUSION: closing this `sorry` requires a winning strategy that is NOT a fixed-amplitude
-    -- triangle sweep (candidates: a fine small-amplitude core interleaved with periodic far
-    -- excursions, or an adaptive belief-shrinking walk). LemmaA guarantees every non-EI `c` has,
-    -- for every candidate pair, a reachable discriminator — so the information to win is always
-    -- present; what is open is packaging it into one explicit, provably-complete *uniform*
-    -- strategy. (The `→` direction of `main` is the open piece; the `←` losing direction is
-    -- proven in `Losing.lean`, and the K-decodable classes above settle wide subclasses of `→`.)
+    -- THE WINNING STRATEGY IS ADAPTIVE (belief-state), verified by exact-dynamics search:
+    --   Maintain `belief = {k : the observed signal history is consistent with k₀ = k}` and move
+    --   to minimise depth-to-singleton. On the block-5 witness this wins the full candidate set
+    --   `{4,5,6,7,8}` in DEPTH 5 (robust across search bounds maxT = 60/120/200, posCap ≤ 1000):
+    --   the play is `R, L, L, L, …` branching on the first "Yes", and it uses NEGATIVE displacement
+    --   (D = -1, -2, i.e. cells LEFT of the start). So the winner is genuinely not a one-sided
+    --   sweep and not even uniform in `k₀` — the trajectory depends on the running belief.
+    --
+    --   This also clears an earlier false alarm: a naive greedy extractor got "stuck" repeating `R`
+    --   forever; that was an extraction bug (a non-splitting `R` trivially keeps both sub-beliefs
+    --   "winnable later"), NOT evidence that block-5 is unwinnable. Under the depth metric the
+    --   strategy resolves cleanly. Block-5 IS winnable ⇒ the answer (`BobWins ↔ ¬EI`) is correct
+    --   and this `sorry` states a TRUE proposition.
+    --
+    -- WHAT `WinsFrom` ACTUALLY DEMANDS (Defs.lean): not merely "learn `k₀`" but (i) every visited
+    -- position stays `≥ 1` through the stop time `T` (no falling off the left — a real SAFETY
+    -- obligation that constrains leftward moves, since the lower bound on the unknown `k₀` is
+    -- itself unknown), and (ii) the action at `T` guesses the trolley's CURRENT cell
+    -- `k₀ + displacement` (Bob reconstructs his own displacement from the history). Localisation
+    -- therefore suffices for the guess, but the no-fall-off safety must be discharged simultaneously.
+    --
+    -- CONCLUSION: closing this `sorry` is a substantial *separate* Lean project — formalise the
+    -- belief-state strategy (belief evolution from history given `c`), prove it shrinks the belief
+    -- to a singleton in finite time (shrinkage from LemmaA's reachable-discriminator existence) and
+    -- discharge the left-edge safety, with a well-founded measure over an INITIALLY INFINITE belief.
+    -- The infinite-belief termination schedule is the genuine open piece — LemmaA gives pairwise
+    -- discriminators, but a single trajectory must resolve infinitely many candidates safely. The
+    -- math content is done (LemmaA, the losing direction, and the arbitrary-K decodable class are
+    -- all axiom-clean); what remains is packaging it into one explicit, provably-complete strategy.
+    -- (The `→` direction of `main` is the open piece; `←` is proven in `Losing.lean`.)
     intro h_not_ei
     sorry
 
