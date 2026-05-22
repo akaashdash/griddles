@@ -133,6 +133,27 @@ def lastEvenYesFrom : List Bool → ℕ → Option ℕ
 /-- The first (earliest) even time with a "Yes" signal in history `h`, or `none`. -/
 def firstEvenYes (h : List Bool) : Option ℕ := lastEvenYesFrom h h.length
 
+/-- Odd-time twin of `lastEvenYesFrom`: scan for the *oldest* odd-time "Yes". -/
+def lastOddYesFrom : List Bool → ℕ → Option ℕ
+  | [], _ => none
+  | (b :: bs), t =>
+      match lastOddYesFrom bs (t - 1) with
+      | some s => some s
+      | none => if t % 2 = 1 ∧ b then some t else none
+
+/-- The first (earliest) odd time with a "Yes" signal in history `h`, or `none`. -/
+def firstOddYes (h : List Bool) : Option ℕ := lastOddYesFrom h h.length
+
+/-- **Cons-recurrence for the odd detector.** -/
+lemma firstOddYes_cons (b : Bool) (bs : List Bool) :
+    firstOddYes (b :: bs) =
+      match firstOddYes bs with
+      | some s => some s
+      | none =>
+          if (b :: bs).length % 2 = 1 ∧ b then some ((b :: bs).length) else none := by
+  show lastOddYesFrom (b :: bs) (bs.length + 1) = _
+  simp only [lastOddYesFrom, Nat.add_sub_cancel, firstOddYes, List.length_cons]
+
 /-- **Cons-recurrence for the detector.**  Prepending the most-recent signal `b` (at time
     `(b :: bs).length`) keeps any earlier even-Yes, else checks the new signal. -/
 lemma firstEvenYes_cons (b : Bool) (bs : List Bool) :
