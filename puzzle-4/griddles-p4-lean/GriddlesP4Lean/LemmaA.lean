@@ -868,6 +868,32 @@ lemma indist_ascending_Delta1 {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
           simpa [aD_val] using this
         omega
 
+/-- **Δ = 1, σ(0) = +1 ⇒ eventual identity.**  The ascending chain
+    (`indist_ascending_Delta1`) is in particular everywhere-flat, so `flat_Delta_one`
+    gives `c n = n` for `n ≥ a`. -/
+lemma indist_Delta1_pos {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (hab : a < b) (h : Indistinguishable c a b)
+    (hσ0 : (c (aD a 0)).val + 1 = (c (aD a 1)).val) :
+    ∀ n : ℕ+, a ≤ n → c n = n := by
+  have hasc := indist_ascending_Delta1 hb hab h hσ0
+  apply flat_Delta_one (Q := a)
+  intro q hq hqpos
+  left
+  set D := q.val - a.val with hD
+  have hqval : q.val = a.val + D := by
+    have : a.val ≤ q.val := hq
+    omega
+  have hq_eq : aD a D = q := by
+    apply Subtype.ext; show a.val + D = q.val; omega
+  have hq1_eq : aD a (D + 1) = ⟨q.val + 1, hqpos⟩ := by
+    apply Subtype.ext; show a.val + (D + 1) = q.val + 1; omega
+  have e1 := hasc D
+  have e2 := hasc (D + 1)
+  rw [hq_eq] at e1
+  rw [hq1_eq] at e2
+  rw [e2, e1]
+  omega
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
