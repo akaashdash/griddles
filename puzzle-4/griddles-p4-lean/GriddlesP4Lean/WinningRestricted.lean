@@ -325,4 +325,39 @@ lemma winStrat_guess_of_both (decode : ℕ → ℕ → ℕ+) (h : List Bool) {T�
       Action.guess (if h.length % 2 = 0 then decode T₁ T₁' else decode T₁ T₁' + 1) := by
   simp only [winStrat, hfe, hfo]
 
+/-- **State match.**  Up to the guess time `T_g = max(T₁, T₁')`, the winning strategy
+    produces exactly the oscillation trajectory: before `T_g`, at least one detector is
+    silent, so `winStrat` oscillates step-for-step like `oscStrat`. -/
+lemma winStrat_state_eq (decode : ℕ → ℕ → ℕ+) (k₀ : ℕ+) :
+    ∀ t : ℕ, t ≤ max (evenThr (c k₀).val) (oddThr (c (k₀ + 1)).val) →
+      state c (winStrat decode) (k₀ : ℤ) t = state c oscStrat (k₀ : ℤ) t := by
+  intro t
+  induction t with
+  | zero => intro _; rfl
+  | succ n ih =>
+      intro hle
+      have ihn := ih (by omega)
+      have hhist : history c (winStrat decode) (k₀ : ℤ) n = history c oscStrat (k₀ : ℤ) n := by
+        unfold history; rw [ihn]
+      have hpos : position c (winStrat decode) (k₀ : ℤ) n = position c oscStrat (k₀ : ℤ) n := by
+        unfold position; rw [ihn]
+      have hlen : (history c oscStrat (k₀ : ℤ) n).length = n := history_length_oscStrat _ _
+      -- winStrat oscillates at step n (at least one detector silent, since n < T_g)
+      have hmove : winStrat decode (history c (winStrat decode) (k₀ : ℤ) n)
+          = .move (oscDir n) := by
+        rw [hhist]
+        by_cases hT₁ : evenThr (c k₀).val ≤ n
+        · have hT₁' : ¬ oddThr (c (k₀ + 1)).val ≤ n := by omega
+          have hfo : firstOddYes (history c oscStrat (k₀ : ℤ) n) = none := by
+            rw [firstOddYes_oscStrat, if_neg hT₁']
+          rw [winStrat_move_of_odd_none _ _ hfo, hlen]
+        · have hfe : firstEvenYes (history c oscStrat (k₀ : ℤ) n) = none := by
+            rw [firstEvenYes_oscStrat, if_neg hT₁]
+          rw [winStrat_move_of_even_none _ _ hfe, hlen]
+      have hmove_osc : oscStrat (history c oscStrat (k₀ : ℤ) n) = .move (oscDir n) := by
+        simp only [oscStrat, hlen]
+      rw [state_succ, state_succ,
+          step_move c (winStrat decode) _ _ _ (oscDir n) hmove,
+          step_move c oscStrat _ _ _ (oscDir n) hmove_osc, hpos, hhist]
+
 end TrolleyRetrieval
