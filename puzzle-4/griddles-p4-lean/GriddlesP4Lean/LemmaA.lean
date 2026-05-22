@@ -993,6 +993,82 @@ lemma indist_Delta_even_good {c : Perm} {a b : ℕ+} (hab : a < b)
   obtain ⟨hconsΔ, hparΔ⟩ := hΔc
   rcases hcons0 with h1 | h1 <;> rcases hconsΔ with h2 | h2 <;> omega
 
+/-- **Regime-2 bound.**  If no "good pair" `(D, D+Δ)` exists (every `D` has `c(a+D) < D`
+    or `c(a+D+Δ) < D+Δ`), then *every* displacement `≥ Δ` is bad: `c(a+D) < D` for `D ≥ Δ`.
+    (Good `D` forces `D+Δ` bad by hypothesis; bad `D` forces `D+Δ` bad by `bad_D_propagates`.) -/
+lemma regime2_bound {c : Perm} {a b : ℕ+} (h : Indistinguishable c a b) {Δ : ℕ}
+    (hΔ : b.val = a.val + Δ)
+    (hreg2 : ∀ D : ℕ, (c (aD a D)).val < D ∨ (c (aD a (D + Δ))).val < D + Δ) :
+    ∀ D : ℕ, Δ ≤ D → (c (aD a D)).val < D := by
+  intro D hD
+  obtain ⟨D0, rfl⟩ : ∃ D0, D = D0 + Δ := ⟨D - Δ, by omega⟩
+  rcases hreg2 D0 with hbad | hgood
+  · have hbad' : (c ⟨a.val + D0, aD_pos a D0⟩).val < D0 := hbad
+    have hbp := bad_D_propagates h hbad'
+    have heq : (⟨b.val + D0, aD_pos b D0⟩ : ℕ+) = aD a (D0 + Δ) := by
+      apply Subtype.ext; show b.val + D0 = a.val + (D0 + Δ); omega
+    rw [heq] at hbp
+    omega
+  · exact hgood
+
+/-- **Regime 2 is impossible.**  Under `regime2_bound`, `c` would map the initial segment
+    `[1, N]` into the smaller set `[1, N − a − 1]` for large `N` — contradicting injectivity. -/
+lemma regime2_impossible {c : Perm} {a b : ℕ+} (h : Indistinguishable c a b) {Δ : ℕ}
+    (hΔ : b.val = a.val + Δ) (hΔ2 : 2 ≤ Δ)
+    (hreg2 : ∀ D : ℕ, (c (aD a D)).val < D ∨ (c (aD a (D + Δ))).val < D + Δ) : False := by
+  have hbound := regime2_bound h hΔ hreg2
+  -- bound on `c` over the finitely many positions below `a + Δ`
+  have hpos : 0 < a.val + Δ := by have := a.property; omega
+  set B : ℕ := (Finset.range (a.val + Δ)).sup (fun n => (c ⟨n + 1, Nat.succ_pos n⟩).val)
+    with hBdef
+  have hBbound : ∀ p : ℕ+, p.val < a.val + Δ → (c p).val ≤ B := by
+    intro p hp
+    have hp1 : 1 ≤ p.val := p.property
+    have hmem : p.val - 1 ∈ Finset.range (a.val + Δ) := Finset.mem_range.mpr (by omega)
+    have hval_eq : (c p).val = (c ⟨(p.val - 1) + 1, Nat.succ_pos _⟩).val := by
+      have hpeq : (⟨(p.val - 1) + 1, Nat.succ_pos _⟩ : ℕ+) = p := by
+        apply Subtype.ext; show (p.val - 1) + 1 = p.val; omega
+      rw [hpeq]
+    rw [hBdef, hval_eq]
+    exact Finset.le_sup (f := fun n => (c ⟨n + 1, Nat.succ_pos n⟩).val) hmem
+  set N : ℕ := B + a.val + Δ + 1 with hNdef
+  have haval : 1 ≤ a.val := a.property
+  -- every position `i+1 ≤ N` has c-value `≤ N - a - 1`
+  have hval : ∀ i : Fin N, (c ⟨i.val + 1, Nat.succ_pos _⟩).val ≤ N - a.val - 1 := by
+    intro i
+    by_cases hge : a.val + Δ ≤ i.val + 1
+    · have hposeq : (⟨i.val + 1, Nat.succ_pos _⟩ : ℕ+) = aD a (i.val + 1 - a.val) := by
+        apply Subtype.ext; show i.val + 1 = a.val + (i.val + 1 - a.val); omega
+      have hb := hbound (i.val + 1 - a.val) (by omega)
+      rw [hposeq]
+      have := i.isLt
+      omega
+    · have := hBbound ⟨i.val + 1, Nat.succ_pos _⟩ (by simp; omega)
+      omega
+  -- inject Fin N into Fin (N - a - 1)
+  let g : Fin N → Fin (N - a.val - 1) := fun i =>
+    ⟨(c ⟨i.val + 1, Nat.succ_pos _⟩).val - 1, by
+      have h1 := hval i
+      have h2 : 0 < (c ⟨i.val + 1, Nat.succ_pos _⟩).val := (c ⟨i.val + 1, Nat.succ_pos _⟩).2
+      omega⟩
+  have hg_inj : Function.Injective g := by
+    intro i j hij
+    have hval_eq : (c ⟨i.val + 1, Nat.succ_pos _⟩).val - 1
+        = (c ⟨j.val + 1, Nat.succ_pos _⟩).val - 1 := by
+      simpa only [g, Fin.mk.injEq] using hij
+    have h2i : 0 < (c ⟨i.val + 1, Nat.succ_pos _⟩).val := (c ⟨i.val + 1, Nat.succ_pos _⟩).2
+    have h2j : 0 < (c ⟨j.val + 1, Nat.succ_pos _⟩).val := (c ⟨j.val + 1, Nat.succ_pos _⟩).2
+    have hcv : (c ⟨i.val + 1, Nat.succ_pos _⟩).val = (c ⟨j.val + 1, Nat.succ_pos _⟩).val := by
+      omega
+    have hc : c ⟨i.val + 1, Nat.succ_pos _⟩ = c ⟨j.val + 1, Nat.succ_pos _⟩ := Subtype.ext hcv
+    have hpe := c.injective hc
+    have : i.val + 1 = j.val + 1 := by
+      have := congrArg (fun (p : ℕ+) => p.val) hpe; simpa using this
+    exact Fin.ext (by omega)
+  have hcard := Fintype.card_le_of_injective g hg_inj
+  simp only [Fintype.card_fin] at hcard
+  omega
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
