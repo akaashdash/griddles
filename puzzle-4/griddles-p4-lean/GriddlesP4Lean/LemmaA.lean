@@ -961,6 +961,38 @@ lemma indist_Delta1_neg {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
   · push_neg at hgood
     omega
 
+/-- **Δ even, "good" sub-case.**  If `(a, b)` is indistinguishable with `Δ = b−a` even
+    (`≥ 2`) and displacement `Δ` is itself "good" (`Δ ≤ c(b)`), we reach a contradiction.
+
+`c(b)` is consecutive to both `c(a)` (displacement `0`) and `c(a+2Δ)` (displacement `Δ`),
+and by injectivity `c(a) ≠ c(a+2Δ)`, so `{c(a), c(a+2Δ)} = {c(b)−1, c(b)+1}`.  Both
+minima must be even (since `0` and `Δ` are even), which pins `c(b)` to both parities —
+contradiction.  (This is the clean half of the `Δ ≥ 2` story; the "bad" sub-case
+`c(b) < Δ` and the odd-`Δ` case remain — see `sigma_eq_pos_one`.) -/
+lemma indist_Delta_even_good {c : Perm} {a b : ℕ+} (hab : a < b)
+    (h : Indistinguishable c a b) (Δ : ℕ) (hΔ : b.val = a.val + Δ)
+    (hΔeven : Δ % 2 = 0) (hΔ2 : 2 ≤ Δ) (hgood : Δ ≤ (c b).val) : False := by
+  have ea0 : aD a 0 = a := by apply Subtype.ext; show a.val + 0 = a.val; omega
+  have eb0 : aD b 0 = b := by apply Subtype.ext; show b.val + 0 = b.val; omega
+  have eaΔ : aD a Δ = b := by apply Subtype.ext; show a.val + Δ = b.val; omega
+  have h0 := indist_consec hab h (D := 0) (Nat.zero_le _) (Nat.zero_le _)
+  rw [ea0, eb0] at h0
+  have h_aΔ : Δ ≤ (c (aD a Δ)).val := by rw [eaΔ]; exact hgood
+  have h_bΔ : Δ ≤ (c (aD b Δ)).val := (good_symm h Δ).mp h_aΔ
+  have hΔc := indist_consec hab h (D := Δ) h_aΔ h_bΔ
+  rw [eaΔ] at hΔc
+  set a2 := aD b Δ with ha2def
+  have hca_ne : (c a).val ≠ (c a2).val := by
+    intro heq
+    have hpos : a = a2 := c.injective (Subtype.ext heq)
+    have : a.val = b.val + Δ := by
+      have := congrArg (fun p : ℕ+ => p.val) hpos
+      rw [ha2def] at this; simpa [aD_val] using this
+    omega
+  obtain ⟨hcons0, hpar0⟩ := h0
+  obtain ⟨hconsΔ, hparΔ⟩ := hΔc
+  rcases hcons0 with h1 | h1 <;> rcases hconsΔ with h2 | h2 <;> omega
+
 /-! ### Main statement -/
 
 /-- **Lemma A (forward).**  If a pair `(a, b)` with `a < b` is indistinguishable, then
