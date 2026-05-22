@@ -285,4 +285,44 @@ lemma firstOddYes_oscStrat (k₀ : ℕ+) (t : ℕ) :
             rintro ⟨h1, -⟩; exact hpar h1
           rw [if_neg hcond, if_neg hno]
 
+/-! ### The combined winning strategy and its hypothesis -/
+
+/-- **Hypothesis (locally decodable).**  The map `k₀ ↦ (T₁, T₁')` — where
+    `T₁ = evenThr (c k₀)` and `T₁' = oddThr (c (k₀+1))` are the first even/odd "Yes" times —
+    admits a left inverse `decode`.  Equivalently, `(c k₀, c (k₀+1))` (up to the ±1 buckets)
+    determines `k₀`.  This holds for all "locally 2-distinguishable" permutations such as
+    adjacent transpositions and 3-cycles (verified by simulation). -/
+def LocallyDecodable (c : Perm) : Prop :=
+  ∃ decode : ℕ → ℕ → ℕ+, ∀ k₀ : ℕ+,
+    decode (evenThr (c k₀).val) (oddThr (c (k₀ + 1)).val) = k₀
+
+/-- **The winning strategy.**  Oscillate while either detector is silent; once *both* the
+    even- and odd-time "Yes" have fired (times `T₁, T₁'`), decode `k₀` and guess the current
+    position `k₀ + (t % 2)`. -/
+def winStrat (decode : ℕ → ℕ → ℕ+) : Strategy := fun h =>
+  match firstEvenYes h with
+  | none => Action.move (oscDir h.length)
+  | some T₁ =>
+    match firstOddYes h with
+    | none => Action.move (oscDir h.length)
+    | some T₁' =>
+        Action.guess (if h.length % 2 = 0 then decode T₁ T₁' else decode T₁ T₁' + 1)
+
+lemma winStrat_move_of_even_none (decode : ℕ → ℕ → ℕ+) (h : List Bool)
+    (hfe : firstEvenYes h = none) :
+    winStrat decode h = Action.move (oscDir h.length) := by
+  simp only [winStrat, hfe]
+
+lemma winStrat_move_of_odd_none (decode : ℕ → ℕ → ℕ+) (h : List Bool)
+    (hfo : firstOddYes h = none) :
+    winStrat decode h = Action.move (oscDir h.length) := by
+  simp only [winStrat, hfo]
+  cases firstEvenYes h <;> rfl
+
+lemma winStrat_guess_of_both (decode : ℕ → ℕ → ℕ+) (h : List Bool) {T₁ T₁' : ℕ}
+    (hfe : firstEvenYes h = some T₁) (hfo : firstOddYes h = some T₁') :
+    winStrat decode h =
+      Action.guess (if h.length % 2 = 0 then decode T₁ T₁' else decode T₁ T₁' + 1) := by
+  simp only [winStrat, hfe, hfo]
+
 end TrolleyRetrieval
