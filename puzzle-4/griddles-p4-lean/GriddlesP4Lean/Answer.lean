@@ -1,5 +1,5 @@
 import GriddlesP4Lean.Losing
-import GriddlesP4Lean.Winning
+import GriddlesP4Lean.WinningGeneral
 import GriddlesP4Lean.WinningRestricted
 
 /-!
@@ -19,9 +19,9 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
   · -- Losing direction (contrapositive).
     intro h_wins h_ei
     exact EventuallyIdentity_loses c h_ei h_wins
-  · -- Winning direction.
+  · -- Winning direction (monotone-right strategy; rests only on `restricted_separation`).
     intro h_not_ei
-    exact NotEventuallyIdentity_wins c h_not_ei
+    exact notEventuallyIdentity_BobWins c h_not_ei
 
 /-- **Capstone for the locally-decodable class** (fully `sorry`-free).  Connecting the
     machine-checked losing direction with the restricted winning theorem: every locally
