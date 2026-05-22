@@ -714,8 +714,9 @@ This follows from the signal-match at the minimal time `t = D`: the signal there
 exactly "the cell is below threshold", and `Indistinguishable` forces these to agree. -/
 lemma good_symm {c : Perm} {a b : ℕ+}
     (h : Indistinguishable c a b) (D : ℕ) :
-    (D ≤ (c ⟨a.val + D, aD_pos a D⟩).val) ↔ (D ≤ (c ⟨b.val + D, aD_pos b D⟩).val) := by
-  have hsig := h D D (le_refl (D : ℤ)) (by simp)
+    (D ≤ (c (aD a D)).val) ↔ (D ≤ (c (aD b D)).val) := by
+  have hsig : (c (aD a D)).val < D ↔ (c (aD b D)).val < D :=
+    h D D (le_refl (D : ℤ)) (by simp)
   constructor
   · intro ha
     by_contra hb
@@ -725,6 +726,21 @@ lemma good_symm {c : Perm} {a b : ℕ+}
     by_contra ha
     push_neg at ha
     exact absurd (hsig.mp ha) (by omega)
+
+/-- **Good is downward-closed (Δ = 1).**  For the pair `(a, a+1)`, if cell `a + (D+1)` is
+    above threshold (`≥ D+1`), then cell `a + D` is above threshold (`≥ D`).
+
+For `Δ = 1` the b-side at `D` is the a-side at `D+1`, so `good_symm` at `D` says
+`c(a+D) ≥ D ⟺ c(a+(D+1)) ≥ D`; the hypothesis gives the right side. -/
+lemma good_downward {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (h : Indistinguishable c a b) (D : ℕ)
+    (hD : (D + 1) ≤ (c (aD a (D + 1))).val) : D ≤ (c (aD a D)).val := by
+  have hbridge : aD b D = aD a (D + 1) := by
+    apply Subtype.ext; show b.val + D = a.val + (D + 1); omega
+  have hgs := good_symm h D
+  rw [hbridge] at hgs
+  rw [hgs]
+  omega
 
 /-- **Bad-D propagation.**  If at displacement `D` the cell `a + D` is "below the time
     threshold" (`c(a+D).val < D`), then so is `b + D`.
@@ -893,6 +909,57 @@ lemma indist_Delta1_pos {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
   rw [hq1_eq] at e2
   rw [e2, e1]
   omega
+
+/-- **Δ = 1, σ(0) = −1 is impossible.**  A descending start forces the a-chain to descend
+    on its (downward-closed) good prefix, so every cell `a, …, a+M` (with `M = c(a).val`)
+    lands in `{1, …, M}` — contradicting injectivity via `maps_into_contradiction`. -/
+lemma indist_Delta1_neg {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (hab : a < b) (h : Indistinguishable c a b)
+    (hσ0 : (c (aD a 1)).val + 1 = (c (aD a 0)).val) :
+    False := by
+  set M := (c (aD a 0)).val with hM
+  have hbridge : ∀ D : ℕ, aD b D = aD a (D + 1) := by
+    intro D; apply Subtype.ext; show b.val + D = a.val + (D + 1); omega
+  -- Descending formula on the good prefix, carried two-step.
+  have hP : ∀ n : ℕ,
+      (n ≤ (c (aD a n)).val → (c (aD a n)).val + n = M) ∧
+      ((n + 1) ≤ (c (aD a (n + 1))).val → (c (aD a (n + 1))).val + (n + 1) = M) := by
+    intro n
+    induction n with
+    | zero =>
+        refine ⟨fun _ => by omega, fun _ => ?_⟩
+        show (c (aD a 1)).val + 1 = M
+        omega
+    | succ m ih =>
+        obtain ⟨hPm, hPm1⟩ := ih
+        refine ⟨hPm1, ?_⟩
+        intro hgood2
+        have hgood1 : (m + 1) ≤ (c (aD a (m + 1))).val :=
+          good_downward hb h (m + 1) hgood2
+        have hgood0 : m ≤ (c (aD a m)).val := good_downward hb h m hgood1
+        have hvm1 : (c (aD a (m + 1))).val + (m + 1) = M := hPm1 hgood1
+        have hvm : (c (aD a m)).val + m = M := hPm hgood0
+        have hdesc_step : (c (aD a (m + 1))).val + 1 = (c (aD a m)).val := by omega
+        have hb_ge : (m + 1) ≤ (c (aD b (m + 1))).val := by
+          rw [hbridge (m + 1)]; omega
+        have hcons := (indist_consec hab h hgood1 hb_ge).1
+        rw [hbridge (m + 1)] at hcons
+        have hnf := sigma_no_flip_desc (c := c) (p := aD a m) (q := aD a (m + 1))
+          (r := aD a (m + 1 + 1)) (Δ := 1) (le_refl 1)
+          (by show (aD a (m + 1)).val = (aD a m).val + 1; simp only [aD_val]; omega)
+          (by show (aD a (m + 1 + 1)).val = (aD a (m + 1)).val + 1;
+              simp only [aD_val]; omega)
+          hdesc_step (Or.imp_left Eq.symm hcons)
+        omega
+  -- Every cell a..a+M maps into {1,..,M}; pigeonhole contradiction.
+  apply maps_into_contradiction (a := a) (M := M)
+  intro D hD
+  show (c (aD a D)).val ≤ M
+  by_cases hgood : D ≤ (c (aD a D)).val
+  · have := (hP D).1 hgood
+    omega
+  · push_neg at hgood
+    omega
 
 /-! ### Main statement -/
 
