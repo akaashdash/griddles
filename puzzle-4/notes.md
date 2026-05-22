@@ -569,3 +569,30 @@ covers exactly the pairs (like blkPerm) where navigation can't.
 "non-EI candidate pair ⇒ (K=2 ∨ navigation) distinguishes". WinningRestricted already proves
 the K=2 half (LocallyDecodable → BobWins); the navigation half is the (correctly-scoped,
 non-universal) monotone-right machinery. NOT research-level — pure game-trajectory engineering.
+
+## CORRECTED winning strategy: the STAIRCASE SWEEP (correctness = the proven lemma)
+
+Two earlier designs were INCOMPLETE (caught by simulation before formalizing — important):
+- monotone-right (nav only): misses local discriminators (blkPerm, D=1).
+- K2 ∨ nav: misses mid-range local discriminators (block-5-cycle has 56 pairs distinguishable
+  only at D=2,3,4 with small t — neither D=1 nor t≥T₁+D).
+
+**Correct strategy — staircase sweep.** Tight-oscillate at displacement D=0,1,2,… (positions
+k₀+D, k₀+D+1 — forward only, so safety is automatic), catching the PRECISE wake
+firstYes@(k₀+D) at each D (resolution 2). D=0 gives firstEvenYes ⇒ T₁ and narrows k₀ to the two
+candidates {c⁻¹(2m), c⁻¹(2m+1)}. Continue to D* = least D where firstYes@(k₀+D) differs between
+the two candidate worlds, i.e. a "D-discriminator": ∃ t≥D, t≡D mod2, [c(p₁+D)<t] ≠ [c(p₂+D)<t].
+Guess the matching candidate's cell.
+
+**Why complete & terminating — and why no new lemma is needed:** a D-discriminator at the
+precise wake is caught directly by the tight oscillation at displacement D (it gives both
+parities' brackets at each cell, resolution 2). The existence of a finite D-discriminator for
+every non-EI candidate pair is EXACTLY `not_eventually_identity_implies_distinguishable`
+(¬Indistinguishable, D≥0) — already PROVEN, axiom-clean. Verified: every non-EI candidate pair
+has a finite D* (1–4 for block cycles / reverse blocks / id-even-swap-odd; larger but finite for
+deep-identity-with-far-gap, where the sweep simply reaches the gap displacement).
+
+This is the right target to formalize for Answer.main's ← direction: define the growing-D
+staircase-sweep strategy, prove it catches firstYes@(k₀+D) at each D, narrow via D=0, and
+discharge WinsFrom using the proven D-discriminator existence. Engineering (sizeable, like
+WinningKProbe generalized to growing window) but NOT research-level, and CORRECTNESS-CLEAN.
