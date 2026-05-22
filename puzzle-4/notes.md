@@ -293,3 +293,64 @@ ascending shift on a cofinite tail despite finitely-interrupting "bad" displacem
   eventually identity (c(n) = n for n ≥ 4). Bob loses for large k₀.
 - **c with finite support transpositions only:** Still eventually identity. Bob loses.
 - **Any c that rearranges arbitrarily large values:** Bob wins.
+
+## REASSESSMENT (2026-05) — answer re-confirmed empirically; proof approach corrected
+
+Triggered by skepticism that the answer itself might be wrong. Source check: this is
+G-Research GRiddles Series A Puzzle 4; the competition is **OPEN with no published answer**,
+so the answer below is our own derivation, now stress-tested three independent ways.
+
+**Answer (re-confirmed): Bob wins ⟺ c is NOT eventually the identity** (c(n) ≠ n for
+infinitely many n). Evidence: (1) an empirical pattern-zoo over 14 families — the
+game-theoretic distinguishability predicate matches non-EI exactly, with eventually-identity
+families always exhibiting a persistent indistinguishable tail pair and non-EI families none;
+(2) a true belief-state AND/OR game solver (with real safety) — eventually-identity → LOSE,
+non-EI → WIN from full ignorance, stable as the universe grows; (3) the identity stress-test
+below.
+
+**The clean core mechanic (the "Yes ⟺ k₀ < 2L" identity).** Let `L_t` = number of LEFT moves
+Bob has made by time `t`. Then `t − D_t = 2 L_t`, so the signal is
+`Yes ⟺ c(k₀ + D_t) < t ⟺ c(k₀+D_t) − (k₀+D_t) < 2L_t − k₀`, i.e. **the walk reads
+`g(m) := c(m) − m` against a threshold controlled by Bob's left-move count.** For the
+identity `g ≡ 0`, so `Yes ⟺ k₀ < 2L_t`: Bob can only ever compare `k₀` against **even**
+thresholds, and `2j < 2L ⟺ 2j+1 < 2L` always — so `(2j, 2j+1)` produce *identical signals
+under every strategy* and can never be separated. (Verified: a "move left until Yes" strategy
+gives `k₀=10` and `k₀=11` the byte-identical history `N N N N N Y …`.) This is the whole
+obstruction: flat labels ⇒ only even thresholds ⇒ the parity bit of `k₀` is unrecoverable.
+
+**Losing direction (rigorous, general).** For c eventually identity (c(n)=n for n>N), take
+`2j > 2N`. The pair `(2j, 2j+1)` is indistinguishable: while both worlds stay in the identity
+region the `k₀ < 2L` argument gives identical signals; if Bob drives them left into `[1,N]`,
+that costs time `t ≥ 2j−N > N ≥ c(position)` so the signal is saturated "Yes" in both worlds.
+Either way signals agree forever ⇒ Bob cannot guarantee the guess ⇒ LOSE. (This matches the
+existing `Losing.lean`.)
+
+**Winning direction — corrected architecture.** Safety is FREE: a strategy that only ever
+oscillates and moves RIGHT keeps positions ≥ k₀ ≥ 1, so it never falls off. Strategy:
+- *Phase 1 (bracket):* oscillate displacement 0↔1; the first even/odd "Yes" brackets
+  `c(k₀), c(k₀+1)` to two values each ⇒ narrows `k₀` to two candidate cells.
+- *Phase 2 (resolve), adaptive:* either **local-decode** (resolve from c's behavior in a
+  bounded window — works when the local labels are non-identity, e.g. transpositions, block
+  cycles), or **navigate right** to a *landmark* — an adjacent pair `(m,m+1)` with a gap
+  `|c(m+1)−c(m)| ≥ 2` whose window contains both parities — and read off the answer.
+
+**CRUCIAL methodological correction.** The abstract `Indistinguishable`/`LemmaA` route
+(no-discriminator-at-any `t ≥ D`) is the WRONG vehicle for the winning direction: a real
+strategy needs a discriminator at `t ≥ T₁ + D` (after Phase 1 ends at `T₁ ≈ c(k₀)`), not
+merely `t ≥ D`. So even a fully-completed `LemmaA` (closing `odd_good_pair_gap`) would NOT
+prove the main winning direction. Empirically confirmed: the naive "oscillate-then-navigate"
+strategy genuinely fails (does not fix with budget) on block-cycle / reverse-block / sparse
+families — those need local-decode instead. **No single uniform strategy works; the win is
+local-decode-OR-navigate, chosen adaptively.**
+
+**The single crux lemma to prove (timing-aware "landmark" lemma).** non-EI ⟹ for every
+candidate pair there is a *reachably-timed* discriminator (`t ≥ T₁+D`) — concretely, a
+rightward landmark gap `(m,m+1)` with `max(c(m),c(m+1)) ≥ m − a`. Follows morally from
+surjectivity (a permutation cannot stay below the diagonal on a whole tail), being nailed
+down precisely (possibly cleaner in the inverse coordinate `c⁻¹(t) − t`).
+
+**Formalization plan going forward:** keep `Losing.lean` (done) and the concrete
+`WinningRestricted`/`WinningKProbe` local-decoders (done, axiom-clean); the `regime2_impossible`
+/ `odd_good_pair_gap` LemmaA work is a valid characterization of the *abstract* Indist relation
+but is OFF the critical path — the winning direction should instead be built from the
+timing-aware landmark lemma + the right-only adaptive strategy.
