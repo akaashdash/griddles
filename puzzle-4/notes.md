@@ -208,6 +208,28 @@ genuine odd-Δ contradiction must combine the *full* "consecutive at every good 
 with global ℕ⁺ surjectivity bookkeeping across unboundedly many bad regions; no finite-window,
 parity, or simple-counting form survives. This is the precise research-level gap.
 
+### UPDATE — regime 2 *is* killable; Δ-even fully closed (formalized)
+
+The sub-diagonal bound is the wrong lever, but a sharper one works. In the *no good pair*
+regime, `good D → (D+Δ) bad` (no-good-pair) **and** `bad D → (D+Δ) bad` (`bad_D_propagates`),
+so **every** displacement `≥ Δ` is bad: `c(p) < p−a` for all `p ≥ a+Δ`. Then for `N` large,
+`c` maps the whole segment `[1,N]` into `[1, N−a−1]` (small positions bounded by their finite
+`Finset.range` sup; large positions by `p−a−1`) — injecting `N` into `N−a−1`, a clean
+pigeonhole. Formalized as **`regime2_impossible`** (no new sorry/axiom).
+
+Consequently the `Δ ≥ 2` story is now:
+- **Δ even** — *fully closed* (`indist_Delta_even`): good pair ⇒ parity kill
+  (`indist_Delta_even_good_at`); no good pair ⇒ `regime2_impossible`.
+- **Δ odd** — no-good-pair ⇒ `regime2_impossible`; the sole remaining `sorry`
+  (`odd_good_pair_gap`) is **Δ odd with a good pair present**.
+
+Refined picture of that last gap, by the good set `G = {D : c(a+D) ≥ D}`:
+- `G` cofinite ⇒ consecutive on a tail ⇒ `flat_imp_ascending` ⇒ ray overlap (closeable);
+- `G` with `≤ a` good displacements `≥ a+Δ` ⇒ the `regime2_impossible` over-stuffing still bites;
+- `G` infinite-but-not-cofinite (**interleaved** good/bad runs) ⇒ the true barrier: ascending
+  runs are finite (length `~c(a)/(Δ−1)`, never reaching a ray) and `≥ a+1` good positions absorb
+  the pigeonhole slack. This interleaved Δ-odd case is the sole research-level remainder.
+
 **LemmaA.lean** has three sub-lemmas proven:
 
 * `c_shift_iter` — if `c(n+1) = c n + 1` past `N`, then `c(N + k) = c N + k`.
