@@ -982,48 +982,32 @@ theorem Indistinguishable_implies_eventually_identity
   have hΔ_pos : 1 ≤ Δ := by
     have h_ab_val : a.val < b.val := hab
     omega
-  -- The shift relation `c(n+Δ) = c(n)+1` holds for n ≥ a.
-  have h_shift_rel := shift_relation_of_indist hab h
-  set N : ℕ+ := a with hN_def
   -- Case split: Δ = 1 vs Δ ≥ 2.
   rcases eq_or_lt_of_le hΔ_pos with hΔ_eq | hΔ_ge_2
-  · -- Δ = 1.  We have c(n + 1) = c n + 1 for n ≥ N (via the shift relation), so
-    -- `shift_one_implies_eventually_identity` gives c n = n for n ≥ N.
+  · -- **Δ = 1** (fully proven via the σ(0) case split, no `sorry`).
     have hΔ_eq_1 : Δ = 1 := hΔ_eq.symm
-    -- First, the shift relation at "+ Δ" is "+ 1" since Δ = 1.
-    have h_shift_one : ∀ n : ℕ+, N ≤ n → c (n + 1) = c n + 1 := by
-      intro n hN_le_n
-      have h_pos : 0 < n.val + Δ := by
-        have := n.property
-        omega
-      have h_rel := h_shift_rel n hN_le_n h_pos
-      -- (c ⟨n.val + Δ, _⟩).val = (c n).val + 1 ; with Δ = 1, this position is `n + 1`.
-      have h_eq_pnat : (⟨n.val + Δ, h_pos⟩ : ℕ+) = n + (1 : ℕ+) := by
-        apply Subtype.ext
-        show n.val + Δ = (n + (1 : ℕ+)).val
-        have h_pnat_add : (n + (1 : ℕ+)).val = n.val + 1 := rfl
-        rw [h_pnat_add, hΔ_eq_1]
-      rw [h_eq_pnat] at h_rel
-      -- h_rel : (c (n + 1)).val = (c n).val + 1
-      apply Subtype.ext
-      show (c (n + (1 : ℕ+))).val = (c n + (1 : ℕ+)).val
-      have h_plus : ((c n + (1 : ℕ+))).val = (c n).val + 1 := rfl
-      rw [h_plus]
-      exact h_rel
-    -- Apply shift_one_implies_eventually_identity.  Since N = a, this gives c n = n
-    -- for all n ≥ a.
-    have h_id : ∀ n : ℕ+, N ≤ n → c n = n := shift_one_implies_eventually_identity h_shift_one
-    -- Conclude b = a + 1.
-    have h_b_eq : b = a + 1 := by
+    have hab' : a.val < b.val := hab
+    have hb1 : b.val = a.val + 1 := by omega
+    have hb_eq : b = a + 1 := by
       apply Subtype.ext
       show b.val = (a + (1 : ℕ+)).val
       have h_pnat_add : (a + (1 : ℕ+)).val = a.val + 1 := rfl
-      rw [h_pnat_add]
       omega
-    exact ⟨h_b_eq, h_id⟩
-  · -- Δ ≥ 2.  Apply shift_Delta_ge_2_contradiction with threshold N = a.
+    -- σ(0) at D = 0: c(a), c(b) are consecutive (b = a+1 so c(aD b 0) = c(aD a 1)).
+    have hbridge0 : aD b 0 = aD a 1 := by
+      apply Subtype.ext; show b.val + 0 = a.val + 1; omega
+    have hsig0 := (indist_consec hab h (Nat.zero_le _) (Nat.zero_le _)).1
+    rw [hbridge0] at hsig0
+    have h_id : ∀ n : ℕ+, a ≤ n → c n = n := by
+      rcases hsig0 with hpos | hneg
+      · exact indist_Delta1_pos hb1 hab h hpos
+      · exact (indist_Delta1_neg hb1 hab h hneg).elim
+    exact ⟨hb_eq, h_id⟩
+  · -- **Δ ≥ 2** (still via the documented `shift_relation_of_indist`, whose only gap is
+    -- `sigma_eq_pos_one`).
+    have h_shift_rel := shift_relation_of_indist hab h
     have hΔ_ge_2' : 2 ≤ Δ := hΔ_ge_2
-    have h_for_lemma : ∀ n : ℕ+, N ≤ n → ∀ (h_pos : 0 < n.val + Δ),
+    have h_for_lemma : ∀ n : ℕ+, a ≤ n → ∀ (h_pos : 0 < n.val + Δ),
         (c ⟨n.val + Δ, h_pos⟩).val = (c n).val + 1 :=
       fun n hN_le_n h_pos => h_shift_rel n hN_le_n h_pos
     exact (shift_Delta_ge_2_contradiction hΔ_ge_2' h_for_lemma).elim
