@@ -8,7 +8,10 @@
 --                       Δ≥2 case `odd_good_pair_gap` is the open research-level crux.
 --   WinningRestricted — complete BobWins for the locally-2-decodable class (axiom-clean)
 --   WinningKProbe     — complete BobWins for the locally-3-decodable class (axiom-clean)
---   Answer            — main theorem: Bob wins ↔ c not eventually identity (winning dir OPEN)
+--   WinningKProbeGen  — complete BobWins for the locally-K-decodable class, arbitrary K (axiom-clean)
+--   Answer            — main theorem: Bob wins ↔ c not eventually identity (winning dir OPEN; the
+--                       precise obstacle — no fixed-K sweep covers all non-EI c, block-5 witness —
+--                       is documented at the `sorry`)
 --
 -- NOTE: RestrictedSeparation.lean / WinningGeneral.lean (the "monotone-right" route) were
 -- DELETED — `restricted_separation` was FALSE (blkPerm counterexample: rightward probes miss
@@ -19,4 +22,5 @@ import GriddlesP4Lean.Losing
 import GriddlesP4Lean.LemmaA
 import GriddlesP4Lean.WinningRestricted
 import GriddlesP4Lean.WinningKProbe
+import GriddlesP4Lean.WinningKProbeGen
 import GriddlesP4Lean.Answer
