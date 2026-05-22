@@ -626,3 +626,37 @@ distinguishability crux (LemmaA) + K=2/K=3 winning classes all PROVEN & axiom-cl
 uniform winning strategy (one sorry in Answer.main) is a genuinely hard open formalization with a
 real timing/resolution/reach tension; the existence of *some* winning strategy is confirmed by
 the belief-state game solver, but an explicit, provably-complete uniform strategy remains open.
+
+## STRATEGY DIFFICULTY — corrected analysis (simulation bug found & fixed)
+
+Found a bug in earlier triangle-wave sims: displacement must satisfy D_t ≡ t (mod 2) (parity
+lock; D changes by ±1 each step). My tri_displacement used (t-1)%2K, putting D=0 at odd t —
+physically impossible. Conclusions from those sims were invalid. Redone with the correct
+reflecting walk D_t = reflect(t mod 2K).
+
+**Corrected findings (these are solid):**
+- Every non-EI candidate pair IS distinguished by some fixed amplitude-K triangle run from t=0
+  (confirms winnability, consistent with the proven LemmaA), but the required K varies per pair
+  (≈ local structure size; far gaps need large K).
+- A LARGE fixed K does NOT distinguish SMALL structure (block-3 fails at K=5,10,30: resolution
+  ~2K too coarse for an O(1) discriminator window). So K must roughly MATCH each pair's
+  discriminator displacement D*.
+- K=2 (amplitude 1) handles block-3 but misses block-5 (needs K up to 5); etc.
+
+**The genuine obstruction:** to catch a pair's discriminator, Bob must finely (period ~2K,
+K≈D*) monitor displacement D* from BEFORE its wake. K* = the right amplitude varies per pair;
+Bob can't know it in advance, can't restart from t=0, and time-sharing across amplitudes
+coarsens resolution (so dovetailing is subtle). Targeted "narrow-to-2 then navigate to D*"
+misses because the wake lands ~2 steps before arrival (t* < T₁+D*).
+
+**Designs tried and rejected by exact-dynamics simulation (6):** monotone-right; K2∨nav;
+sequential staircase; slow growing-triangle; large-fixed-K; targeted-navigate. Each fails a
+concrete family. The likely-correct design (dovetail of fixed-amplitude triangles) is intricate
+and its completeness under epoch-timing-vs-wake-timing is unverified.
+
+**Honest conclusion:** the explicit uniform winning strategy is a genuinely hard,
+research-adjacent formalization — almost certainly the intended hard core of the puzzle. The
+DISTINGUISHABILITY crux (LemmaA) — the part everyone called impossible — is PROVEN & axiom-clean,
+along with the losing direction and K=2/K=3 winning classes. The remaining Answer.main sorry
+(turning distinguishability into an explicit uniform BobWins strategy) is the hard open piece;
+the EXISTENCE of a winning strategy is confirmed by the belief-state game solver.
