@@ -82,4 +82,35 @@ lemma position_oscStrat_pos (k₀ : ℕ+) (t : ℕ) :
   have : (0 : ℤ) ≤ ((t % 2 : ℕ) : ℤ) := by positivity
   linarith
 
+/-- `Int.toPNat` is a left inverse of the `ℕ+ → ℤ` coercion. -/
+lemma toPNat_coe (k : ℕ+) (h : (1 : ℤ) ≤ (k : ℤ)) : Int.toPNat (k : ℤ) h = k := by
+  apply Subtype.ext
+  show (k : ℤ).toNat = k.val
+  simp
+
+/-- At even times, the position is exactly `k₀`. -/
+lemma position_oscStrat_even (k₀ : ℕ+) (t : ℕ) (ht : t % 2 = 0) :
+    position c oscStrat (k₀ : ℤ) t = (k₀ : ℤ) := by
+  rw [position_oscStrat, ht]; simp
+
+/-- **Phase-1 signal at even times.**  The signal emitted at an even time `t` is exactly
+    `c(k₀) < t` — Bob is probing the label of his own (unknown) starting cell. -/
+lemma signal_even_oscStrat (k₀ : ℕ+) (t : ℕ) (ht : t % 2 = 0) :
+    signalOf c (position c oscStrat (k₀ : ℤ) t) t = decide ((c k₀).val < t) := by
+  rw [position_oscStrat_even k₀ t ht]
+  have hk : (1 : ℤ) ≤ (k₀ : ℤ) := by exact_mod_cast k₀.property
+  rw [signalOf, dif_pos hk, toPNat_coe k₀ hk]
+
+/-- **Phase-1 signal at odd times.**  The signal emitted at an odd time `t` probes the
+    label of the cell *next to* the start: `c(k₀ + 1) < t`. -/
+lemma signal_odd_oscStrat (k₀ : ℕ+) (t : ℕ) (ht : t % 2 = 1) :
+    signalOf c (position c oscStrat (k₀ : ℤ) t) t = decide ((c (k₀ + 1)).val < t) := by
+  have hpos : position c oscStrat (k₀ : ℤ) t = ((k₀ + 1 : ℕ+) : ℤ) := by
+    rw [position_oscStrat, ht]
+    push_cast
+    ring
+  rw [hpos]
+  have hk : (1 : ℤ) ≤ ((k₀ + 1 : ℕ+) : ℤ) := by exact_mod_cast (k₀ + 1).property
+  rw [signalOf, dif_pos hk, toPNat_coe (k₀ + 1) hk]
+
 end TrolleyRetrieval
