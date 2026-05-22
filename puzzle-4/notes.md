@@ -456,3 +456,35 @@ down precisely (possibly cleaner in the inverse coordinate `c⁻¹(t) − t`).
 / `odd_good_pair_gap` LemmaA work is a valid characterization of the *abstract* Indist relation
 but is OFF the critical path — the winning direction should instead be built from the
 timing-aware landmark lemma + the right-only adaptive strategy.
+
+## Restricted Separation Lemma — precise gap characterization (dedicated proof attempt)
+
+A focused proof attempt (math, no game) confirmed the **monotone-right reformulation is no
+easier** than the old `odd_good_pair_gap`: it is a *stronger conclusion from a weaker
+hypothesis*. Clean coordinates and what is airtight vs open:
+
+Let `a = min(p₁,p₂)`, `Δ = |p₂−p₁| ≥ 1`, `C = (2m+2) − a`. Set `u(D) := a+D+C − c(a+D)`
+(so `u(0)=2`) and `w(D) := u(D) − D = a+C − c(a+D)` (**injective** in `D`, since `c` is).
+
+**Reduction (airtight, 0 mismatches incl. non-EI):** twin ⟺
+`(U)  ∀D≥0: [u(D) ≥ 1] ⟺ [u(D+Δ) ≥ Δ+1]`  (equivalently `[w(D) ≥ 1−D] ⟺ [w(D+Δ) ≥ 1−D]`).
+
+**Airtight structural facts (all elementary, Lean-formalizable):**
+- `B(n) ⟹ B(n+Δ)` is **NOT** a free permutation fact (fails ~95% generically); it holds
+  *only as a consequence of twin* — via `B(n) ⟹ c(n+Δ)<n+C ⟹ c(n+Δ)<(n+Δ)+C = B(n+Δ)`.
+- (M1) GOOD `={u≥1}` propagates forward by `+Δ`; (M2) "stuck" `={u≤0}` propagates *backward*
+  by `+Δ`. ⇒ on each residue mod `Δ`, the sign of `u` is bad-prefix / good-suffix.
+- Eventual **upper** bound: once GOOD, `g(m)=c(m)−m ≤ C−Δ−1`.
+
+**The open core (genuine, research-level):** EI needs `g≡0` on a tail, but twin gives only an
+upper bound. Two subcases: (A) all residues eventually GOOD ⇒ `g ≤ C−Δ−1` — a pure upper
+bound, and *upper-bound + bijection ≠ EI* (adjacent transpositions have `g∈{±1}`, non-EI);
+(B) some residue "stuck" (`c(n) ≥ n+C` on an AP) = value-hogging of large values, which
+surjectivity does NOT kill in isolation. A bounded-lag stuck-residue twin prefix survives to
+depth 69 ⇒ **no finite/local/parity obstruction**; the contradiction must come from the
+*interaction* of `(U)` on the other residues with global ℕ⁺ surjectivity across infinitely
+many interleaved bad positions. (Empirically certain: 0 twins in non-EI, N ≤ 20000.)
+
+**Status:** `restricted_separation` stays a single, precisely-characterized, true-but-hard
+`sorry`. The monotone-right *strategy* around it (safety + timing + Phase-1/2 plumbing) is
+fully formalizable and is being built (`WinningGeneral.lean`).
