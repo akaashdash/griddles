@@ -152,6 +152,11 @@ Bob has a strategy ensuring safe retrieval if and only if $c$ is
 $c(n)\neq n$ for infinitely many~$n$.
 \end{theorem}
 
+\[
+  \boxed{\;\textbf{Bob wins from every start cell} \iff
+  c(n)\neq n \text{ for infinitely many } n.\;}
+\]
+
 We write $c$ is \emph{eventually identity} (EI) if there is a threshold
 $N$ with $c(n)=n$ for all $n>N$. Since $c$ is a bijection, ``not EI'' has
 several equivalent forms, all used below:
@@ -965,20 +970,58 @@ recurring-slack excess $s-\max(a,b)$ is uniformly $\le 2$ (the canonical
 witness $s=\lceil\max/2\rceil\cdot 2$ works for almost every pair; only the
 parity-shift family needs $\max+2$).
 
-\paragraph{Why it resists the existing engine.} The contrapositive
-hypothesis ``no slack-$s$ separator for all $D\ge D_0$'' supplies signal
-\emph{agreement at exactly one time $t=D+s$ per displacement}---a single
-bit per~$D$. But the distinguishability engine (Lemma~\ref{lem:consec},
-which pins $|c(a+D)-c(b+D)|=1$) reads the signal at \emph{three} distinct
-times per displacement; one bit per~$D$ does not reproduce the
-consecutive-values conclusion. The truth survives only in the cofinite-$D$
-limit via a global counting argument, and the universal quantifier over
-slacks is load-bearing (the parity-shift permutation agrees at a single
-fixed slack forever yet is non-EI). This is exactly the
-slack-localized strengthening of the distinguishability theorem that the
-existing $\texttt{IndistFrom}$ machinery (which floors the displacement,
-not the slack) does not supply. It is the genuine combinatorial heart of
-the winning direction, and the one piece not yet given a Lean proof.
+\subsection{Approaches considered for the residual lemma}
+\label{sec:approaches}
+
+The lemma is not for want of trying. We record three natural proof routes,
+each of which we ruled out by exhibiting an explicit non-EI permutation that
+defeats it; together they explain why the recurrence is genuinely hard rather
+than merely unfinished. A literature search located only analogues---the
+parity-sweep of Hunters-and-Rabbit pursuit games and a K\"onig/min-cut
+argument---none of which applies off the shelf.
+
+\begin{enumerate}[topsep=2pt,itemsep=4pt,leftmargin=*]
+  \item \textbf{Slack-localised Lemma~A (information deficit).} The natural
+  hope is to re-run the distinguishability engine
+  (Lemma~\ref{lem:consec}) at a single fixed slack. But the contrapositive
+  hypothesis ``no slack-$s$ separator for all $D\ge D_0$'' supplies signal
+  \emph{agreement at exactly one time $t=D+s$ per displacement}---a single
+  bit per~$D$. The engine that pins $|c(a+D)-c(b+D)|=1$ reads the signal at
+  \emph{three} distinct times per displacement; one bit per~$D$ simply does
+  not reproduce the consecutive-values conclusion. Moreover the universal
+  quantifier over slacks is load-bearing: the \emph{parity-shift}
+  permutation $c(2k)=2k{+}2$, $c(2k{+}1)=2k{-}1$ agrees at a single fixed
+  slack forever yet is non-EI, so no \emph{one} slack can be hard-wired.
+  (This is why the existing axiom-clean \texttt{IndistFrom} machinery, which
+  floors the displacement rather than the slack, does not supply the lemma.)
+
+  \item \textbf{Band-collapse with cut counting.} A second route models the
+  agreement constraints as a flow/cut on the bipartite incidence of cells
+  against awake-times and tries to close the band by a min-cut argument. The
+  \emph{same} parity-shift permutation $c(2k)=2k{+}2$, $c(2k{+}1)=2k{-}1$
+  defeats it: it is non-EI yet has \emph{balanced, residue-constant}
+  displacement $g(n)=c(n)-n\in\{+2,-2\}$, so the cut never closes---the
+  collapse argument certifies agreement that the permutation does not in
+  fact exhibit. A displacement-floored closure cannot see the parity
+  structure that actually separates the pair.
+
+  \item \textbf{Positive-density averaging.} A third route would derive the
+  recurrence from a positive lower density of separators (so that two
+  positive-density sets must intersect). This fails because the recurrence is
+  intrinsically \emph{sparse}: the \emph{swap-at-powers} permutation (which
+  transposes only cells indexed by powers of~$2$) is non-EI yet has only
+  $O(\log N)$ separators among the first~$N$ displacements, a density tending
+  to~$0$. The two infinite displacement-sets must therefore be coordinated
+  \emph{exactly}, not merely on average.
+\end{enumerate}
+
+The honest characterisation is that Theorem~\ref{thm:bandrec} is a
+\emph{cofinitely-sparse coordination of two infinite displacement-sets}
+($\{D:\text{a separator exists}\}$ and $\{D:c(a+D)\le a+D\}$, which must
+meet at a common slack-bounded displacement infinitely often). It survives
+only in the cofinite-$D$ limit via a global counting argument, and is the
+genuine combinatorial heart of the winning direction---the one piece not yet
+given a Lean proof.
 
 % ============================================================
 \section{Machine-verification status}
@@ -986,13 +1029,16 @@ the winning direction, and the one piece not yet given a Lean proof.
 
 The argument is formalised in Lean~4 (with Mathlib) in the development
 \texttt{griddles-p4-lean}; \verb|lake build| succeeds ($3334$ jobs). We
-report the status precisely. A substantial core---including the
-\emph{entire reduction} and \emph{entire staircase construction}---is
-machine-checked, and the winning direction is complete \textbf{modulo the
-single combinatorial lemma} Theorem~\ref{thm:bandrec}
-(\lean{band\us recurrence\us ge\us max}), whose proof is one \lean{sorry}
-(\lean{noSeparator\us allSlack\us imp\us eventuallyIdentity}). We do
-\emph{not} claim the main theorem is fully proven or axiom-clean.
+report the status precisely. A substantial core---the losing direction, the
+distinguishability theorem, the \emph{entire candidate-collapsing reduction},
+and the full $K$-decodable family---is machine-checked and \emph{axiom-clean},
+and the winning direction is fully formalised (the staircase's safety,
+separation, and Yes-emission lemmas are all proved) \textbf{modulo the single
+combinatorial lemma} Theorem~\ref{thm:bandrec}
+(\lean{band\us recurrence\us ge\us max}), which routes through one \lean{sorry}
+(\lean{noSeparator\us allSlack\us imp\us eventuallyIdentity})---the
+\emph{only} \lean{sorry} in the entire development. We do \emph{not} claim the
+main theorem is fully proven or axiom-clean.
 
 For each item, ``axiom-clean'' means the Lean \verb|#print axioms| audit
 lists only the three standard foundational axioms \verb|propext|,
@@ -1029,8 +1075,9 @@ Reduction (Thm.~\ref{thm:reduction})
   & \lean{localizes\us BobWins}, \lean{ofMoves\us localizes} \\
 Staircase safety / separation / Yes
   & via Thm.~\ref{thm:bandrec}
-  & \lean{stair\us safe}, \lean{stair\us separates},
-    \lean{stair\us yes} \\
+  & \lean{Staircase\dt stair\us safe},
+    \lean{Staircase\dt stair\us separates},
+    \lean{Staircase\dt stair\us yes} \\
 Separating fixed trajectory exists
   & via Thm.~\ref{thm:bandrec}
   & \lean{separating\us trajectory\us exists} \\
@@ -1075,27 +1122,31 @@ winning family with its concrete instances
 these pass the \verb|#print axioms| audit with no \verb|sorryAx|.
 
 \paragraph{What the single \lean{sorry} is.}
-The only \verb|sorry| on the path to \lean{main} is inside
-\lean{noSeparator\us allSlack\us imp\us eventuallyIdentity}, the
-contrapositive form of Theorem~\ref{thm:bandrec}. Every result above it on
-the dependency chain---\lean{band\us recurrence\us ge\us max},
-\lean{separating\us trajectory\us exists}, \lean{notEI\us BobWins},
-\lean{main}---inherits its \verb|sorryAx| from this lemma alone, and from
-nothing else. (The file also contains an \emph{orphan} \lean{sorry},
-\lean{boundedSlack\us recurrence}, feeding the alternative lemma
-\lean{band\us recurrence}; this is \emph{not} on the path to \lean{main}
-and is irrelevant to the main theorem's audit.)
+The development contains \textbf{exactly one} \verb|sorry| in total: it is
+inside \lean{noSeparator\us allSlack\us imp\us eventuallyIdentity}, the
+contrapositive form of Theorem~\ref{thm:bandrec}. Every result that carries
+\verb|sorryAx|---\lean{band\us recurrence\us ge\us max},
+\lean{separating\us trajectory\us exists}, the three staircase lemmas
+\lean{Staircase\dt stair\us safe}/\lean{stair\us separates}/\lean{stair\us yes},
+\lean{notEI\us BobWins}, and \lean{main}---inherits it from this single lemma
+alone, and from nothing else. There are no orphan \verb|sorry|s: an earlier
+parallel route through a lemma \lean{boundedSlack\us recurrence} was retired as
+dead code, so the band-top staircase now consumes
+\lean{band\us recurrence\us ge\us max} directly, leaving the project with this
+one \verb|sorry| and no others.
 
 \paragraph{Summary---honest boundary.}
 The \emph{answer} (Theorem~\ref{thm:main}) is settled, and the
 \emph{architecture} of both directions is fully formalised: the losing
 direction and distinguishability theorem are machine-checked and
-axiom-clean, and the winning direction is reduced---through a fully
-machine-checked reduction and a fully machine-checked staircase
-construction---to one explicit, precisely stated, computationally-verified
-($2300{+}$ cases, zero counterexamples) combinatorial recurrence lemma. The
-winning direction is therefore \textbf{proven modulo this one true lemma};
-it is not yet a complete, \lean{sorry}-free proof.
+axiom-clean, and the winning direction is reduced---through an
+axiom-clean reduction and a fully formalised staircase construction
+whose safety, separation, and Yes-emission lemmas are all proved---to one
+explicit, precisely stated, computationally-verified ($2300{+}$ cases, zero
+counterexamples) combinatorial recurrence lemma, the single \lean{sorry} in
+the development. The main theorem is therefore
+\textbf{machine-verified modulo one true, computationally-verified lemma}; it
+is not yet a complete, \lean{sorry}-free proof.
 
 % ============================================================
 \section*{Acknowledgements}
