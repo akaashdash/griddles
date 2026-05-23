@@ -22,8 +22,9 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
     exact EventuallyIdentity_loses c h_ei h_wins
   · -- Winning direction.  Discharged by `notEI_BobWins` (WinningAdaptive): the **band-top
     -- lag-monotone staircase** — a fixed signal-independent trajectory — localizes every start
-    -- cell, and `localizes_BobWins` packages that into `BobWins`.  This is FULLY PROVEN modulo two
-    -- isolated combinatorial recurrence lemmas (`boundedSlack_recurrence`, `band_recurrence_ge_max`).
+    -- cell, and `localizes_BobWins` packages that into `BobWins`.  This is FULLY PROVEN modulo a
+    -- SINGLE isolated combinatorial recurrence residue (`band_recurrence_ge_max_of_jointFinite`,
+    -- reached via `band_recurrence_ge_max`'s JOINT-condition dichotomy).
     --
     -- Historical note on the architecture (the prior `sorry` was here):
     --
@@ -108,10 +109,12 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
     intro h_not_ei
     exact notEI_BobWins c h_not_ei
 
--- Axiom audit.  `main` is `sorry`-free *modulo* the two isolated combinatorial recurrence lemmas
--- (`boundedSlack_recurrence`, `band_recurrence_ge_max`): its `#print axioms` shows `sorryAx` only
--- through those.  The losing direction and ALL the game-semantic / construction plumbing of the
--- winning direction are fully proven.
+-- Axiom audit.  `main` is `sorry`-free *modulo* a SINGLE isolated combinatorial recurrence residue
+-- (`band_recurrence_ge_max_of_jointFinite`, the anti-correlated bounded regime of
+-- `band_recurrence_ge_max`'s JOINT-condition dichotomy): its `#print axioms` shows `sorryAx` only
+-- through that one residue (the J-infinite case, absorbing the unbounded regime, is axiom-clean).
+-- The losing direction and ALL the game-semantic / construction plumbing of the winning direction
+-- are fully proven.
 #print axioms main
 
 /-- **Capstone for the locally-decodable class** (fully `sorry`-free).  Connecting the

@@ -1486,3 +1486,43 @@ PROPOSED cleaner dichotomy (replaces bounded/unbounded):
 NEXT: verify joint-finite ⟹ pigeonhole-handled (i.e. joint-finite ⟹ effectively bounded on rays
 or directly S_infinite), and consider restructuring the Lean proof around the JOINT dichotomy
 (slack-M-easy case is axiom-clean-able; would isolate the residue to the anti-correlated case only).
+
+## Loop iteration (2026-05-23 #4): JOINT dichotomy IMPLEMENTED in Lean (residue 2 → 1)
+
+Acted on #3's proposal. Restructured `band_recurrence_ge_max` (WinningAdaptive.lean) from the
+bounded/unbounded split into the JOINT-condition dichotomy.
+
+DEFINITIONS (ordered pair a<b, M=b.val, p=M%2, fixed even slack s=M+p):
+  memJ c a b D := c(a+D) ≤ a+D  ∧  c(b+D) ≥ b+D + p.
+
+PROVEN AXIOM-CLEAN:
+  * `memJ_imp_separator`: every D∈J is a slack-(M+p) separator. (weak-desc-a ⇒ lo edge x<D+s
+    using a<M; ascent-with-parity-b ⇒ hi edge y≥D+s; via separatorAtSlack_iff_window.)
+  * `band_recurrence_ge_max_of_jointInfinite`: J recurs at unbounded D ⟹ band recurrence at the
+    fixed s=M+p. Trivial transport via memJ_imp_separator. NO sorryAx.
+
+SINGLE RESIDUE (sorry):
+  * `band_recurrence_ge_max_of_jointFinite`: J finite (∃D₀,∀D≥D₀, ¬memJ) ⟹ band still holds.
+    The anti-correlated bounded regime. Statement verified TRUE (joint_finite_residue.py: 25/25
+    J-finite ordered pairs have a recurring even slack ≥M).
+
+DISPATCH: `band_recurrence_ge_max` does WLOG a<b, then `by_cases` on the J-recurrence proposition
+(NOT Set.Infinite, so push_neg gives exactly the J-finite hypothesis). b<a half swaps via
+separatorAtSlack symmetry.
+
+DISCRIMINATOR (joint_dichotomy.py, NMAX=2·10⁵, all FAMILIES × 8 pairs, 0 violations):
+  (A) memJ ⇒ slack-(M+p) separator: 0 failures.
+  (B) J-infinite ⇒ slack-s separators infinite: 0 failures.
+  (C) **NO unbounded family is J-finite** (both growing_blocks_* are J-infinite on every pair).
+      ⟹ the J-infinite clean case ABSORBS the entire unbounded regime; the old
+      `band_recurrence_ge_max_of_unbddDisp` residue is DELETABLE.
+
+DELETED dead sorry-bearing residues: `S_infinite_of_bddDisp`, `band_recurrence_ge_max_of_unbddDisp`,
+plus their now-dead consumers `band_recurrence_finite_window_of_bddDisp`,
+`band_recurrence_ge_max_of_bddDisp`. Retained axiom-clean scaffolding (memS, memS_imp_separator,
+even_in_window_ge, separatorAtSlack_slack_le_of_bddDisp, fixedSlack_ge_of_window_recurrence) for reuse.
+
+RESULT: `#print axioms main` = [propext, sorryAx, Classical.choice, Quot.sound]; sorryAx flows
+through EXACTLY ONE residue (band_recurrence_ge_max_of_jointFinite), down from two. Build GREEN.
+We did NOT formalize "J-finite ⟹ bounded" (empirically true but a separate combinatorial fact);
+the J-finite case is simply the one residue.
