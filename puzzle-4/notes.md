@@ -1538,3 +1538,20 @@ the finite pigeonhole gives a recurring value (x,y) same sign; it separates unle
 consecutive (|x−y−δ|=1); so the residue closes iff "all recurring comonotone values consecutive
 ⇒ EI" (the consecutive⇒EI argument, now with comonotone+bounded structure). Plan: formalize the
 symmetric J'' lemma (shrink residue to comonotone+bounded), then attempt consecutive⇒EI close.
+
+## Loop iteration (2026-05-23 #5): CLEAN closure of bounded comonotone (likely closes residue)
+
+The residue band_recurrence_ge_max_of_bothJointFinite = comonotone (φ(a+D),φ(b+D) same sign
+cofinitely ⟺ φ sign constant on residue classes mod δ). CLEAN CLOSURE for BOUNDED comonotone:
+  band-fail ⟹ for EVERY even s≥M, cofinitely-many positive-class D have min(va,vb) ≥ s
+            ⟹ min(va,vb) → ∞ on the positive class;
+  but min ≤ va = a+φ(a+D) ≤ a+B (bounded) ⟹ CONTRADICTION. So bounded comonotone ⟹ band.
+  (Alt: gap=1 on a DENSE positive class [comonotone gives full residue class, not sparse fiber] ⟹
+   chain c(n+kδ)=c(n)±1 ⟹ φ(n+kδ) ≤ φ(n)−k(δ−1) → −∞, contradicting φ>0 on the positive class.
+   δ=1 comonotone ⟹ φ constant sign ⟹ ¬bijection, vacuous. So δ≥2.)
+KEY remaining question: is comonotone ⟹ bounded? Empirically YES (0 unbounded both-finite cases;
+reverse_pow2_blocks is unbounded but NOT comonotone → joint-infinite). Surjectivity appears to
+force bounded (unbounded displacement on a sign-constant class makes its image too sparse / breaks
+balance). If comonotone ⟹ bounded is provable, the residue is VACUOUS → main fully axiom-clean.
+Plan: formalize bounded-comonotone ⟹ band (clean), and prove comonotone ⟹ bounded (or split off
+unbounded-comonotone as a tiny empirically-empty residue).
