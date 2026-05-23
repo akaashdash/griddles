@@ -1628,3 +1628,40 @@ Restructure band_recurrence_ge_max to dispatch BOUNDED-ABOVE (formalize agent's 
 (prove unbounded ⟹ J-infinite, then existing J-infinite proof). Bounded-above proof is the big new content
 and is clean/formalizable. Status: agent's bounded-above proof manually verified; pressure-test w/ advisor
 before formalizing.
+
+## Loop iteration (2026-05-23 #8): CRITICAL — the BAND RECURRENCE IS FALSE (AP-split counterexample)
+
+The bridge agent (δ=1 proven, δ≥2 open) flagged a candidate counterexample shape: one residue class
+mod δ slowly ASCENDING to ∞ while another descends. I built it and VERIFIED it is a genuine
+counterexample to the band recurrence itself (not just the bridge):
+
+CONSTRUCTION (AP-split, δ=2): A = {a_k = 2k + 2·⌊√k⌋ : k≥1}; c(2k)=a_k (evens slowly ascend,
+f(2k)=2⌊√k⌋→∞), c(2k−1)=b_k where B=ℕ∖A in order (odds descend, f≈−√k→−∞). Valid non-EI bijection
+(verified injective + surjective-below on [1,238000]).
+
+For pair (2,4): BOTH-FINITE (memJ, memJ'' have ZERO members — comonotone, never opposite-sign).
+BAND FAILS: at even D=2j, window = (2+2⌊√(j+1)⌋, 4+2⌊√(j+2)⌋] ≈ (2+2√j, 4+2√j], width≈2, ESCAPING
+upward. Each fixed even s = 4+2t is in the window only for j∈[t²,(t+1)²) (~2t values of D) then is
+ABANDONED forever as the window climbs. Verified: active separator s ∈ [48,62] for D∈[1k,2k];
+[130,144] for D∈[8k,16k]; [286,300] for D∈[40k,80k]. So NO fixed even s≥4 recurs at ∞-many D.
+⇒ band_recurrence_ge_max(c,2,4) is FALSE. (Same for (1,3),(4,6),(6,8),(2,6).)
+
+CONSEQUENCES:
+1. `band_recurrence_ge_max_of_bothJointFinite` is a FALSE proposition. The lone `sorry` can NEVER be
+   filled. The fixed-staircase winning-direction route is DOOMED (not merely unproven). This is the
+   concrete realization of the documented "(1) NO FIXED TRAJECTORY is universal" negative result.
+2. The bridge "unbounded-above ⟹ J-inf ∨ J''-inf" is FALSE (δ≥2): AP-split is unbounded-above AND
+   both-finite. (δ=1 bridge remains true & proven.)
+3. bounded-above ⟹ band remains TRUE & proven (AP-split is unbounded-above, outside its scope).
+4. THE ANSWER (Bob wins ⟺ ¬EI) IS SAFE: discriminators exist for every pair (LemmaA, proven:
+   (2,4)@(D=0,t=6), (1,3)@(D=0,t=2)). Bob distinguishes cells — but needs an ADAPTIVE strategy that
+   tracks the CLIMBING slack s(D)~√D, which no fixed-slack staircase can do.
+
+PATH FORWARD: the Lean winning direction must be rebuilt off the band recurrence. Options:
+(a) formalize the adaptive belief-state strategy (memory: "substantial separate Lean project");
+(b) replace the band recurrence with a TRUE weaker condition the staircase-with-growing-amplitude can
+    use (the discriminators climb like √D — a growing-amplitude sweep, not fixed-slack, may capture
+    them); (c) a localization argument directly from LemmaA's distinguishability + safety.
+The honest writeup status should change from "machine-verified modulo one true lemma" to "modulo the
+winning-direction strategy; the previously-attempted fixed-staircase lemma is now KNOWN FALSE
+(AP-split), confirming adaptivity is required."
