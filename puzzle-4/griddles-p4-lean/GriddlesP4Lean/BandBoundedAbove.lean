@@ -2,12 +2,14 @@ import GriddlesP4Lean.BoundedAbove
 import GriddlesP4Lean.WinningAdaptive
 
 /-!
-# Bounded-above ⟹ band recurrence (the bounded-above slice of the both-joint-finite residue)
+# Bounded-above ⟹ band recurrence (the bounded-above regime of the winning direction)
 
-This file proves the **band recurrence** (the consumer hypothesis of `band_recurrence_ge_max`)
-under the extra assumption that `c` is *bounded above* — `∃ B, ∀ n, (c n).val ≤ n.val + B`.  This
-is precisely the bounded-above sub-case of the lone `band_recurrence_ge_max_of_bothJointFinite`
-residue.
+This file proves the **band recurrence** — the per-pair recurring-slack guarantee packaged as
+`BandProvider c` and consumed by the band-top staircase in `WinningAdaptive` — under the assumption
+that `c` is *bounded above*: `∃ B, ∀ n, (c n).val ≤ n.val + B`.  This is the bounded-above half of
+`main`'s winning-direction dichotomy (the unbounded-above half is handled separately by `GrowStair`,
+where no single fixed slack recurs).  No general band recurrence is claimed: the band genuinely
+recurs only in this bounded-above regime.
 
 The argument follows the integer-displacement contrapositive (`f n := (c n).val − n.val : ℤ`):
 
@@ -253,7 +255,8 @@ lemma cofinite_of_backward_closed {Q : ℕ → Prop} {N₀ : ℕ}
     (`∃ B, ∀ n, (c n).val ≤ n.val + B`), then for any distinct ordered pair `a < b` there is a
     fixed even slack `s ≥ max a.val b.val` whose separators recur at unbounded displacement.
 
-    This is the bounded-above sub-case of `band_recurrence_ge_max_of_bothJointFinite`. -/
+    This is the per-pair content of `BandProvider c` for the bounded-above regime; assembled over
+    all pairs by `bandProvider_of_boundedAbove` and consumed by `BobWins_of_bandProvider`. -/
 theorem band_of_boundedAbove (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a < b)
     (hbdd : ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B) :
     ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
@@ -418,7 +421,7 @@ theorem band_of_boundedAbove (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ
     `band_of_boundedAbove` supplies the band recurrence for every distinct *ordered* pair `a < b`;
     the `a ≠ b` interface of `BandProvider` is met by dispatching on `lt_or_gt_of_ne` and, in the
     `b < a` half, swapping the (symmetric) `separatorAtSlack` Boolean disagreement (`max` is
-    symmetric, mirroring `band_recurrence_ge_max`'s own order reduction). -/
+    symmetric). -/
 theorem bandProvider_of_boundedAbove (c : Perm) (h : ¬ EventuallyIdentity c)
     (hbdd : ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B) : BandProvider c := by
   intro a b hab
@@ -434,7 +437,7 @@ theorem bandProvider_of_boundedAbove (c : Perm) (h : ¬ EventuallyIdentity c)
 /-- **Bounded-above ⟹ Bob wins (axiom-clean).**  If `c` is not eventually identity and is bounded
     above (`∃ B, ∀ n, (c n).val ≤ n.val + B`), then Bob wins.  Routes through the parameterized
     band-top staircase `BobWins_of_bandProvider` fed by `bandProvider_of_boundedAbove` — entirely
-    `sorry`-free (the false general dispatch `band_recurrence_ge_max` is no longer on this path). -/
+    `sorry`-free.  This is the bounded-above branch of `main`'s winning-direction dispatch. -/
 theorem notEI_boundedAbove_BobWins (c : Perm) (h : ¬ EventuallyIdentity c)
     (hbdd : ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B) : BobWins c :=
   BobWins_of_bandProvider c h (bandProvider_of_boundedAbove c h hbdd)

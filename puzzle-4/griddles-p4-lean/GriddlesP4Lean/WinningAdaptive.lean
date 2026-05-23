@@ -2,17 +2,20 @@ import GriddlesP4Lean.Parity
 import GriddlesP4Lean.LemmaA
 
 /-!
-# Winning direction (adaptive belief-state reduction)
+# Winning direction (belief-state reduction + `BandProvider` staircase)
 
 The fixed-`K` sweep classes (`WinningRestricted`, `WinningKProbe`, `WinningKProbeGen`) prove
 `BobWins` for permutations whose per-displacement first-"Yes" thresholds *decode* the start
-cell at a *uniform* amplitude.  As documented at the `sorry` in `Answer.lean`, **no fixed `K`
-suffices** for all non-eventually-identity `c` (the block-5 witness), so the genuinely-uniform
-winning strategy must be **adaptive**: Bob maintains a *belief* — the set of start cells still
-consistent with the signals he has seen — and guesses once that belief is a singleton.
+cell at a *uniform* amplitude.  No fixed `K` suffices for all non-eventually-identity `c` (the
+block-5 witness), so the genuinely-uniform winning strategy must be **adaptive**: Bob maintains a
+*belief* — the set of start cells still consistent with the signals he has seen — and guesses once
+that belief is a singleton.
 
-This file formalises the **belief-state reduction** so that the only remaining gap is a single,
-clearly-named combinatorial localization fact (`adaptive_localizes`).
+This file formalises the **belief-state reduction** and the **`BandProvider`-parameterized
+staircase localization** that consumes it.  The winning direction is COMPLETE and `sorry`-free.
+The recurrence that the staircase needs (a fixed even slack with separators at unbounded
+displacement, packaged as `BandProvider c`) is *not* proved in this file; it is supplied by the
+two regimes of the bounded-above/unbounded-above dichotomy (see "How this feeds `main`" below).
 
 ## What this file builds
 
@@ -31,40 +34,40 @@ clearly-named combinatorial localization fact (`adaptive_localizes`).
    unique consistent candidate **is** `k₀`, safety transfers from the exploration trajectory,
    and the "first guess at the stop time" obligation is discharged via `Nat.find`.
 
-4. **The construction** (`Staircase`, `separating_trajectory_exists`, `adaptive_localizes`): a
-   *fixed signal-independent* trajectory — the **band-top lag-monotone staircase** — that is safe,
-   Yes-emitting, and separates every pair of start cells.  This is the (formerly feared
-   "irreducibly adaptive") winning strategy; it turns out a c-tailored *fixed* trajectory works.
-   It is fully proven modulo a single isolated combinatorial lemma `band_recurrence_ge_max`.
+4. **The `BandProvider` abstraction** (`BandProvider`).  `BandProvider c` is exactly the band
+   recurrence as an abstract hypothesis: for every distinct pair `a, b` there is a *fixed* even
+   slack `s ≥ max a.val b.val` with separators at unbounded displacement.  Everything downstream
+   is parameterized by it, so this file stays agnostic about *how* the recurrence is established.
 
-5. **Conclusion** (`notEI_BobWins`): chains the reduction with the construction.
+5. **The construction** (`namespace Staircase`, `separating_trajectory_exists`,
+   `adaptive_localizes`): from a `BandProvider c`, a *fixed signal-independent* trajectory — the
+   band-top lag-monotone staircase — that is safe, Yes-emitting, and separates every pair of start
+   cells.  All game-semantic steps (the state machine defining the moves, displacement tracking,
+   safety, per-bucket separation, the Yes obligation) are FULLY PROVEN, axiom-clean.
 
-## Honesty note
+6. **Conclusion** (`BobWins_of_bandProvider`): chains the reduction (3) with the construction (5):
+   `BandProvider c → BobWins c`.  Fully proven; `[propext, Classical.choice, Quot.sound]`.
 
-The winning direction (`notEI_BobWins`) is now `sorry`-free **modulo exactly ONE isolated
-combinatorial recurrence lemma**, reached via `band_recurrence_ge_max`'s **SYMMETRIC JOINT-condition
-trichotomy**.  For the ordered pair `a < b`, with `M = b.val`, the dispatch is on whether either of
-two mirror joint sets recurs at unbounded displacement:
-* `J  = {D : c(a+D) ≤ a+D ∧ c(b+D) ≥ b+D + M%2}` (a weak-descends, b ascends-with-parity),
-* `J'' = {D : c(a+D) ≥ a+D + q ∧ c(b+D) ≤ b+D}` (a ascends-with-offset, b weak-descends), where
-  `q = leastEvenGe(M+1) − a.val`.
+## How this feeds `main`
 
-* **J-infinite** → `band_recurrence_ge_max_of_jointInfinite` is FULLY PROVEN axiom-clean (via
-  `memJ_imp_separator` + `separatorAtSlack_iff_window`), fixed even slack `M + M%2`.
-* **J''-infinite** → `band_recurrence_ge_max_of_jointInfinite'` is FULLY PROVEN axiom-clean (via
-  `memJ''_imp_separator` + `separatorAtSlack_iff_window`), fixed even slack `leastEvenGe(M+1)`.
-* **BOTH finite** → `band_recurrence_ge_max_of_bothJointFinite` is the SINGLE residue.  This regime
-  is exactly **bounded displacement + pointwise comonotone** (`φ(a+D)` and `φ(b+D)` never have
-  opposite signs): 0 separator failures, 0 opposite-sign pairs, 0 unbounded both-finite cases over
-  ~6·10⁷ checks (`joint_dichotomy_dual.py`).  The recurring separating slack is pinned to
-  `{M, M+2}` (`bothfinite_mechanism.py`).  The symmetric route strictly shrinks the prior
-  `J`-finite residue.
+`Answer.main` dispatches the winning direction on the bounded-above vs unbounded-above dichotomy
+of `c`, and supplies a `BandProvider` (or wins directly) in each regime:
 
-This replaces the earlier two-residue split (`band_recurrence_finite_window_of_bddDisp` bounded +
-`band_recurrence_ge_max_of_unbddDisp` unbounded), both now removed.  *Every* game-semantic and
-construction step — the state machine defining the moves, displacement tracking, safety, the
-per-bucket separation, and the Yes obligation — is FULLY PROVEN.  See the `#print axioms` profiles
-at `separating_trajectory_exists` and `notEI_BobWins`.
+* **Bounded above** → `BandBoundedAbove.bandProvider_of_boundedAbove` (via `band_of_boundedAbove`)
+  produces a `BandProvider c`, then `BobWins_of_bandProvider` here finishes.  This regime covers
+  the parity-shift family and every bounded displacement.
+* **Unbounded above** → `GrowStair.notEI_unboundedAbove_BobWins` wins *directly* via the
+  growing-lag trajectory: `Q2Even.q2even` (separators at arbitrarily large even lag for every
+  pair) feeds `ofMoves_localizes` and then `localizes_BobWins` here.
+
+Both regimes are `sorry`-free and depend only on `[propext, Classical.choice, Quot.sound]`.
+
+Historical note: an earlier route tried to prove a single *general* band recurrence
+(`band_recurrence_ge_max`) via a joint-condition dichotomy.  That general recurrence is FALSE
+(an arithmetic-progression-split counterexample defeats the fixed-staircase route in the
+unbounded-above regime), so it has been removed.  The live proof routes the unbounded-above case
+through the growing-lag trajectory instead, and only ever instantiates `BandProvider` in the
+bounded-above regime where the band genuinely recurs.
 -/
 
 namespace TrolleyRetrieval
@@ -488,108 +491,31 @@ theorem fixedSlack_of_boundedSlack_recurrence (c : Perm) (a b : ℕ+) (S : ℕ)
   have hD_ge_fj : D ≥ f j := le_trans hfj_le hD_ge
   exact hf j D hD_ge_fj hsep
 
--- NOTE.  Earlier routes left several orphan lemmas here — `boundedSlack_recurrence`,
--- `band_recurrence`, and the all-slacks `noSeparator_allSlack_imp_eventuallyIdentity` — all removed
--- as dead code.  `main` routes through `band_recurrence_ge_max` (below), which now dispatches on the
--- **JOINT-condition dichotomy** (J-infinite vs J-finite), so its `sorryAx` flows through EXACTLY ONE
--- isolated residue: `band_recurrence_ge_max_of_jointFinite` (the anti-correlated bounded regime).
--- The J-infinite case (`band_recurrence_ge_max_of_jointInfinite`) is PROVEN axiom-clean and absorbs
--- the entire unbounded regime, replacing the prior two-residue bounded/unbounded split (the old
--- `S_infinite_of_bddDisp` and `band_recurrence_ge_max_of_unbddDisp` are deleted).  The axiom-clean
--- pigeonhole `fixedSlack_of_boundedSlack_recurrence` is retained above for potential reuse.
+-- NOTE.  Earlier routes left orphan lemmas here (`boundedSlack_recurrence`, `band_recurrence`, the
+-- all-slacks `noSeparator_allSlack_imp_eventuallyIdentity`) and, later, a `band_recurrence_ge_max`
+-- joint-condition dichotomy — all removed as dead code.  The single *general* band recurrence is
+-- FALSE (an AP-split counterexample defeats the fixed staircase in the unbounded-above regime), so
+-- it is no longer attempted: `main` only ever obtains a `BandProvider` in the bounded-above regime
+-- (`BandBoundedAbove`), and wins the unbounded-above regime directly via `GrowStair`.  The
+-- axiom-clean pigeonhole `fixedSlack_of_boundedSlack_recurrence` is retained above for reuse.
 #print axioms separatorAtSlack_imp_separatedAtDisp
 #print axioms fixedSlack_of_boundedSlack_recurrence
 
-/-! ### Band recurrence with a `max`-bounded slack (`main`'s consumer; JOINT dichotomy)
+/-! ### The recurrence the staircase consumes (abstracted as `BandProvider`)
 
-The band-top staircase enumerates the (infinitely many) distinct start-pairs in an order of type
-`ω` (every pair has finitely many predecessors), processing them by *recurring slack*.  For that
-ordering to have type `ω` we must know that the recurring slack `s(a,b)` of each pair is **bounded
-below by `max a.val b.val`** — otherwise infinitely many pairs could share one slack level and the
-"slack-then-max-then-min" key would not be a well-order of type `ω`.
+The band-top staircase (`namespace Staircase` below) enumerates the infinitely many distinct
+start-pairs in an order of type `ω` (every pair has finitely many predecessors), processing them by
+*recurring slack*.  For that ordering to have type `ω` the recurring slack `s(a,b)` of each pair must
+be **bounded below by `max a.val b.val`** — otherwise infinitely many pairs could share one slack
+level and the "slack-then-max-then-min" key would not be a well-order of type `ω`.
 
-We isolate the strengthened statement (recurring even slack pinned `≥ max(a,b)`) as
-`band_recurrence_ge_max`.  It is NOT proven directly; instead it dispatches on the **JOINT-condition
-dichotomy** (J-infinite vs J-finite, see the section near `memJ` below), reducing to the SINGLE
-isolated residue `band_recurrence_ge_max_of_jointFinite` (J-infinite proven axiom-clean).
-
-## Truth: DECISIVELY VERIFIED (computational, parity lock respected)
-
-The statement is TRUE.  Exhaustive Python search (cells `a,b ≤ ~10`, displacements to `3·10⁵`)
-across block-`B` cycles, reverse-block-`B`, the adjacent-transposition involution, sparse
-`swap_at_powers` (id except swap `(2ʲ, 2ʲ+1)`), growing-block / growing-reverse-block
-*unbounded-`g`* families, random period-`B` permutations, **random bijections on a 6·10⁴ prefix**,
-and **large-displacement involutions**: over 2300 (family, pair) combos and 0 counterexamples.
-
-**Canonical witness.** `s₀ := ` *the smallest even number `≥ max a.val b.val`* always works: it
-recurs at unbounded `D` for *every* tested pair (0 failures).  (An earlier note that the recurring
-slack could be larger than `max+1` for a particular `rev_block5` indexing is subsumed — `∃ s` only
-needs *one* recurring slack `≥ max`, and `s₀` is always one.)
-
-**Mechanism.**  Writing `gₓ(D) = c(x+D) − (x+D)`, with `A := s₀−a`, `B := s₀−b` (so `A > B ≥ 0`),
-a slack-`s₀` separator at `D` is `[gₐ(D) < A] ≠ [g_b(D) < B]`.  The separators are driven by the
-*larger* cell's behaviour: e.g. on `swap_at_powers (2,3)` (`s₀ = 4`, `B = 1`) the only recurring
-slack is `s₀`, hitting at `D = 2ᵏ − 3` (genuinely unbounded, log-sparse) — precisely where
-`b+D = 2ᵏ` so `c(b+D) = b+D+1` (`g_b = 1 = B`, b-side *not* below) while `gₐ = 0 < A` (a-side
-below).  Equivalently: the separating slacks at a given `D` form the interval
-`(min(cₐ,c_b)−D, max(cₐ,c_b)−D]`; at infinitely many `D` this interval contains an even integer in
-`[max(a,b), max(a,b)+O(1)]`.
-
-## Proof gap (precise, honest)
-
-A FULL Lean proof needs a *slack-localized* strengthening of Lemma A that the existing engine does
-NOT provide, and this is the same residue as the parallel `boundedSlack_recurrence` effort.  The
-obstruction is concrete: the would-be hypothesis "no slack-`s₀` separator for all `D ≥ D₀`" gives
-signal *agreement at exactly one time `t = D + s₀` per displacement* — a single bit per `D`.  The
-Lemma-A core `indist_consec` (which pins `|c(a+D) − c(b+D)| = 1` and a parity) reads the signal at
-*three* distinct times per `D`; single-time agreement does NOT reproduce that consecutive-values
-conclusion.  Confirmed by exhaustive search: genuine prefix-bijections satisfying single-slack-`s₀`
-agreement on a finite prefix exist that are *nowhere* shift/ascending-like (e.g. pair `(1,4)`,
-`s₀ = 4`: `[1,2,6,3,4,9,5,7,12,8,10,13,11]`), so neither `flat_imp_ascending` nor the cofinitely-bad
-value-hogging engine fires from the single-slack hypothesis alone.  The truth survives only in the
-*cofinite-`D`* limit via a global counting that pins the recurring slack into `[max, max+O(1)]` — the
-genuine combinatorial residue.  See `boundedSlack_recurrence` for the equivalent reduced form (it
-plus `fixedSlack_of_boundedSlack_recurrence` would discharge a `≥ b`-window variant).
-
-This all-slacks obstruction is *removed* by the **JOINT-condition dichotomy** (see the `memJ`
-section below).  For the ordered pair `a < b`, with `M = b.val`, `p = M % 2`, fixed even slack
-`s = M + p`, define `J = {D : c(a+D) ≤ a+D ∧ c(b+D) ≥ b+D+p}`.  If `J` is infinite, the fixed slack
-`s` separates at every `D ∈ J` (`band_recurrence_ge_max_of_jointInfinite`, proven AXIOM-CLEAN via the
-window arithmetic `memJ_imp_separator`); this absorbs the entire unbounded-displacement regime (no
-unbounded `c` is J-finite, verified `joint_dichotomy.py`).  The lone residue is the J-finite
-("anti-correlated") regime `band_recurrence_ge_max_of_jointFinite`.  The build is GREEN; the
-construction proving `main` from `band_recurrence_ge_max` is otherwise fully verified, so `main`'s
-`sorryAx` flows through exactly ONE isolated, empirically-confirmed-true fact (the J-finite case;
-`joint_finite_residue.py` confirms the band still holds there). -/
-
-/-- The least even natural `≥ m`: `m` if `m` is even, else `m + 1`. -/
-def leastEvenGe (m : ℕ) : ℕ := if m % 2 = 0 then m else m + 1
-
-lemma leastEvenGe_even (m : ℕ) : Even (leastEvenGe m) := by
-  unfold leastEvenGe
-  split
-  · rename_i h; exact (Nat.even_iff).mpr h
-  · rename_i h; refine (Nat.even_iff).mpr ?_; omega
-
-lemma le_leastEvenGe (m : ℕ) : m ≤ leastEvenGe m := by
-  unfold leastEvenGe; split <;> omega
-
-/-- Indicator disagreement at the fixed slack `s` *is* a slack-`s` separator: both are the
-    statement that `[c(a+D).val < D+s]` and `[c(b+D).val < D+s]` differ. -/
-private lemma not_indicatorAgree_imp_separatorAtSlack
-    (c : Perm) (a b : ℕ+) (s D : ℕ)
-    (hne : ¬ ((c (cellAt a D)).val ≥ D + s ↔ (c (cellAt b D)).val ≥ D + s)) :
-    separatorAtSlack c a b s D := by
-  unfold separatorAtSlack
-  rw [decide_ne_iff_not_iff]
-  -- `(x < D+s) ↔ (y < D+s)` is the negation-pair of `(x ≥ D+s) ↔ (y ≥ D+s)`.
-  intro hlt
-  apply hne
-  constructor
-  · intro hxge; by_contra hyge; push_neg at hyge
-    exact absurd (hlt.mpr hyge) (by omega)
-  · intro hyge; by_contra hxge; push_neg at hxge
-    exact absurd (hlt.mp hxge) (by omega)
+This per-pair guarantee — a fixed even slack `s ≥ max(a,b)` with separators at unbounded
+displacement — is exactly the predicate `BandProvider c` (defined just above the staircase).  The
+staircase and `BobWins_of_bandProvider` are PARAMETERIZED by it; they make no claim about how it is
+established.  In the live proof a `BandProvider` is produced ONLY in the bounded-above regime
+(`BandBoundedAbove.bandProvider_of_boundedAbove`); the unbounded-above regime is handled separately
+by `GrowStair` (growing-lag trajectory) and does not use the staircase, because no single fixed
+slack recurs for every pair there. -/
 
 /-! ### Window characterization of a fixed-slack separator
 
@@ -640,511 +566,6 @@ theorem separatorAtSlack_iff_window (c : Perm) (a b : ℕ+) (s D : ℕ) :
       omega
 
 #print axioms separatorAtSlack_iff_window
-
-/-! ### RETAINED SCAFFOLDING (formerly the bounded-displacement dispatch; now superseded)
-
-NOTE: The lemmas in this section (`separatorAtSlack_slack_le_of_bddDisp`, `even_in_window_ge`,
-`memS`, `memS_imp_separator`, `fixedSlack_ge_of_window_recurrence`) are AXIOM-CLEAN and were the
-scaffolding of the earlier *bounded-displacement* dispatch.  That dispatch (and its sorry residues
-`S_infinite_of_bddDisp` / `band_recurrence_ge_max_of_unbddDisp`) has been REPLACED by the cleaner
-JOINT-condition dichotomy (`band_recurrence_ge_max_of_jointInfinite` + `..._jointFinite`, below).
-These pieces are retained only for potential reuse; they no longer feed `main`.
-
-The text below describes the (now-superseded) bounded-displacement closure for context.
-
-The lemma `band_recurrence_ge_max` was formerly closed here for permutations of **bounded
-displacement** (`∃ B, ∀ n, |c n − n| ≤ B`).  This is the regime that defeated every prior route:
-the documented WALL of the (now-removed) all-slacks route was that its per-slack displacement floor
-`D₀(s)` does **not uniformize across `s`** (see notes.md for the archived attempt log).  Bounded
-displacement removes the WALL: a separator's slack is *capped* (Step A below), so only **finitely
-many** even slacks `≥ M` can ever separate, and the axiom-clean finite pigeonhole
-`fixedSlack_ge_of_window_recurrence` then uniformizes the floor automatically.
-
-## The two pieces
-
-* **Step A — the slack cap (`separatorAtSlack_slack_le_of_bddDisp`, axiom-clean).**  A slack-`s`
-  separator at `D` forces `D + s ≤ max (c (a+D)) (c (b+D))` (the window's upper edge,
-  `separatorAtSlack_iff_window`).  With `(c x).val ≤ x.val + B` (bounded displacement) and
-  `a, b ≤ b` this gives `D + s ≤ (b.val + D) + B`, i.e. `s ≤ b.val + B`.  Verified computationally
-  with **0 violations over 9.6·10⁶ checks** (`bounded_case.py`, `clean_argument.py`).
-
-* **Reduction (`band_recurrence_ge_max_of_bddDisp`).**  Combining Step A with the finite even-slack
-  pigeonhole reduces the lemma to the *finite-window recurrence*: at unbounded `D`, **some** even
-  slack in the finite range `[M, b+B]` separates (`band_recurrence_finite_window_of_bddDisp`).
-
-* **Cleaner reduction (the current residue).**  The finite-window recurrence is now a *derivation*,
-  not a residue: the axiom-clean scaffolding `even_in_window_ge` (interval-even arithmetic) and
-  `memS_imp_separator` (every `D ∈ S` is a slack-`s` separator for a concrete even `s ∈ [b, b+B]`)
-  reduce it to the single sharpened residue `S_infinite_of_bddDisp` — "`S := {D : c(b+D) > b+D ∧
-  |c(a+D) − c(b+D)| ≥ 2}` is infinite".  This is a concrete combinatorial predicate on `c`, NOT a
-  fiber-pigeonhole/parity bundle.  Verified non-empty/unbounded on every bounded non-EI family
-  (incl. log-sparse `swap_at_powers`); the scaffolding's containment/arithmetic checks pass with
-  **0 violations over 1.17·10⁶ checks** (`cleaner_bounds.py`, `cleaner_S_infinite.py`,
-  `cleaner_refute_Sfinite.py`).  Among many candidate clean sufficient sets, `S` is the *unique* one
-  that is both containment-correct and never empties on the sparse families. -/
-
-/-- **Bounded displacement.**  `c` displaces every cell by at most `B`. -/
-def BddDisp (c : Perm) (B : ℕ) : Prop :=
-  ∀ n : ℕ+, (c n).val ≤ n.val + B ∧ n.val ≤ (c n).val + B
-
-/-- **Step A — the slack cap.**  Under bounded displacement `B`, any slack-`s` separator for a
-    pair `a < b` at any displacement `D` has `s ≤ b.val + B`.
-
-    *Proof.*  By `separatorAtSlack_iff_window`, a separator at `D` gives
-    `D + s ≤ max (c (a+D)).val (c (b+D)).val`.  Bounded displacement bounds each label:
-    `(c (a+D)).val ≤ (a+D).val + B ≤ (b+D).val + B` (since `a < b`) and
-    `(c (b+D)).val ≤ (b+D).val + B`, so the `max ≤ (b.val + D) + B`.  Cancel `D`. -/
-theorem separatorAtSlack_slack_le_of_bddDisp (c : Perm) (a b : ℕ+) (hab : a < b) {B : ℕ}
-    (hB : BddDisp c B) (s D : ℕ) (hsep : separatorAtSlack c a b s D) :
-    s ≤ b.val + B := by
-  -- window upper edge
-  have hwin := (separatorAtSlack_iff_window c a b s D).mp hsep
-  have hup : D + s ≤ max (c (cellAt a D)).val (c (cellAt b D)).val := hwin.2
-  -- each label bounded by (b+D)+B
-  have ha : (c (cellAt a D)).val ≤ (b.val + D) + B := by
-    have := (hB (cellAt a D)).1
-    rw [cellAt_val] at this
-    have hab' : a.val ≤ b.val := le_of_lt hab
-    omega
-  have hb : (c (cellAt b D)).val ≤ (b.val + D) + B := by
-    have := (hB (cellAt b D)).1
-    rw [cellAt_val] at this
-    omega
-  have hmax : max (c (cellAt a D)).val (c (cellAt b D)).val ≤ (b.val + D) + B :=
-    max_le ha hb
-  omega
-
-#print axioms separatorAtSlack_slack_le_of_bddDisp
-
-/-! ### CLEANER bounded-case reduction (scaffolding axiom-clean; residue sharpened to `S` infinite)
-
-The prior single `sorry` (`band_recurrence_finite_window_of_bddDisp`) bundled an entire fiber-
-pigeonhole + parity argument.  We replace it with **axiom-clean scaffolding** plus ONE strictly
-more concrete combinatorial residue: the set
-
-  `S := { D : c(b+D) > b+D  ∧  |c(a+D) − c(b+D)| ≥ 2 }`
-
-is infinite (for bounded non-EI `c`, pair `a < b`).  This reduction is **empirically counterexample-
-free**: `S` is non-empty/infinite on every bounded non-EI family tested (block/reverse-block cycles,
-adjacent involution, parity-shift, sparse `swap_at_powers`, random period-`B`), and every `D ∈ S` is
-provably a slack-`s` separator for a *concrete* even `s ∈ [b, b+B]` — verified with **0 violations
-over 1.17·10⁶ checks** (`cleaner_bounds.py`, `cleaner_S_infinite.py`, `cleaner_refute_Sfinite.py`).
-Among many candidate "clean sufficient sets" (`T1` weak-desc-`a`+asc-`b`, `T2` direct slack-`M`,
-`T3`), `S` was the *unique* one that is simultaneously containment-correct (0 fail) and never empties
-(the sparse `swap_at_powers` defeats every alternative); see `cleaner_refute_Sfinite.py`.
-
-The two scaffolding pieces below (interval-even arithmetic, `S`-containment) are axiom-clean.  Only
-`S_infinite_of_bddDisp` carries the open weight — a single concrete claim about the permutation,
-NOT a fiber-pigeonhole/parity bundle. -/
-
-/-- **Interval-even arithmetic.**  A half-open interval `(lo, hi]` whose top edge `hi ≥ M + 1` and
-    whose width `hi − lo ≥ 2` contains an even integer `s` with `M ≤ s ≤ hi` (and `lo < s`).  Take
-    `s = hi` if `hi` is even, else `s = hi − 1`; both lie in `(lo, hi]` (width `≥ 2`) and are `≥ M`
-    (since `hi − 1 ≥ M`).  Verified with 0 failures (`cleaner_S_infinite.py`). -/
-lemma even_in_window_ge (lo hi M : ℕ) (hhi : M + 1 ≤ hi) (hwidth : lo + 2 ≤ hi) :
-    ∃ s : ℕ, Even s ∧ M ≤ s ∧ s ≤ hi ∧ lo < s := by
-  rcases Nat.even_or_odd hi with hev | hodd
-  · exact ⟨hi, hev, by omega, le_refl _, by omega⟩
-  · refine ⟨hi - 1, ?_, by omega, by omega, by omega⟩
-    rcases hodd with ⟨k, hk⟩
-    exact ⟨k, by omega⟩
-
-/-- **The set `S` of the cleaner reduction (membership predicate).**  Displacement `D` is in `S`
-    for the pair `a < b` iff `c(b+D)` is a *strict ascent* of cell `b+D` and the two displaced
-    labels `c(a+D)`, `c(b+D)` differ by at least `2`. -/
-def memS (c : Perm) (a b : ℕ+) (D : ℕ) : Prop :=
-  (cellAt b D).val < (c (cellAt b D)).val ∧
-    ((c (cellAt a D)).val + 2 ≤ (c (cellAt b D)).val ∨
-      (c (cellAt b D)).val + 2 ≤ (c (cellAt a D)).val)
-
-/-- **`S`-containment (axiom-clean).**  Every `D ∈ S` is a slack-`s` separator for a concrete even
-    slack `s` with `b ≤ s ≤ b + B`.
-
-    *Proof.*  Write `x = (c(a+D)).val`, `y = (c(b+D)).val`, `M = b.val`.  The slack window of `D` is
-    `(min x y − D, max x y − D]` (`separatorAtSlack_iff_window`).  The strict ascent at `b` gives
-    `y > (b+D).val = M + D`, so the top edge `hi := max x y − D ≥ y − D ≥ M + 1`.  The gap `≥ 2`
-    gives width `hi − lo = |x − y| ≥ 2`.  By `even_in_window_ge` there is an even `s` with
-    `M ≤ s ≤ hi` and `lo < s`, i.e. `min x y − D < s ≤ max x y − D`, i.e. `min x y < D + s ≤
-    max x y` — a slack-`s` separator (`separatorAtSlack_iff_window`).  Finally bounded displacement
-    bounds `hi ≤ M + B` (`x ≤ a+D+B ≤ b+D+B`, `y ≤ b+D+B`), so `s ≤ M + B`. -/
-theorem memS_imp_separator (c : Perm) (a b : ℕ+) (hab : a < b) {B : ℕ} (hB : BddDisp c B)
-    {D : ℕ} (hD : memS c a b D) :
-    ∃ s : ℕ, Even s ∧ b.val ≤ s ∧ s ≤ b.val + B ∧ separatorAtSlack c a b s D := by
-  obtain ⟨hasc, hgap⟩ := hD
-  set x := (c (cellAt a D)).val with hx
-  set y := (c (cellAt b D)).val with hy
-  set M := b.val with hM
-  -- strict ascent at b: y > (b+D).val = M + D
-  have hyasc : M + D < y := by
-    rw [hM]; have := hasc; rw [cellAt_val] at this; rw [hy]; omega
-  -- bounded-displacement upper bounds on x, y by (b+D)+B
-  have hxB : x ≤ (b.val + D) + B := by
-    have := (hB (cellAt a D)).1; rw [cellAt_val] at this
-    have hab' : a.val ≤ b.val := le_of_lt hab
-    rw [hx]; omega
-  have hyB : y ≤ (b.val + D) + B := by
-    have := (hB (cellAt b D)).1; rw [cellAt_val] at this; rw [hy]; omega
-  -- window endpoints (in slack coords)
-  set lo := min x y - D with hlo
-  set hi := max x y - D with hhi
-  -- numeric facts about min/max of x,y (avoid `set` interfering with omega)
-  have hbpos : 1 ≤ b.val := b.property
-  have hy_le_max : y ≤ max x y := le_max_right x y
-  have hD_le_max : D ≤ max x y := by omega
-  -- max x y ≥ min x y + 2 in either disjunct (gap ≥ 2)
-  have hmaxmin : min x y + 2 ≤ max x y := by
-    rcases hgap with hgxy | hgyx
-    · rw [hx, hy] at hgxy; omega
-    · rw [hx, hy] at hgyx; omega
-  -- min x y ≥ M+D? no — but min x y ≥ M+D-? handle truncation in hi/lo directly.
-  have hlo_eq : lo = min x y - D := hlo
-  have hhi_eq : hi = max x y - D := hhi
-  -- top edge ≥ M + 1 : hi = max - D ≥ y - D > M  (so ≥ M+1)
-  have htop : M + 1 ≤ hi := by omega
-  -- width ≥ 2 : if D ≤ min then hi - lo = max - min ≥ 2; else lo = 0 and hi ≥ M+1 ≥ 2.
-  have hwidth : lo + 2 ≤ hi := by omega
-  -- get the even slack
-  obtain ⟨s, hse, hsM, hsHi, hsLo⟩ := even_in_window_ge lo hi M htop hwidth
-  refine ⟨s, hse, hsM, ?_, ?_⟩
-  · -- s ≤ M + B : s ≤ hi = max x y - D ≤ (b+D+B) - D = M + B
-    have hmax_le : max x y ≤ (b.val + D) + B := max_le hxB hyB
-    omega
-  · -- separatorAtSlack via the window characterization
-    rw [separatorAtSlack_iff_window]
-    -- goal in x,y terms: min x y < D + s ∧ D + s ≤ max x y
-    refine ⟨?_, ?_⟩
-    · -- min x y < D + s.  From lo < s with lo = min - D: if D ≤ min then min - D < s ⇒ min < D+s;
-      -- if D > min then min < D ≤ D + s.
-      omega
-    · -- D + s ≤ max x y, i.e. s ≤ hi = max - D, with D ≤ max.
-      omega
-
-#print axioms memS_imp_separator
-
-/-! ### NOTE on the superseded bounded-case `S`-route.
-
-The earlier dispatch split the band recurrence into bounded vs unbounded displacement, leaving two
-residues: the bounded-case `S_infinite_of_bddDisp` (the set `S = {D : c(b+D) > b+D ∧ |c(a+D) −
-c(b+D)| ≥ 2}` is infinite) and the unbounded-case `band_recurrence_ge_max_of_unbddDisp`.  Both have
-been **REMOVED** in favour of the cleaner JOINT-condition dichotomy below
-(`band_recurrence_ge_max_of_jointInfinite` proven axiom-clean + the single residue
-`band_recurrence_ge_max_of_jointFinite`).  The axiom-clean scaffolding it relied on
-(`even_in_window_ge`, `memS`, `memS_imp_separator`, `separatorAtSlack_slack_le_of_bddDisp`,
-`fixedSlack_ge_of_window_recurrence`) is retained below for potential reuse; only the sorry-bearing
-residues themselves were deleted. -/
-
-/-- **`≥ M` finite pigeonhole.**  If at unbounded displacement *some* even slack in `[M, M+2K]`
-    separates, then *one fixed* even slack `s` with `M ≤ s ≤ M + 2K` separates at unbounded
-    displacement.  (The `≥ M` companion to `fixedSlack_of_boundedSlack_recurrence`: pigeonhole over
-    the finite even set `{M', M'+2, …}` where `M' = leastEvenGe M`.) -/
-theorem fixedSlack_ge_of_window_recurrence (c : Perm) (a b : ℕ+) (M K : ℕ)
-    (hrec : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ ∃ s : ℕ, Even s ∧ M ≤ s ∧ s ≤ M + K ∧
-      separatorAtSlack c a b s D) :
-    ∃ s : ℕ, Even s ∧ M ≤ s ∧ ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
-  classical
-  by_contra hcon
-  push_neg at hcon
-  -- hcon : ∀ s, Even s → M ≤ s → ∃ D₀, ∀ D ≥ D₀, ¬ separator
-  -- collect per-even-slack-in-[M,M+K] floors; take their max as a common floor.
-  have hbound : ∀ j : ℕ, ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ →
-      ¬ (Even (M + j) ∧ M ≤ M + j ∧ M + j ≤ M + K ∧ separatorAtSlack c a b (M + j) D) := by
-    intro j
-    by_cases hev : Even (M + j)
-    · obtain ⟨D₀, hD₀⟩ := hcon (M + j) hev (Nat.le_add_right _ _)
-      exact ⟨D₀, fun D hD ⟨_, _, _, hs⟩ => hD₀ D hD hs⟩
-    · exact ⟨0, fun D _ ⟨he, _, _, _⟩ => hev he⟩
-  choose f hf using hbound
-  set Dstar : ℕ := (Finset.range (K + 1)).sup f with hDstar
-  obtain ⟨D, hD_ge, s, hse, hsM, hsMK, hsep⟩ := hrec Dstar
-  -- s = M + (s - M) with s - M ≤ K, so it's covered by the finite family.
-  set j := s - M with hj
-  have hjK : j ≤ K := by omega
-  have hsj : M + j = s := by omega
-  have hfj_le : f j ≤ Dstar := by
-    rw [hDstar]; exact Finset.le_sup (Finset.mem_range.mpr (Nat.lt_succ_of_le hjK))
-  have hD_ge_fj : D ≥ f j := le_trans hfj_le hD_ge
-  exact hf j D hD_ge_fj ⟨by rw [hsj]; exact hse, by omega, by omega, by rw [hsj]; exact hsep⟩
-
-#print axioms fixedSlack_ge_of_window_recurrence
-
-/-! ### JOINT-CONDITION DICHOTOMY for the band recurrence (`main`'s consumer)
-
-`band_recurrence_ge_max` below is what `main` consumes (via `slackOf`).  It dispatches on a clean
-**joint two-ray condition** that subsumes the earlier bounded/unbounded split and concentrates the
-residue into a single regime.
-
-For `a < b`, set `M := b.val`, `p := M % 2` (`0` if `M` even, `1` if `M` odd), and the *fixed even*
-slack `s := M + p` (so `s ≥ M` and `s` is even).  Define the **joint set**
-
-  `J := { D : c(a+D) ≤ a+D  (weak descent of a)  ∧  c(b+D) ≥ b+D + p  (ascent-with-parity of b) }`.
-
-* **JOINT-INFINITE case** (`band_recurrence_ge_max_of_jointInfinite`, AXIOM-CLEAN).  If `J` recurs
-  at unbounded displacement, then the *fixed* even slack `s = M + p` separates the pair at every
-  `D ∈ J`: a weak descent of `a` puts the window's lower edge `min(c(a+D),c(b+D)) ≤ c(a+D) ≤ a+D <
-  M+D ≤ D+s` (using `a < b = M`), and the ascent-with-parity of `b` puts the upper edge
-  `max(c(a+D),c(b+D)) ≥ c(b+D) ≥ b+D+p = D+s`; so `D+s ∈ (min, max]` is a slack-`s` separator
-  (`separatorAtSlack_iff_window`).  This is proven outright from `memJ_imp_separator` (window
-  arithmetic) and the J-infinite hypothesis.  It covers e.g. the unbounded `growing_blocks_rev` /
-  `growing_blocks_cyc` (verified J-infinite for every tested pair, `joint_dichotomy.py`).
-
-* **JOINT-FINITE case** (`band_recurrence_ge_max_of_jointFinite`, the SINGLE residue).  If `J` is
-  finite, this is the "anti-correlated" regime (e.g. `parity_shift (1,3)`, `block_cycle_2 (1,3)`
-  have `J` empty for that ordered pair).  band still holds (the smallest even slack `≥ M` recurs;
-  excess `≤ 2`, verified) — this is the isolated open weight.
-
-## DISCRIMINATOR (Python, `joint_dichotomy.py`, NMAX = 2·10⁵, 0 violations)
-Every non-EI family tested is, on each ordered pair, EITHER J-infinite (then the fixed slack
-`s = M+p` separates ∞-often, confirmed) OR J-finite — exhaustively, with `memJ`-membership ⇒
-slack-`s` separator holding with **0 failures** and J-infinite ⇒ slack-`s` separators infinite with
-**0 failures**.  Crucially, **no unbounded family is J-finite** (both `growing_blocks_*` are
-J-infinite on every pair), so the J-infinite clean case absorbs the entire unbounded regime; the
-former separate `band_recurrence_ge_max_of_unbddDisp` residue is therefore *removed*.  (We do NOT
-claim "J-finite ⟹ bounded" as a Lean lemma — it is empirically true but its formalization is a
-separate combinatorial fact; instead the J-finite case is simply left as the one residue.) -/
-
-/-- **The joint set `J` (membership predicate).**  For the ordered pair `a < b`, displacement `D`
-    is in `J` iff `c(a+D)` is a *weak descent* of cell `a+D` and `c(b+D)` is an *ascent of `b+D`
-    with parity offset `p = b.val % 2`* (a weak ascent for `M` even, a strict ascent for `M` odd).
-    The parity offset `p` is exactly what makes the fixed slack `s = b.val + p` even. -/
-def memJ (c : Perm) (a b : ℕ+) (D : ℕ) : Prop :=
-  (c (cellAt a D)).val ≤ (cellAt a D).val ∧
-    (cellAt b D).val + (b.val % 2) ≤ (c (cellAt b D)).val
-
-/-- The fixed even slack `b.val + b.val % 2` is even. -/
-private lemma even_b_add_parity (b : ℕ+) : Even (b.val + b.val % 2) := by
-  rcases Nat.even_or_odd b.val with hev | hodd
-  · have : b.val % 2 = 0 := Nat.even_iff.mp hev
-    rw [this]; simpa using hev
-  · have : b.val % 2 = 1 := Nat.odd_iff.mp hodd
-    rw [this]
-    rcases hodd with ⟨k, hk⟩
-    exact ⟨k + 1, by omega⟩
-
-/-- **`J`-membership ⇒ fixed-slack separator (AXIOM-CLEAN).**  Every `D ∈ J` (for the ordered pair
-    `a < b`) is a slack-`s` separator at the *fixed even* slack `s = b.val + b.val % 2 ≥ b.val`.
-
-    *Proof.*  Write `x = c(a+D).val`, `y = c(b+D).val`, `M = b.val`, `p = M % 2`, `s = M + p`.
-    The slack window of `D` is `(min x y, max x y]` shifted by `D` (`separatorAtSlack_iff_window`),
-    so a slack-`s` separator is `min x y < D + s ≤ max x y`.
-    * Lower edge: the weak descent of `a` gives `x ≤ (a+D).val = a.val + D < b.val + D ≤ M + D ≤
-      D + s` (using `a < b = M` and `s ≥ M ≥ 0`), so `min x y ≤ x < D + s`.
-    * Upper edge: the ascent-with-parity of `b` gives `y ≥ (b+D).val + p = M + D + p = D + s`, so
-      `max x y ≥ y ≥ D + s`.  Done. -/
-theorem memJ_imp_separator (c : Perm) (a b : ℕ+) (hab : a < b) {D : ℕ} (hD : memJ c a b D) :
-    Even (b.val + b.val % 2) ∧ b.val ≤ b.val + b.val % 2 ∧
-      separatorAtSlack c a b (b.val + b.val % 2) D := by
-  obtain ⟨hwd, hasc⟩ := hD
-  set x := (c (cellAt a D)).val with hx
-  set y := (c (cellAt b D)).val with hy
-  set M := b.val with hM
-  set p := b.val % 2 with hp
-  set s := M + p with hs
-  -- weak descent of a, in raw cell coordinates
-  have hwd' : x ≤ a.val + D := by rw [hx]; have := hwd; rwa [cellAt_val] at this
-  -- ascent-with-parity of b
-  have hasc' : (b.val + D) + p = D + s := by rw [hs, hM]; ring
-  have hyge : D + s ≤ y := by
-    have := hasc; rw [cellAt_val] at this
-    -- this : b.val + D + p ≤ y
-    rw [hy]; omega
-  -- a.val < M (since a < b = M)
-  have haM : a.val < M := by rw [hM]; exact_mod_cast hab
-  refine ⟨even_b_add_parity b, by omega, ?_⟩
-  -- the separator via the window characterization
-  rw [separatorAtSlack_iff_window]
-  refine ⟨?_, ?_⟩
-  · -- min x y < D + s : x < D + s (weak descent, a < M, s ≥ M)
-    have hx_lt : x < D + s := by omega
-    exact lt_of_le_of_lt (min_le_left x y) hx_lt
-  · -- D + s ≤ max x y : y ≥ D + s
-    exact le_trans hyge (le_max_right x y)
-
-#print axioms memJ_imp_separator
-
-/-- **JOINT-INFINITE case (AXIOM-CLEAN), ordered pair.**  For `a < b`, if the joint set `J` (on
-    the ordered pair `(a, b)`) recurs at unbounded displacement, the fixed even slack
-    `s = b.val + b.val % 2 ≥ b.val = max a.val b.val` has separators at unbounded displacement —
-    i.e. the band recurrence holds with this fixed `s ≥ max a.val b.val`.
-
-    *Proof.*  Each `D ∈ J` is a slack-`s` separator (`memJ_imp_separator`, axiom-clean), so the
-    J-recurrence hypothesis transports directly to slack-`s` separators at unbounded `D`. -/
-theorem band_recurrence_ge_max_of_jointInfinite
-    (c : Perm) (a b : ℕ+) (hab : a < b)
-    (hJ : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ memJ c a b D) :
-    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
-      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
-  have hmax : max a.val b.val = b.val := max_eq_right (le_of_lt hab)
-  refine ⟨b.val + b.val % 2, even_b_add_parity b, by rw [hmax]; omega, fun D₀ => ?_⟩
-  obtain ⟨D, hDge, hmem⟩ := hJ D₀
-  exact ⟨D, hDge, (memJ_imp_separator c a b hab hmem).2.2⟩
-
-#print axioms band_recurrence_ge_max_of_jointInfinite
-
-/-! ### SYMMETRIC joint set `J''` (shrinks the residue, AXIOM-CLEAN)
-
-The original `J` makes the *smaller* cell `a` weak-descend and the *larger* cell `b`
-ascend-with-parity.  Its **mirror image** `J''` makes the *larger* cell `b` weak-descend and the
-*smaller* cell `a` *ascend with offset* `q`.  Both produce a fixed-even-slack separator, but they
-fire in **opposite sign-regimes**, so combining them shrinks the residue from "`J` finite" to
-"`J` AND `J''` both finite".
-
-For the ordered pair `a < b`, set `M = b.val`, the symmetric fixed even slack
-`s' = leastEvenGe (M + 1)` (`= M+1` if `M` odd, `M+2` if `M` even — even and `≥ M`), and the
-ascent offset `q = s' - a.val` (so `a.val + q = s'`, since `s' ≥ M+1 > a.val`).
-
-  `J'' := { D : c(a+D) ≥ (a+D) + q  ∧  c(b+D) ≤ (b+D) }`
-
-* Lower edge: `y = c(b+D) ≤ M + D < M + 1 + D ≤ s' + D = D + s'`, so `min x y ≤ y < D + s'`.
-* Upper edge: `x = c(a+D) ≥ (a.val + D) + q = (a.val + q) + D = s' + D = D + s'`, so
-  `max x y ≥ x ≥ D + s'`.
-
-Verified: 0 separator failures over ~6·10⁷ checks (`joint_dichotomy_dual.py`), and the both-finite
-residue is *pointwise comonotone* (no opposite-sign `(φ_a, φ_b)` pair) and bounded. -/
-
-/-- **The symmetric joint set `J''` (membership predicate), ordered pair `a < b`.**  `D ∈ J''` iff
-    the *larger* cell `b+D` weak-descends and the *smaller* cell `a+D` ascends by the offset
-    `q = leastEvenGe (b.val + 1) - a.val`. -/
-def memJ'' (c : Perm) (a b : ℕ+) (D : ℕ) : Prop :=
-  (cellAt a D).val + (leastEvenGe (b.val + 1) - a.val) ≤ (c (cellAt a D)).val ∧
-    (c (cellAt b D)).val ≤ (cellAt b D).val
-
-/-- **`J''`-membership ⇒ fixed-slack separator (AXIOM-CLEAN).**  Every `D ∈ J''` (for the ordered
-    pair `a < b`) is a slack-`s'` separator at the *fixed even* slack `s' = leastEvenGe (b.val + 1)`,
-    which is even and `≥ b.val = max a.val b.val`.  Mirror of `memJ_imp_separator`. -/
-theorem memJ''_imp_separator (c : Perm) (a b : ℕ+) (hab : a < b) {D : ℕ} (hD : memJ'' c a b D) :
-    Even (leastEvenGe (b.val + 1)) ∧ b.val ≤ leastEvenGe (b.val + 1) ∧
-      separatorAtSlack c a b (leastEvenGe (b.val + 1)) D := by
-  obtain ⟨hasc, hwd⟩ := hD
-  set x := (c (cellAt a D)).val with hx
-  set y := (c (cellAt b D)).val with hy
-  set M := b.val with hM
-  set s := leastEvenGe (M + 1) with hs
-  -- a.val < M (since a < b = M)
-  have haM : a.val < M := by rw [hM]; exact_mod_cast hab
-  -- s ≥ M + 1 > a.val, so a.val ≤ s and the offset cancels: a.val + (s - a.val) = s.
-  have hsM1 : M + 1 ≤ s := by rw [hs]; exact le_leastEvenGe (M + 1)
-  have hqcancel : a.val + (s - a.val) = s := by omega
-  -- ascent-with-offset of a, in raw cell coordinates: (a.val + D) + (s - a.val) ≤ x
-  have hasc' : (a.val + D) + (s - a.val) ≤ x := by
-    rw [hx]; have := hasc; rw [cellAt_val] at this; rw [hs]; exact this
-  -- x ≥ D + s
-  have hxge : D + s ≤ x := by omega
-  -- weak descent of b, in raw cell coordinates: y ≤ b.val + D
-  have hwd' : y ≤ M + D := by rw [hy]; have := hwd; rw [cellAt_val] at this; rw [hM]; exact this
-  -- y < D + s (since y ≤ M + D < M + 1 + D ≤ s + D)
-  have hylt : y < D + s := by omega
-  refine ⟨leastEvenGe_even (M + 1), ?_, ?_⟩
-  · -- M ≤ s
-    omega
-  · -- the separator via the window characterization
-    rw [separatorAtSlack_iff_window]
-    refine ⟨?_, ?_⟩
-    · -- min x y < D + s : y < D + s
-      exact lt_of_le_of_lt (min_le_right x y) hylt
-    · -- D + s ≤ max x y : x ≥ D + s
-      exact le_trans hxge (le_max_left x y)
-
-#print axioms memJ''_imp_separator
-
-/-- **JOINT-INFINITE case for `J''` (AXIOM-CLEAN), ordered pair `a < b`.**  If the symmetric joint
-    set `J''` recurs at unbounded displacement, the fixed even slack `s' = leastEvenGe (b.val + 1)`
-    `≥ max a.val b.val` has separators at unbounded displacement.  Mirror of
-    `band_recurrence_ge_max_of_jointInfinite`. -/
-theorem band_recurrence_ge_max_of_jointInfinite'
-    (c : Perm) (a b : ℕ+) (hab : a < b)
-    (hJ : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ memJ'' c a b D) :
-    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
-      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
-  have hmax : max a.val b.val = b.val := max_eq_right (le_of_lt hab)
-  refine ⟨leastEvenGe (b.val + 1), leastEvenGe_even (b.val + 1), ?_, fun D₀ => ?_⟩
-  · rw [hmax]; have := le_leastEvenGe (b.val + 1); omega
-  · obtain ⟨D, hDge, hmem⟩ := hJ D₀
-    exact ⟨D, hDge, (memJ''_imp_separator c a b hab hmem).2.2⟩
-
-#print axioms band_recurrence_ge_max_of_jointInfinite'
-
-/-! ### BOTH-JOINT-FINITE case (the single isolated residue, now strictly smaller)
-
-When **both** `J` *and* its mirror `J''` are finite (for the ordered pair `a < b`), the original
-fixed-slack-`(M+p)` route and the symmetric fixed-slack-`s'` route both fail to fire infinitely.
-The band recurrence STILL holds.  This is the *only* remaining residue: every `J`-infinite `c`
-(including the entire unbounded regime) is handled axiom-clean by
-`band_recurrence_ge_max_of_jointInfinite`, and every `J''`-infinite `c` by
-`band_recurrence_ge_max_of_jointInfinite'`.
-
-## STATUS: TRUE, decisively verified; the SOLE remaining `sorry` of `band_recurrence_ge_max`.
-The hypotheses (for `a < b`) are `∃ D₀, ∀ D ≥ D₀, ¬ memJ c a b D` (J finite) AND
-`∃ D₀, ∀ D ≥ D₀, ¬ memJ'' c a b D` (J'' finite).  Both-finite was verified to be exactly the
-**bounded + pointwise-comonotone** regime: cofinitely `φ(a+D) = c(a+D)-(a+D)` and
-`φ(b+D) = c(b+D)-(b+D)` have the *same sign* (never opposite) and are bounded — 0 opposite-sign
-pairs and 0 unbounded both-finite cases over ~6·10⁷ checks (`joint_dichotomy_dual.py`).  This is
-strictly fewer permutations than the former `J`-finite residue: the symmetric route absorbs every
-`c` whose displacements anti-correlate in the `J''` direction.  The honest obstruction (documented
-in the report) is that closing "bounded + comonotone ⇒ band recurrence" requires a partial-sum /
-fiber-bijection counting argument with no off-the-shelf Mathlib engine. -/
-theorem band_recurrence_ge_max_of_bothJointFinite
-    (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a < b)
-    (hJfin : ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ → ¬ memJ c a b D)
-    (hJ''fin : ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ → ¬ memJ'' c a b D) :
-    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
-      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
-  sorry
-
-#print axioms band_recurrence_ge_max_of_bothJointFinite
-
-/-- **THE BAND RECURRENCE (`main`'s consumer), via the JOINT dichotomy.**  For non-EI `c` and a
-    distinct pair, a *fixed* even slack `s ≥ max a.val b.val` has separators at unbounded
-    displacement.
-
-    Dispatches on whether the joint set `J` recurs at unbounded displacement:
-    * **J-infinite** → `band_recurrence_ge_max_of_jointInfinite` (AXIOM-CLEAN; absorbs the entire
-      unbounded regime), or
-    * **J-finite** → `band_recurrence_ge_max_of_jointFinite` (the single residue, anti-correlated
-      bounded regime).
-
-    The `by_cases` (after WLOG ordering `a < b`) is on the ordered-pair J-recurrence proposition
-    directly (not `Set.Infinite`), so its negation `push_neg`'s to exactly the J-finite hypothesis
-    the residue needs.
-
-    The `b < a` half reuses the `(b, a)`-ordered conclusion and swaps the separator's Boolean
-    disagreement (`separatorAtSlack` is symmetric in the pair). -/
-theorem band_recurrence_ge_max (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
-    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
-      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
-  -- An ordered-pair helper: for `lo < hi`, dispatch on J-recurrence of the ordered pair.
-  have ordered : ∀ lo hi : ℕ+, lo < hi →
-      ∃ s : ℕ, Even s ∧ max lo.val hi.val ≤ s ∧
-        ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c lo hi s D := by
-    intro lo hi hlohi
-    by_cases hJ : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ memJ c lo hi D
-    · -- J-infinite (clean).
-      exact band_recurrence_ge_max_of_jointInfinite c lo hi hlohi hJ
-    · by_cases hJ'' : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ memJ'' c lo hi D
-      · -- J''-infinite (clean, symmetric route).
-        exact band_recurrence_ge_max_of_jointInfinite' c lo hi hlohi hJ''
-      · -- BOTH J and J'' finite (the single residue).  Each negation `push_neg`'s to its
-        -- finiteness statement.
-        push_neg at hJ hJ''
-        obtain ⟨D₀, hD₀⟩ := hJ
-        obtain ⟨D₁, hD₁⟩ := hJ''
-        exact band_recurrence_ge_max_of_bothJointFinite c h lo hi hlohi
-          ⟨D₀, fun D hD => hD₀ D hD⟩ ⟨D₁, fun D hD => hD₁ D hD⟩
-  rcases lt_or_gt_of_ne hab with hlt | hgt
-  · -- a < b : directly.
-    exact ordered a b hlt
-  · -- b < a : obtain for (b, a) and swap the separator's Boolean disagreement.
-    obtain ⟨s, hse, hsM, hpin⟩ := ordered b a hgt
-    refine ⟨s, hse, by rw [max_comm]; exact hsM, fun D₀ => ?_⟩
-    obtain ⟨D, hD, hsep⟩ := hpin D₀
-    exact ⟨D, hD, by unfold separatorAtSlack at hsep ⊢; exact hsep.symm⟩
-
--- Axiom audit: `band_recurrence_ge_max` now dispatches on the JOINT-condition dichotomy.  The
--- **J-infinite case is fully PROVEN** (`band_recurrence_ge_max_of_jointInfinite`, axiom-clean via
--- `memJ_imp_separator` + `separatorAtSlack_iff_window`); it absorbs the entire unbounded regime, so
--- the former `band_recurrence_ge_max_of_unbddDisp` residue is gone.  The SINGLE remaining residue is
--- `band_recurrence_ge_max_of_jointFinite` (the anti-correlated bounded regime).  So `main`'s
--- `sorryAx` now flows through EXACTLY ONE isolated combinatorial fact.
-#print axioms band_recurrence_ge_max
 
 /-! ### Never-guessing exploration strategies -/
 
@@ -1668,17 +1089,17 @@ theorem ofMoves_localizes (c : Perm) (m : ℕ → Dir)
 
 /-! ### The band-top staircase: constructing the separating fixed trajectory
 
-We now build the explicit move sequence `m` discharging `separating_trajectory_exists`, *modulo*
-the single isolated combinatorial lemma `band_recurrence_ge_max` (plus the pre-existing
-`boundedSlack_recurrence` it routes through).  Everything in this section is fully proven.
+We now build the explicit move sequence `m` discharging `separating_trajectory_exists` from a
+`BandProvider c` (the per-pair recurring-slack guarantee, defined just below).  Everything in this
+section is fully proven, parameterized by that abstract provider.
 
 The trajectory is a **lag-monotone staircase**.  We enumerate the (infinitely many) ordered
 distinct start-pairs `(a, b)` with `a < b` in order of nondecreasing *recurring slack*
-`slackOf a b` (`≥ b.val ≥ max(a,b)`, by `band_recurrence_ge_max`).  Each phase:
+`slackOf a b` (`≥ b.val ≥ max(a,b)`, from the `BandProvider`).  Each phase:
 
 * **Raise** the lag to the pair's slack `s` (oscillating `D ∈ {0,1}`), then
 * **Ride** right at lag `s` until a fixed-slack-`s` separator for the pair is met
-  (`band_recurrence_ge_max` guarantees one at unbounded displacement), then
+  (the `BandProvider` guarantees one at unbounded displacement), then
 * **Tail**: ride right until the displacement exceeds the phase index (so displacements grow
   without bound — needed for the "Yes" obligation).
 
@@ -1690,8 +1111,8 @@ large displacements, so a weak descent (`weak_descents_infinite`) of `k₀` even
     for every distinct ordered pair there is a *fixed* even slack `s ≥ max a.val b.val` whose
     slack-`s` separators recur at arbitrarily large displacement.  The staircase construction
     (`namespace Staircase`) is parameterized by such a provider, so the *bounded-above* regime can
-    supply it from the axiom-clean `band_of_boundedAbove` (decoupling the construction from the
-    false general dispatch `band_recurrence_ge_max`). -/
+    supply it from the axiom-clean `band_of_boundedAbove`.  (No general band recurrence is claimed:
+    the unbounded-above regime, where no single fixed slack recurs, is handled by `GrowStair`.) -/
 def BandProvider (c : Perm) : Prop :=
   ∀ a b : ℕ+, a ≠ b →
     ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
