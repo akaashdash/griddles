@@ -1702,3 +1702,31 @@ PROOF ARCHITECTURE (reuses PROVEN pieces):
 
 TASKS #18–21. The research crux is the termination/no-stranding proof (task #19); the enabling true
 facts (separators_unbounded, yesSet_finite, localizes_BobWins) are all already PROVEN axiom-clean.
+
+## Loop iteration (2026-05-23 #10): CLEAN DICHOTOMY — bounded-above (band true) vs unbounded-above (Q2-even true). NO adaptive belief-state needed.
+
+Adaptive-research agent concluded "foresight needed, requires the (false) band recurrence" — but that was
+based on STALE info (it didn't know band is false) and a BOUNDED witness (adjacent-transposition) for its
+"Q2 false". Correcting the regimes gives a clean dichotomy (verified):
+
+KEY: Bob's lag L = t−D is ALWAYS EVEN (D_t ≡ t mod 2) and MONOTONE non-decreasing. So Bob needs EVEN-lag
+separators, caught before lag climbs past them.
+
+Q2-even ("every pair has even-lag separators at arbitrarily large lag"):
+  • UNBOUNDED-ABOVE c: Q2-even TRUE. [verified: AP-split, doubling_rev, growing_rev — max even sep-lag
+    doubles when D-range doubles; + 40 random growing-block bijections, ALL pairs grow.] Reason: unbounded
+    displacement on the (cofinite) ray ⟹ window top max(va,vb)→∞ ⟹ even-lag separators at all large lags.
+  • BOUNDED c: Q2-even FALSE (capped at ~max(a,b)) — but band recurrence is TRUE there (bounded-above proof).
+
+THE DICHOTOMY (both cases = c-tailored FIXED trajectories via the PROVEN ofMoves_localizes; NO belief state):
+  notEI_BobWins: by_cases on bounded-above (∃B ∀n (c n).val ≤ n.val+B):
+   (1) BOUNDED-ABOVE → band_recurrence_ge_max is TRUE (agent: bounded-above ⟹ band) → existing band-staircase
+       (rides at FIXED slack, catches recurring fixed-slack separator). [tasks: formalize bounded-above⟹band]
+   (2) UNBOUNDED-ABOVE → Q2-even TRUE → c-tailored GROWING-LAG trajectory: enumerate pairs; for each, raise
+       lag + ride right to an even-lag separator at lag ≥ current (Q2-even guarantees one at arbitrarily large
+       lag ⟹ NEVER STRANDED). Satisfies ofMoves_localizes' hsep (sep every pair) + hsafe (D≥0) + hyes (D→∞).
+This REPLACES the false band_recurrence_ge_max_of_bothJointFinite with TWO TRUE lemmas + two trajectory
+constructions. No foresight/belief-state needed — lag monotonicity is fine because (1) fixed slack recurs
+[bounded] or (2) separators at ALL large lags [unbounded], so the monotone-lag staircase is never stuck.
+NEW LEMMA to formalize (case 2): unbounded-above ⟹ Q2-even (separators at arbitrarily large even slack),
+then a growing-lag analogue of the Staircase. Case 1 = agent's bounded-above⟹band + existing staircase.
