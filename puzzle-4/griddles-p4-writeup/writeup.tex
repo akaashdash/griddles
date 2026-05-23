@@ -73,41 +73,26 @@ A Complete, Machine-Checked Solution}
 
 % ============================================================
 \begin{abstract}
-We give a complete solution to the \emph{Trolley Retrieval} problem
-(G-Research GRiddles Series~A, Puzzle~4). A trolley sits on an unknown
-cell of a one-way infinite tape whose cell~$n$ carries the label~$c(n)$,
-where $c$ is a permutation of the positive integers known to the player
-Bob. Each turn Bob pushes the trolley one cell left or right and is told
-whether the label of the new cell is strictly less than the current time;
-falling off the left end loses, and Bob wins only by correctly naming the
-trolley's exact position.
-
-We prove the answer: \textbf{Bob has a winning strategy if and only if
-$c$ is \emph{not} eventually the identity}, i.e.\ $c(n)\neq n$ for
-infinitely many~$n$ (equivalently, $c$ is not a finitary permutation).
-The losing direction rests on a parity lock: the threshold Bob can probe
-is always \emph{even}, so an identity tail makes the pair $(2j,\,2j{+}1)$
-permanently indistinguishable. The winning direction has two pieces. A
-\emph{distinguishability theorem} shows that for a
-non-eventually-identity~$c$ no pair of start cells is indistinguishable;
-its crux is an elementary forward-closure argument. A \emph{candidate
-collapse} (``first-Yes finiteness'') then reduces a win to a single,
-fixed, signal-independent exploration trajectory that is safe,
-informative, and pairwise-separating. Building that trajectory splits on
-whether the displacement $c(n)-n$ is bounded above. In the
-\emph{bounded-above} regime a single fixed lag recurs, and a lag-monotone
-staircase succeeds. In the \emph{unbounded-above} regime no fixed lag can
-work---a fact we make precise with an explicit counterexample---so a
-\emph{growing-lag} staircase, tailored to~$c$, raises its lag once per
-pair. No adaptive belief-state strategy is needed.
-
-Every step is formalised and machine-checked in \textbf{Lean~4}: the main
-theorem \lean{main}, stating that \lean{BobWins~c} holds if and only if
-$c$ is not eventually the identity, is \emph{fully \lean{sorry}-free and
-axiom-clean}, its \verb|#print axioms|
-audit listing only the three standard foundational axioms
-(\verb|propext|, \verb|Classical.choice|, \verb|Quot.sound|). This is the
-headline of the paper.
+We give a complete, machine-checked solution to the \emph{Trolley
+Retrieval} problem (G-Research GRiddles Series~A, Puzzle~4). Writing $c$
+for the permutation of the positive integers that labels the tape, the
+answer is
+\[
+  \boxed{\;\text{Bob has a winning strategy}\iff
+  c\text{ is \emph{not} eventually the identity}\;}
+\]
+that is, $c(n)\neq n$ for infinitely many~$n$ (equivalently, $c$ is not
+finitary). The losing direction is a parity lock that makes consecutive
+cells permanently indistinguishable once $c$ has an identity tail. The
+winning direction builds an explicit, signal-independent exploration
+strategy, splitting on whether the displacement $c(n)-n$ is bounded
+above: a single fixed ``lag'' recurs when it is, whereas in the
+unbounded-above regime the natural single-lag recurrence is
+\emph{provably false}, so a growing-lag staircase tailored to~$c$ is used
+instead. Every step is formalised in \textbf{Lean~4}: the main theorem is
+fully \lean{sorry}-free and axiom-clean, its \verb|#print axioms| audit
+listing only the three standard foundational axioms (\verb|propext|,
+\verb|Classical.choice|, \verb|Quot.sound|).
 \end{abstract}
 
 % ============================================================
@@ -947,8 +932,8 @@ is \textbf{fully \lean{sorry}-free}, and its axiom audit
   \verb|#print axioms main| \;=\; [\verb|propext|,\ \verb|Classical.choice|,\ \verb|Quot.sound|]
 \]
 lists \emph{only} the three standard foundational axioms, with \emph{no}
-\verb|sorryAx|. The full library builds with \lean{lake build}
-(3335~jobs).
+\verb|sorryAx|. The full library builds cleanly with \lean{lake build}
+(3338~jobs).
 \end{quote}
 
 ``Axiom-clean'' means precisely this: the \verb|#print axioms| audit shows
