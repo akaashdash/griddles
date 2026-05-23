@@ -1768,3 +1768,24 @@ remaining MATH BOTTLENECK is odd-δ Q2-even (needs the global boundary/displacem
 unbounded-above ⟹ width-1-odd-top-everywhere is impossible because displacement variation forces
 width≥2 or even-top at growing lag — the agent's descending-block/surjectivity-tiling count, not
 finished). Case-1 (bounded-above⟹band) Lean formalization running separately.
+
+## Loop iteration (2026-05-23 #13): Q2-even CLOSED for δ=1 (peak-chase); now proven for even δ AND δ=1; odd δ≥3 open
+
+δ=1 closure (airtight): for δ=1 the AP is ALL of ℕ. Assume (⋆). At a spike s with φ(s)≥max(L+2,c(a+1)):
+both links width-1 ⟹ {c(s−1),c(s+1)}={c(s)−1,c(s)+1}. PEAK-CHASE toward value+1 ⟹ self-avoiding ±1
+walk ⟹ monotone in cell index. Rightward: c(n)=n+φ(s) on [s,∞) ⟹ [s,∞)→[s+φ(s),∞) ⟹ cells [1,s−1]
+(s−1 of them) must cover all values <s+φ(s) (s+φ(s)−1>s−1 values) — PIGEONHOLE contradiction. Leftward:
+chase reaches cell 1 with c(1)=φ(s)+2s−1>φ(s)≥c(1) — contradiction. So (⋆) impossible ⟹ Q2-even holds
+for ALL adjacent pairs. No δ=1 counterexample (explains why "reverse-odd-blocks" leaks even separators
+at run boundaries). δ=1 is the most important case (adjacent pairs).
+ODD δ≥3 (open): chase forces RIGHTWARD (leftward ruled out for large φ(s)), but c(a+jδ)=c(s)+j with
+cells advancing by δ ⟹ φ drops by δ−1 per step ⟹ run is FINITE (length ~φ(s)/(δ−1)) on the density-1/δ
+residue-class AP. Single-spike count is LOCAL (AP and complement decouple) ⟹ no bijectivity contradiction
+from one spike. WHY δ=1 worked: there the AP IS all of ℕ, so the pigeonhole is GLOBAL. MISSING SUB-FACT:
+a multi-spike global count (interlocking ascending runs over spikes s₁<s₂<… on a residue class force a
+high width-≥2 link). Q2-even verified TRUE for odd δ≤9 empirically; the count is the open residue.
+
+Q2-EVEN STATUS: proven for EVEN δ (parity-collision) and δ=1 (peak-chase); OPEN for odd δ≥3 (multi-spike
+count). Downstream (ofMoves_localizes hsep ∀ pairs) needs ALL δ, so odd δ≥3 is required.
+REMAINING for unbounded-above case: (1) odd δ≥3 Q2-even; (2) the growing-lag c-tailored trajectory
+(NOT started — existing Staircase uses FIXED slack via band; a growing-lag analogue using Q2-even is new).
