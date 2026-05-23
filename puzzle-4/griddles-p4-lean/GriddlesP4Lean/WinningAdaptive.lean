@@ -555,13 +555,46 @@ pair `{c(a+D), c(b+D)}` lands on — note both indicators compare against the *s
 the three-times-per-`D` Lemma-A engine (`indist_consec`, pinning `|c(a+D) − c(b+D)| = 1`) does
 not fire from it.  The truth survives in the cofinite-`D` limit via a global counting that pins
 the recurring slack into `[max, max + O(1)]` — DECISIVELY VERIFIED computationally (2300+ cases,
-0 counterexamples) but not yet given a Lean proof. -/
+0 counterexamples) but not yet given a Lean proof.
+
+## STATUS (this attempt): TRUE, residue confirmed genuine — NOT closed.
+
+Re-verified the contrapositive empirically (`verify_target.py`, `diag.py`, `global_count.py`,
+`adversarial.py`): over 1100+ (family, pair) combos — block-`B`, reverse-block-`B`, the
+adjacent-transposition involution, `swap_at_powers`, the parity-shift `c(2k)=2k+2 / c(2k+1)=2k−1`,
+the *unbounded-`g`* growing-block / growing-reverse-block families, and random period-`B` —
+**0 counterexamples**: every non-EI `c` violates `hno` (some even slack `≥ max` has separators at
+unbounded `D`).  Findings that pin the mechanism:
+
+  * The canonical witness `s = leastEvenGe (max a b)` recurs for *almost* every pair; the *only*
+    family needing a larger slack is the parity-shift, which needs `max + 2`.  Across ALL families
+    tested the recurring-slack *excess* `s − max` is uniformly `≤ 2` (even the unbounded-`g`
+    growing families) — i.e. the recurring slack lives in `{leastEvenGe max, leastEvenGe max + 2}`.
+  * At the recurring displacements the `g`-coordinates `gₐ(D)=c(a+D)−D`, `g_b(D)=c(b+D)−D` are
+    eventually *constant* with `gₐ < s ≤ g_b` (e.g. parity-shift pair `(2,4)`: `gₐ≡4`, `g_b≡6`,
+    separator at the even threshold `D+6 ∈ (D+4, D+6]`).
+
+THE PRECISE WALL (why a faithful Lean proof reproduces the documented residue, not a shortcut):
+`hno`'s displacement floor `D₀(s)` is *per-slack* — it does NOT uniformize across `s`.  To run any
+threshold-agreement engine one needs, at a *single* `D`, agreement at a *range* of thresholds
+`t ≥ D + max` simultaneously; `hno` only supplies, for each fixed even `s`, a *tail* of `D`'s, with
+no common tail across all `s`.  Concretely, the two infinite sets that would need to be intersected
+— `{D : a separator exists at D}` (`separators_unbounded`, axiom-clean) and
+`{D : c(a+D) ≤ a+D}` (`weak_descents_infinite`, axiom-clean, pins the LOWER cell so the minimal
+separating slack is `≤ max`) — have no Lean lemma forcing a common element, and that coordination
+IS the open combinatorics.  This is the *same* residue as `boundedSlack_recurrence` (each is the
+contrapositive of the other on slacks in `[max, max+O(1)]`).  No single-slack reformulation is
+sound (the WARNING counterexample `c(2k)=2k+2 / c(2k+1)=2k−1`, pair `(2,4)`, agrees at slack `4`
+forever yet is non-EI), so the universal quantifier over `s` is load-bearing and cannot be
+weakened.  Left as the lone `sorry` of `main`'s path; build stays GREEN. -/
 theorem noSeparator_allSlack_imp_eventuallyIdentity
     (c : Perm) (a b : ℕ+) (hab : a ≠ b)
     (hno : ∀ s : ℕ, Even s → max a.val b.val ≤ s →
       ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ → ¬ separatorAtSlack c a b s D) :
     EventuallyIdentity c := by
   sorry
+
+#print axioms noSeparator_allSlack_imp_eventuallyIdentity
 
 /-- Indicator disagreement at the fixed slack `s` *is* a slack-`s` separator: both are the
     statement that `[c(a+D).val < D+s]` and `[c(b+D).val < D+s]` differ. -/
