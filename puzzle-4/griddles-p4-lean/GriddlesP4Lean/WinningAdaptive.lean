@@ -402,77 +402,14 @@ theorem fixedSlack_of_boundedSlack_recurrence (c : Perm) (a b : ℕ+) (S : ℕ)
   have hD_ge_fj : D ≥ f j := le_trans hfj_le hD_ge
   exact hf j D hD_ge_fj hsep
 
-/-- **Bounded-slack recurrence (the single isolated combinatorial residue of S1′).**
-
-For non-eventually-identity `c` and any distinct pair `a ≠ b`, at arbitrarily large displacement
-`D` there is a separator at *some even slack `≤ 2·b`* (i.e. slack `2j` with `j ≤ b.val`):
-`∀ D₀, ∃ D ≥ D₀, ∃ j ≤ b.val, separatorAtSlack c a b (2*j) D`.
-
-This is the one open fact gating `band_recurrence` (and hence the band-top staircase).  It is
-**strictly sharper** than `separators_unbounded` — that lemma gives separators at unbounded `D` but
-at *unbounded* slack (the slack can drift to `∞`, as on the growing-reverse-block family); this
-statement additionally pins the slack into the *fixed finite window* `[0, 2b]`.
-
-Why it should hold (and the proof skeleton, not yet formalized): `weak_descents_infinite` gives
-infinitely many `D` with `c(a+D) ≤ a+D`, hence `min(c(a+D),c(b+D)) − D ≤ a`, so the bottom of the
-slack window `(min−D, max−D]` is `≤ a`; whenever this window also contains an even number `≤ 2b`
-(which the `c`-value parity structure of `indist_consec` forces at a separating `D`), a bounded-slack
-separator exists there.  Coordinating "weak descent of the lower cell" with "the pair actually
-separates at that `D`" is the genuine combinatorial residue — it needs a *slack-localized*
-strengthening of `LemmaA` (the existing `IndistFrom_implies_EventuallyIdentity` floors the
-*displacement*, not the *slack*, so it does not directly apply).
-
-**Empirically verified** with the parity lock on every family tested (block / reverse-block /
-adjacent-transposition / sparse `swap_at_powers` / growing-block / growing-reverse-block / random
-period-`B`): 0 violations over 100+ pairs; recurrence may be log-sparse but is genuinely unbounded
-in `D`.  Discharging this `sorry` closes `band_recurrence` axiom-clean. -/
-theorem boundedSlack_recurrence (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
-    ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ ∃ j : ℕ, j ≤ b.val ∧ separatorAtSlack c a b (2 * j) D := by
-  sorry
-
-/-- **Band recurrence (S1′): a fixed even slack whose separators recur at unbounded displacement.**
-
-For non-eventually-identity `c` and any distinct pair `a ≠ b`, there is *one* even slack `s`
-such that fixed-slack separators at `s` occur at arbitrarily large displacement:
-`∀ D₀, ∃ D ≥ D₀, separatorAtSlack c a b s D`.
-
-This is the slack-localized strengthening of `separators_unbounded` that the band-top staircase
-needs (ride at lag `= s`, terminate by recurrence).  It is **strictly stronger** than
-`separators_unbounded` (which fixes only the displacement, not the slack) and **strictly weaker**
-than the false "exact `bandTop`" claim (`bandTop ∈ {max, max+1}` fails on reverse-block / random
-families — verified empirically; the true recurring slack need not be the band top).
-
-Empirical status (parity lock respected, families: block-`B` cycles, reverse blocks,
-adjacent-transposition involution, sparse `swap_at_powers`, growing-block / growing-reverse-block
-*unbounded-`g`* permutations, random period-`B` colliders): **a fixed even recurring slack exists
-for every pair in every family** (0 violations over 100+ pairs).  Recurrence may be *log-sparse*
-(e.g. `swap_at_powers` pair `(2,3)`: separators only at `D = 2^k − 1`) but is genuinely infinite.
-
-Proof reduction (see `weak_descents_infinite` for the axiom-clean engine, and
-`fixedSlack_of_boundedSlack_recurrence` for the pigeonhole):
-the smallest separator slack at displacement `D` is `≈ min(c(a+D), c(b+D)) − D + O(1)`, which at a
-*weak descent* (`weak_descents_infinite`) is bounded by `≈ max(a,b)`.  Since separators occur at
-unbounded `D` (`separators_unbounded`) and the slack at infinitely many of them is bounded by the
-fixed window `[0, 2·b]`, a pigeonhole (`fixedSlack_of_boundedSlack_recurrence`) over that finite
-window yields a fixed recurring slack.
-
-This statement is **fully reduced** — modulo exactly one isolated combinatorial residue,
-`boundedSlack_recurrence` below — by `fixedSlack_of_boundedSlack_recurrence`.  `band_recurrence`
-itself is therefore *not* a bare `sorry`: it is `sorry`-free given `boundedSlack_recurrence`, which
-is the single remaining open fact (and is sharper than `separators_unbounded`: it pins the slack to
-a *fixed finite window*, not merely the displacement). -/
-theorem band_recurrence (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
-    ∃ s : ℕ, Even s ∧ ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D :=
-  -- The slack cap is `b` (window `{0, 2, …, 2b}`); `boundedSlack_recurrence` supplies the
-  -- unbounded-`D` bounded-slack separators, the pigeonhole upgrades to a *fixed* recurring slack.
-  fixedSlack_of_boundedSlack_recurrence c a b b.val (boundedSlack_recurrence c h a b hab)
-
--- Axiom audit.  The bridge and the pigeonhole reduction are `sorry`-free (three classical axioms
--- only).  `band_recurrence` is `sorry`-free *modulo* `boundedSlack_recurrence`: its profile shows
--- `sorryAx` solely through that single isolated residue.
+-- NOTE.  An earlier S1′ route had two orphan lemmas here — `boundedSlack_recurrence` (a `sorry`)
+-- and `band_recurrence` (which consumed it via the pigeonhole below).  `main` does NOT use them:
+-- the band-top staircase consumes `band_recurrence_ge_max` (below) directly.  They were dead code,
+-- so they are removed, leaving the project with EXACTLY ONE `sorry` on `main`'s path
+-- (`noSeparator_allSlack_imp_eventuallyIdentity`).  The axiom-clean pigeonhole
+-- `fixedSlack_of_boundedSlack_recurrence` is retained above for potential reuse.
 #print axioms separatorAtSlack_imp_separatedAtDisp
 #print axioms fixedSlack_of_boundedSlack_recurrence
-#print axioms band_recurrence
 
 /-! ### Band recurrence with a `max`-bounded slack (the single NEW isolated lemma)
 
