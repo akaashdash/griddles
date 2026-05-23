@@ -1555,3 +1555,30 @@ force bounded (unbounded displacement on a sign-constant class makes its image t
 balance). If comonotone ⟹ bounded is provable, the residue is VACUOUS → main fully axiom-clean.
 Plan: formalize bounded-comonotone ⟹ band (clean), and prove comonotone ⟹ bounded (or split off
 unbounded-comonotone as a tiny empirically-empty residue).
+
+## Loop iteration (2026-05-23 #6): CORRECTION — the "bounded comonotone closure" has a real bridge gap (advisor-caught)
+
+The #5 idea (bounded comonotone ⟹ band) is sound MATH for that slice, but it does NOT close the
+residue `band_recurrence_ge_max_of_bothJointFinite`, because **`bothJointFinite` does not imply
+bounded+comonotone**. Concretely (the killer check):
+  - parity-shift c (c(2k)=2k+2, c(2k+1)=2k−1), pair (2,4): δ=2, M=b=4, p=0, q=leastEvenGe(5)−2=4.
+    memJ  = (φa≤0 ∧ φb≥0): D even has φa=+2 (fails), D odd has φb=−2 (fails) → memJ EMPTY.
+    memJ''= (φa≥4 ∧ φb≤0): |φ|=2 always, φa≥4 never → memJ'' EMPTY.
+    So bothJointFinite holds VACUOUSLY for (2,4) — J/J'' extract ZERO structural info. The band
+    still holds (s=6, D even: window (4,6]), but its proof must come from ¬EI+bijectivity ALONE.
+  - Mixed-sign D survive both-finite: cofinitely (φa≥1 ∨ φb<p) ∧ (φa<q ∨ φb≥1) ALLOWS
+    1≤φa≤q−1 ∧ φb≤0 (opposite sign). So both-finite ⊉ comonotone. (advisor case-walk)
+  - The "min(va,vb)→∞ via all-s" step is also wrong: band-fail at s ⟺ (min≥s) ∨ (max<s); for
+    bounded c the max<s branch handles all large s, so min does NOT →∞.
+Two questions that genuinely BLOCK closure (both currently OPEN on paper):
+  (1) bothJointFinite ∧ ¬EI ⟹ bounded?  — NOT derivable from defs (J/J'' can be vacuous);
+      bounded is also globally false for ¬EI (reverse_pow2_blocks unbounded), only plausibly true
+      restricted to both-finite, empirically (0 unbounded both-finite) but UNPROVEN.
+  (2) bothJointFinite ⟹ comonotone (sign const on classes mod δ)? — NO, mixed-sign D survive.
+The chain argument NEEDS comonotone (dense residue class); on a bounded-but-not-comonotone c the
+recurring (u,v) fiber is sparse, so no chain. So neither bounded alone nor the chain alone closes it.
+HONEST STATUS: the residue is the genuine research frontier. The J/J'' joint dichotomy shrinks the
+residue for c where J or J'' is INFINITE (proven axiom-clean), but bounded-comonotone-ish c
+(parity-shift family) fall into the both-finite residue with J/J'' vacuous, and closing them needs
+deriving the band from ¬EI+bijectivity directly — which is exactly the hard bounded-displacement
+band recurrence that has resisted every approach. Structural re-dispatch won't change this.
