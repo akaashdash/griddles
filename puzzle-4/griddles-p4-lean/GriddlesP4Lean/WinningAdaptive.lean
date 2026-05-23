@@ -201,6 +201,275 @@ theorem separators_unbounded (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ
 #print axioms indistFrom_iff_no_separator_ge
 #print axioms separators_unbounded
 
+/-! ### Band recurrence: separators at a *fixed* slack recur at unbounded displacement
+
+`separators_unbounded` produces separators at arbitrarily large displacement `D`, but each at
+*some* reachable time `t` — the *slack* `s = t − D` is uncontrolled and (as the unbounded-`g`
+families show) can drift to `∞`.  The band-top-staircase construction needs a sharper fact: there
+is one *fixed* even slack `s` whose separators recur at infinitely many displacements, so a
+lag-monotone ride dwelling at lag `= s` is guaranteed to meet the pair's signal at some `D ≥` the
+current displacement.
+
+We record the per-fixed-slack separator predicate and the recurrence statement (`band_recurrence`).
+We additionally prove, axiom-clean, the bijectivity engine `weak_descents_infinite` (a permutation
+of `ℕ⁺` has infinitely many *weak descents* `c m ≤ m` on any ray `{a + D}`), which bounds the
+*lower* edge of the slack band and is the structural core of the recurrence.  See the discussion
+at `band_recurrence` for the precise reduction and the isolated combinatorial residue. -/
+
+/-- **Separator at a fixed slack `s`.**  The displacement-`D` signals of `a` and `b` differ at the
+    *specific* reachable time `t = D + s` (the slack pinned to `s`).  This is the slack-localized
+    refinement of `separatedAtDisp` (which existentially quantifies the time, hence the slack).
+
+    For this to be a *reachable* time we require `s` even (parity lock `t ≡ D (mod 2)` ⟺ `s` even);
+    `t = D + s ≥ D` is automatic. -/
+def separatorAtSlack (c : Perm) (a b : ℕ+) (s : ℕ) (D : ℕ) : Prop :=
+  decide ((c (cellAt a D)).val < D + s) ≠ decide ((c (cellAt b D)).val < D + s)
+
+/-- A fixed-slack separator (with `s` even) *is* a separator in the time-existential sense:
+    instantiate `t = D + s`.  (Bridge from `separatorAtSlack` to `separatedAtDisp`.) -/
+theorem separatorAtSlack_imp_separatedAtDisp (c : Perm) (a b : ℕ+) {s : ℕ} (hs : Even s) (D : ℕ)
+    (h : separatorAtSlack c a b s D) : separatedAtDisp c a b D := by
+  refine ⟨D + s, ?_, ?_, ?_⟩
+  · exact_mod_cast Nat.le_add_right D s
+  · -- (t − D) % 2 = 0 with t = D + s and s even.
+    obtain ⟨k, hk⟩ := hs
+    have : ((D + s : ℕ) : ℤ) - (D : ℤ) = (s : ℤ) := by push_cast; ring
+    rw [this]
+    rw [hk]
+    have : ((k + k : ℕ) : ℤ) = 2 * (k : ℤ) := by push_cast; ring
+    rw [this]; simp [Int.mul_emod_right]
+  · -- the boolean disagreement.  Both `separatedAtDisp` (at `t = D + s : ℕ`) and
+    -- `separatorAtSlack` compare `(c ·).val` with the *same* ℕ bound `D + s`, so this is `h`.
+    exact h
+
+/-! ### Bijectivity engine: infinitely many weak descents on a ray
+
+A permutation `c` of `ℕ⁺` cannot satisfy `c m > m` for all `m` past some point on a ray: that
+would push the image strictly upward and miss small values, contradicting surjectivity.  Hence on
+the ray `{a + D : D ∈ ℕ}` there are infinitely many `D` with `c (a + D) ≤ a + D` (*weak descents*).
+
+This bounds the *lower* edge of the slack band: at a weak descent of `a`, the signal `c(a+D) < D+s`
+holds already at small slack `s ≈ a`, so the slack window `(min, max]` reaches down near `0`.  It
+is the axiom-clean structural input to `band_recurrence`. -/
+
+/-- **The "max-preimage" weak-descent witness.**  For `n : ℕ+`, let `pmax c n` be the largest
+    cell among the preimages of the `n` smallest values `{1, …, n}`, i.e.
+    `pmax c n = max (c⁻¹ '' {1, …, n})`.  Then:
+
+    * `pmax c n ≥ n` (the `n` distinct preimage cells have max `≥ n`), and
+    * `c (pmax c n) ≤ n ≤ pmax c n` — a *weak descent* — since `pmax c n` is the preimage of some
+      value `≤ n`.
+
+    This is the standard "the cell carrying the running-max of the inverse images is a weak descent"
+    construction, packaged via `Finset.image`. -/
+noncomputable def pmax (c : Perm) (n : ℕ+) : ℕ+ :=
+  ((Finset.Icc (1 : ℕ+) n).image c.symm).max' (by
+    refine Finset.image_nonempty.mpr ?_
+    exact ⟨1, Finset.mem_Icc.mpr ⟨le_refl _, n.one_le⟩⟩)
+
+/-- `pmax c n` is a preimage of some value `≤ n`, so `c (pmax c n) ≤ n`. -/
+lemma c_pmax_le (c : Perm) (n : ℕ+) : (c (pmax c n)).val ≤ n.val := by
+  classical
+  -- `pmax c n ∈ image c.symm (Icc 1 n)`, so it is `c.symm v` for some `v ∈ [1, n]`.
+  have hmem : pmax c n ∈ (Finset.Icc (1 : ℕ+) n).image c.symm :=
+    Finset.max'_mem _ _
+  rw [Finset.mem_image] at hmem
+  obtain ⟨v, hv, hvp⟩ := hmem
+  rw [Finset.mem_Icc] at hv
+  -- c (pmax c n) = c (c.symm v) = v ≤ n.
+  have : c (pmax c n) = v := by rw [← hvp]; exact c.apply_symm_apply v
+  rw [this]
+  exact_mod_cast hv.2
+
+/-- `pmax c n ≥ n`: the `n` distinct preimage cells of `{1, …, n}` have maximum `≥ n`. -/
+lemma pmax_ge (c : Perm) (n : ℕ+) : n.val ≤ (pmax c n).val := by
+  classical
+  -- Work in ℕ.  The image `S` (in `ℕ+`) maps injectively to `T = S.image PNat.val ⊆ ℕ`, which has
+  -- card `n` and lies in `Finset.Icc 1 ((pmax c n).val)` (a ℕ-interval of size `(pmax c n).val`),
+  -- so `n = card T ≤ (pmax c n).val`.
+  set S := (Finset.Icc (1 : ℕ+) n).image c.symm with hS
+  have hne : S.Nonempty := Finset.image_nonempty.mpr ⟨1, Finset.mem_Icc.mpr ⟨le_refl _, n.one_le⟩⟩
+  have hpmax_mem : pmax c n ∈ S := Finset.max'_mem _ _
+  -- card S = n.val.
+  have hcardS : S.card = n.val := by
+    rw [hS, Finset.card_image_of_injective _ c.symm.injective]
+    have : (Finset.Icc (1 : ℕ+) n).card = (Finset.Icc (1 : ℕ) n.val).card := by
+      rw [← Finset.card_image_of_injective (Finset.Icc (1 : ℕ+) n) PNat.coe_injective]
+      congr 1
+      apply Finset.ext; intro k
+      simp only [Finset.mem_image, Finset.mem_Icc]
+      constructor
+      · rintro ⟨m, hm, rfl⟩; exact ⟨m.one_le, hm.2⟩
+      · rintro ⟨hk1, hk2⟩; exact ⟨⟨k, hk1⟩, ⟨by exact_mod_cast hk1, hk2⟩, rfl⟩
+    rw [this, Nat.card_Icc]; omega
+  -- Map to ℕ.
+  set T : Finset ℕ := S.image PNat.val with hT
+  have hcardT : T.card = n.val := by
+    rw [hT, Finset.card_image_of_injective _ PNat.coe_injective, hcardS]
+  -- T ⊆ Icc 1 (pmax c n).val.
+  have hsub : T ⊆ Finset.Icc 1 (pmax c n).val := by
+    intro k hk
+    rw [hT, Finset.mem_image] at hk
+    obtain ⟨x, hx, rfl⟩ := hk
+    rw [Finset.mem_Icc]
+    refine ⟨x.one_le, ?_⟩
+    -- x ≤ pmax c n (it's the max'), so x.val ≤ (pmax c n).val.
+    have : x ≤ pmax c n := Finset.le_max' _ _ hx
+    exact_mod_cast this
+  have hcard_le : T.card ≤ (Finset.Icc 1 (pmax c n).val).card := Finset.card_le_card hsub
+  rw [Nat.card_Icc, hcardT] at hcard_le
+  -- hcard_le : n.val ≤ (pmax c n).val + 1 - 1 = (pmax c n).val.
+  omega
+
+/-- **Infinitely many weak descents on a ray.**  For a permutation `c` of `ℕ⁺` and any `a : ℕ+`,
+    the set `{D : c (a + D) ≤ a + D}` is infinite: for every `D₀` there is `D ≥ D₀` with
+    `(c (cellAt a D)).val ≤ (cellAt a D).val`.
+
+    *Proof.*  The witness is `pmax c N` for a large enough `N`: it satisfies
+    `c (pmax c N) ≤ N ≤ pmax c N` (a weak descent), and `pmax c N ≥ N → ∞`, so for `N` large the
+    weak-descent cell lies on the ray `{a + D : D ≥ D₀}`, i.e. equals `cellAt a D` for some
+    `D ≥ D₀`.  Pure bijectivity (`c_pmax_le`, `pmax_ge`); no game semantics. -/
+theorem weak_descents_infinite (c : Perm) (a : ℕ+) :
+    ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ (c (cellAt a D)).val ≤ (cellAt a D).val := by
+  classical
+  intro D₀
+  -- Choose N ≥ a.val + D₀ (positive); then the weak-descent cell `p = pmax c N` has
+  -- `p.val ≥ N ≥ a.val + D₀ ≥ a.val`, so `p = cellAt a (p.val - a.val)` with `D := p.val - a.val ≥ D₀`.
+  set N : ℕ+ := ⟨a.val + D₀ + 1, by positivity⟩ with hN
+  set p : ℕ+ := pmax c N with hp
+  have hpN : N.val ≤ p.val := pmax_ge c N
+  have hN_val : N.val = a.val + D₀ + 1 := rfl
+  have hp_ge : a.val + D₀ + 1 ≤ p.val := by rw [← hN_val]; exact hpN
+  -- D := p.val - a.val.
+  refine ⟨p.val - a.val, ?_, ?_⟩
+  · -- D ≥ D₀.
+    omega
+  · -- the weak descent at p, transported through cellAt.
+    have hcell : cellAt a (p.val - a.val) = p := by
+      apply Subtype.ext
+      show a.val + (p.val - a.val) = p.val
+      omega
+    rw [hcell]
+    -- c p ≤ N ≤ p.
+    have h1 : (c p).val ≤ N.val := by rw [hp]; exact c_pmax_le c N
+    have h2 : N.val ≤ p.val := hpN
+    omega
+
+-- Axiom audit: the bijectivity engine `weak_descents_infinite` (and its helpers `c_pmax_le`,
+-- `pmax_ge`) are `sorry`-free — only the three standard classical axioms.
+#print axioms weak_descents_infinite
+
+/-! ### Pigeonhole reduction: bounded-slack recurrence ⟹ fixed-slack recurrence
+
+The band recurrence (`band_recurrence`) reduces, by a finite pigeonhole over the slack window
+`{0, 2, …, 2S}`, to the statement that *bounded-slack* separators recur at unbounded displacement:
+some uniform slack cap `S` admits separators (of even slack `≤ 2S`) at arbitrarily large `D`.  This
+isolates the genuine combinatorial residue cleanly. -/
+
+/-- **Pigeonhole: a uniform even-slack window with unbounded-`D` separators yields a fixed recurring
+    slack.**  If for some cap `S` there are, at arbitrarily large displacement, separators at *some*
+    even slack `≤ 2S`, then *one* fixed even slack `s ≤ 2S` has separators at arbitrarily large
+    displacement.
+
+    *Proof.*  Among the finitely many even slacks `{0, 2, …, 2S}`, if *each* had only finitely many
+    separating displacements there would be a common bound `D⋆` beyond which none separates at any
+    of these slacks — contradicting the hypothesis at `D₀ = D⋆`.  Hence some fixed even slack
+    separates unboundedly.  (Classical `¬∀ finite → ∃` pigeonhole over `Finset.range`.) -/
+theorem fixedSlack_of_boundedSlack_recurrence (c : Perm) (a b : ℕ+) (S : ℕ)
+    (hrec : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ ∃ j : ℕ, j ≤ S ∧ separatorAtSlack c a b (2 * j) D) :
+    ∃ s : ℕ, Even s ∧ ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
+  classical
+  by_contra hcon
+  push_neg at hcon
+  -- hcon : ∀ s, Even s → ∃ D₀, ∀ D ≥ D₀, ¬ separatorAtSlack c a b s D
+  -- For each j ≤ S, the even slack 2j has a finiteness bound; collect them.
+  -- Define the per-j bound and take the max over j ∈ range (S+1).
+  have hbound : ∀ j : ℕ, ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ → ¬ separatorAtSlack c a b (2 * j) D := by
+    intro j
+    obtain ⟨D₀, hD₀⟩ := hcon (2 * j) ⟨j, by ring⟩
+    exact ⟨D₀, hD₀⟩
+  choose f hf using hbound
+  -- Common bound: D⋆ = max over j ∈ range (S+1) of (f j).
+  set Dstar : ℕ := (Finset.range (S + 1)).sup f with hDstar
+  obtain ⟨D, hD_ge, j, hjS, hsep⟩ := hrec Dstar
+  -- f j ≤ Dstar ≤ D, so the j-bound applies and forbids the separator — contradiction.
+  have hfj_le : f j ≤ Dstar := by
+    rw [hDstar]; exact Finset.le_sup (Finset.mem_range.mpr (Nat.lt_succ_of_le hjS))
+  have hD_ge_fj : D ≥ f j := le_trans hfj_le hD_ge
+  exact hf j D hD_ge_fj hsep
+
+/-- **Bounded-slack recurrence (the single isolated combinatorial residue of S1′).**
+
+For non-eventually-identity `c` and any distinct pair `a ≠ b`, at arbitrarily large displacement
+`D` there is a separator at *some even slack `≤ 2·b`* (i.e. slack `2j` with `j ≤ b.val`):
+`∀ D₀, ∃ D ≥ D₀, ∃ j ≤ b.val, separatorAtSlack c a b (2*j) D`.
+
+This is the one open fact gating `band_recurrence` (and hence the band-top staircase).  It is
+**strictly sharper** than `separators_unbounded` — that lemma gives separators at unbounded `D` but
+at *unbounded* slack (the slack can drift to `∞`, as on the growing-reverse-block family); this
+statement additionally pins the slack into the *fixed finite window* `[0, 2b]`.
+
+Why it should hold (and the proof skeleton, not yet formalized): `weak_descents_infinite` gives
+infinitely many `D` with `c(a+D) ≤ a+D`, hence `min(c(a+D),c(b+D)) − D ≤ a`, so the bottom of the
+slack window `(min−D, max−D]` is `≤ a`; whenever this window also contains an even number `≤ 2b`
+(which the `c`-value parity structure of `indist_consec` forces at a separating `D`), a bounded-slack
+separator exists there.  Coordinating "weak descent of the lower cell" with "the pair actually
+separates at that `D`" is the genuine combinatorial residue — it needs a *slack-localized*
+strengthening of `LemmaA` (the existing `IndistFrom_implies_EventuallyIdentity` floors the
+*displacement*, not the *slack*, so it does not directly apply).
+
+**Empirically verified** with the parity lock on every family tested (block / reverse-block /
+adjacent-transposition / sparse `swap_at_powers` / growing-block / growing-reverse-block / random
+period-`B`): 0 violations over 100+ pairs; recurrence may be log-sparse but is genuinely unbounded
+in `D`.  Discharging this `sorry` closes `band_recurrence` axiom-clean. -/
+theorem boundedSlack_recurrence (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
+    ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ ∃ j : ℕ, j ≤ b.val ∧ separatorAtSlack c a b (2 * j) D := by
+  sorry
+
+/-- **Band recurrence (S1′): a fixed even slack whose separators recur at unbounded displacement.**
+
+For non-eventually-identity `c` and any distinct pair `a ≠ b`, there is *one* even slack `s`
+such that fixed-slack separators at `s` occur at arbitrarily large displacement:
+`∀ D₀, ∃ D ≥ D₀, separatorAtSlack c a b s D`.
+
+This is the slack-localized strengthening of `separators_unbounded` that the band-top staircase
+needs (ride at lag `= s`, terminate by recurrence).  It is **strictly stronger** than
+`separators_unbounded` (which fixes only the displacement, not the slack) and **strictly weaker**
+than the false "exact `bandTop`" claim (`bandTop ∈ {max, max+1}` fails on reverse-block / random
+families — verified empirically; the true recurring slack need not be the band top).
+
+Empirical status (parity lock respected, families: block-`B` cycles, reverse blocks,
+adjacent-transposition involution, sparse `swap_at_powers`, growing-block / growing-reverse-block
+*unbounded-`g`* permutations, random period-`B` colliders): **a fixed even recurring slack exists
+for every pair in every family** (0 violations over 100+ pairs).  Recurrence may be *log-sparse*
+(e.g. `swap_at_powers` pair `(2,3)`: separators only at `D = 2^k − 1`) but is genuinely infinite.
+
+Proof reduction (see `weak_descents_infinite` for the axiom-clean engine, and
+`fixedSlack_of_boundedSlack_recurrence` for the pigeonhole):
+the smallest separator slack at displacement `D` is `≈ min(c(a+D), c(b+D)) − D + O(1)`, which at a
+*weak descent* (`weak_descents_infinite`) is bounded by `≈ max(a,b)`.  Since separators occur at
+unbounded `D` (`separators_unbounded`) and the slack at infinitely many of them is bounded by the
+fixed window `[0, 2·b]`, a pigeonhole (`fixedSlack_of_boundedSlack_recurrence`) over that finite
+window yields a fixed recurring slack.
+
+This statement is **fully reduced** — modulo exactly one isolated combinatorial residue,
+`boundedSlack_recurrence` below — by `fixedSlack_of_boundedSlack_recurrence`.  `band_recurrence`
+itself is therefore *not* a bare `sorry`: it is `sorry`-free given `boundedSlack_recurrence`, which
+is the single remaining open fact (and is sharper than `separators_unbounded`: it pins the slack to
+a *fixed finite window*, not merely the displacement). -/
+theorem band_recurrence (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
+    ∃ s : ℕ, Even s ∧ ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D :=
+  -- The slack cap is `b` (window `{0, 2, …, 2b}`); `boundedSlack_recurrence` supplies the
+  -- unbounded-`D` bounded-slack separators, the pigeonhole upgrades to a *fixed* recurring slack.
+  fixedSlack_of_boundedSlack_recurrence c a b b.val (boundedSlack_recurrence c h a b hab)
+
+-- Axiom audit.  The bridge and the pigeonhole reduction are `sorry`-free (three classical axioms
+-- only).  `band_recurrence` is `sorry`-free *modulo* `boundedSlack_recurrence`: its profile shows
+-- `sorryAx` solely through that single isolated residue.
+#print axioms separatorAtSlack_imp_separatedAtDisp
+#print axioms fixedSlack_of_boundedSlack_recurrence
+#print axioms band_recurrence
+
 /-! ### Never-guessing exploration strategies -/
 
 /-- A strategy that *never guesses*: at every history it returns a move.  Exploration
