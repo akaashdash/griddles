@@ -1840,3 +1840,13 @@ descent/ascent-cofinite⟹EI, band_of_boundedAbove, q2even (Q2-even all δ via l
 pigeonhole), and the growing-lag trajectory. PUZZLE 4 LEAN PROOF COMPLETE.
 Cleanup TODO (optional): delete orphan dead code band_recurrence_ge_max[_of_bothJointFinite] in
 WinningAdaptive (off main's path). Writeup update (task #21) still pending.
+
+## Cleanup (2026-05-23 #16): verify scripts consolidated → `griddles-p4-code/`
+The exploratory verification scripts (attack_*, conv_*, cleaner_*, step3_*, joint_*, *_probe.py,
+counterexample_search.py, structural_witness.py, families.py, etc. — many from the now-FALSE
+band-recurrence exploration) have been DELETED and consolidated into a single self-verifying
+`puzzle-4/griddles-p4-code/main.py` (a proper `uv` project, matching the other puzzles' code
+folders; folder renamed verify→code). `uv run main.py` reproduces the three headline empirical
+facts: (1) the answer (belief-state solver: Bob wins ⟺ ¬EI), (2) band recurrence FALSE (ap_split
+climbing lag), (3) Q2-even (unbounded-above ⟹ separators at arbitrarily large even lag). Historical
+references above to `griddles-p4-verify/<script>.py` point to now-consolidated code.

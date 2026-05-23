@@ -1,0 +1,7 @@
+[project]
+name = "griddles-p4-code"
+version = "0.1.0"
+description = "Trolley Retrieval (Puzzle 4): empirical verification of the solution"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
