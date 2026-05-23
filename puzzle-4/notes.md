@@ -1730,3 +1730,20 @@ constructions. No foresight/belief-state needed — lag monotonicity is fine bec
 [bounded] or (2) separators at ALL large lags [unbounded], so the monotone-lag staircase is never stuck.
 NEW LEMMA to formalize (case 2): unbounded-above ⟹ Q2-even (separators at arbitrarily large even slack),
 then a growing-lag analogue of the Staircase. Case 1 = agent's bounded-above⟹band + existing staircase.
+
+## Loop iteration (2026-05-23 #11): Q2-even substantially proven; δ≥2 residual gap
+
+Q2-even (unbounded-above ⟹ every pair has even-lag separators at arbitrarily large lag) — the case-2
+enabling lemma. PROVEN (airtight): reduction to the bad adversary (⋆) = "width-1 ∧ consecutive ∧ odd-top
+at all high-max displacements"; SPIKE PROPAGATION (φ(n)≥M ∧ c(n+δ)=c(n)±1 ⟹ φ(n+δ)≥M-2, so high spikes
+self-perpetuate along the δ-AP — removes the sparse-set obstruction); injective ±1 walk ⟹ strictly
+monotone; INCREASING case ⟹ c(n)=n+g₀ on a tail (δ=1) ⟹ pigeonhole (values [1,n₀+g₀) vs indices
+[1,n₀)) contradiction; DECREASING case for gap-1 killed via gap-2 (descending run gives c(n₀+2)=c(n₀)-2,
+contradicting gap-2 width-1 |c(n₀)-c(n₀+2)|=1, at a propagated high spike — LOCAL, no sparsity).
+NET PROVEN: ¬(gap-1 ∧ gap-2 both fail). RESIDUAL GAP: per-pair for δ≥2 (for δ≥2 the δ-AP ±1 walk is
+FINITE — exits high-spike since φ(n₀+kδ)=φ(n₀)−k(δ∓1)... → so no infinite-run pigeonhole; needs a
+descending-block/surjectivity-tiling count over many spikes, not completed). Q2-even verified TRUE
+empirically (AP-split, doubling/growing-rev, 40 random unbounded-above; 0 counterexamples). The bad
+adversary (consecutive-odd-top) is NOT killable by parity alone (decreasing blocks preserve odd-top);
+it IS killed locally by a second gap. STATUS: replaced the FALSE band lemma with a TRUE (empirically)
+Q2-even that is partially proven (δ≥2 open). Case 1 (bounded-above⟹band) being formalized separately.
