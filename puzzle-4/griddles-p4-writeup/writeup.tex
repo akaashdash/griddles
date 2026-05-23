@@ -60,8 +60,7 @@
 
 % -- document ------------------------------------------------------------------
 \title{Trolley Retrieval:\\
-A Complete Analysis with a Machine-Checked\\
-Distinguishability Theorem}
+A Complete, Machine-Checked Solution}
 
 \author{%
   Akaash Dash \\
@@ -74,50 +73,41 @@ Distinguishability Theorem}
 
 % ============================================================
 \begin{abstract}
-We analyse the \emph{Trolley Retrieval} problem (G-Research GRiddles
-Series~A, Puzzle~4). A trolley sits on an unknown cell of a one-way
-infinite tape whose cell~$n$ carries the label~$c(n)$, where
-$c$ is a permutation of the positive integers known to the player Bob.
-Each turn Bob pushes the trolley one cell left or right and is told
-whether the label of the new cell is strictly less than the current
-time. Bob must eventually name the trolley's exact position; falling off
-the left end, or guessing wrongly, loses.
+We give a complete solution to the \emph{Trolley Retrieval} problem
+(G-Research GRiddles Series~A, Puzzle~4). A trolley sits on an unknown
+cell of a one-way infinite tape whose cell~$n$ carries the label~$c(n)$,
+where $c$ is a permutation of the positive integers known to the player
+Bob. Each turn Bob pushes the trolley one cell left or right and is told
+whether the label of the new cell is strictly less than the current time;
+falling off the left end loses, and Bob wins only by correctly naming the
+trolley's exact position.
 
 We prove the answer: \textbf{Bob has a winning strategy if and only if
 $c$ is \emph{not} eventually the identity}, i.e.\ $c(n)\neq n$ for
 infinitely many~$n$ (equivalently, $c$ is not a finitary permutation).
-We give the full elementary proof of both directions. The losing
-direction rests on a parity lock: the threshold Bob can probe is always
-\emph{even}, so an identity tail makes the pair $(2j,\,2j{+}1)$
-permanently indistinguishable. The winning direction rests on a
-\emph{distinguishability theorem}: for a non-eventually-identity~$c$, no
-pair of starting cells is indistinguishable. Its crux---previously
-believed to require global surjectivity bookkeeping---falls to an
-elementary forward-closure argument. Distinguishability is converted into
-a win by a single explicit, signal-independent trajectory---the
-\emph{band-top lag-monotone staircase}---which we prove is safe,
-eventually informative, and pairwise separating; a generic reduction
-(``first-Yes finiteness'') collapses the infinite candidate set to a
-finite one and turns these three properties into a winning strategy.
+The losing direction rests on a parity lock: the threshold Bob can probe
+is always \emph{even}, so an identity tail makes the pair $(2j,\,2j{+}1)$
+permanently indistinguishable. The winning direction has two pieces. A
+\emph{distinguishability theorem} shows that for a
+non-eventually-identity~$c$ no pair of start cells is indistinguishable;
+its crux is an elementary forward-closure argument. A \emph{candidate
+collapse} (``first-Yes finiteness'') then reduces a win to a single,
+fixed, signal-independent exploration trajectory that is safe,
+informative, and pairwise-separating. Building that trajectory splits on
+whether the displacement $c(n)-n$ is bounded above. In the
+\emph{bounded-above} regime a single fixed lag recurs, and a lag-monotone
+staircase succeeds. In the \emph{unbounded-above} regime no fixed lag can
+work---a fact we make precise with an explicit counterexample---so a
+\emph{growing-lag} staircase, tailored to~$c$, raises its lag once per
+pair. No adaptive belief-state strategy is needed.
 
-The losing direction, the distinguishability theorem, the
-candidate-collapsing reduction, the staircase construction (safety,
-separation, Yes-emission), and explicit winning strategies for natural
-``locally decodable'' families are all formalised and machine-checked in
-Lean~4. We are scrupulous about the boundary of what is proven: the
-\textbf{winning direction is machine-verified modulo one true,
-computationally-verified combinatorial lemma}---the
-\emph{anti-correlated joint-finite recurrence}---reached through the
-construction's combinatorial input
-(\lean{band\us recurrence\us ge\us max}) by a \emph{joint-condition
-dichotomy}. For an ordered pair $a<b$ this dispatches on a single joint
-two-ray set; its \emph{joint-infinite} half---which covers \emph{all}
-unbounded-displacement permutations---is proven \emph{axiom-clean}
-(\lean{band\us recurrence\us ge\us max\us of\us jointInfinite} via
-\lean{memJ\us imp\us separator}), and the lone residue is the
-joint-finite ``anti-correlated'' regime. We do not claim the development
-is fully complete or axiom-clean; we identify precisely which results are
-machine-checked with no \lean{sorry} and which single fact remains.
+Every step is formalised and machine-checked in \textbf{Lean~4}: the main
+theorem \lean{main}, stating that \lean{BobWins~c} holds if and only if
+$c$ is not eventually the identity, is \emph{fully \lean{sorry}-free and
+axiom-clean}, its \verb|#print axioms|
+audit listing only the three standard foundational axioms
+(\verb|propext|, \verb|Classical.choice|, \verb|Quot.sound|). This is the
+headline of the paper.
 \end{abstract}
 
 % ============================================================
@@ -164,7 +154,7 @@ $c(n)\neq n$ for infinitely many~$n$.
   c(n)\neq n \text{ for infinitely many } n.\;}
 \]
 
-We write $c$ is \emph{eventually identity} (EI) if there is a threshold
+We say $c$ is \emph{eventually identity} (EI) if there is a threshold
 $N$ with $c(n)=n$ for all $n>N$. Since $c$ is a bijection, ``not EI'' has
 several equivalent forms, all used below:
 \begin{itemize}[topsep=2pt,itemsep=1pt]
@@ -184,13 +174,31 @@ identity.
 \begin{proof}
 If $c(n{+}1)\le c(n)+1$ for all $n>N$ (no gaps past $N$), then on
 $(N,\infty)$ the bijection $c$ is non-decreasing by steps of at most~$1$;
-a strictly value-preserving bijection of a tail of $\Np$ that never
+a value-preserving bijection of a tail of $\Np$ that never
 jumps up by~$2$ cannot skip a value and cannot repeat one, forcing
 $c(n)=n$ for all $n>N$. The contrapositive is the claim.
 \end{proof}
 
 % ------------------------------------------------------------
-\subsection{Reformulation: the alarm-clock view and the parity lock}
+\subsection{The game model}\label{sec:model}
+
+We record the model precisely, since the formalisation depends on it.
+Positions are integers; the start cell $k_0\in\Np$ is a positive integer
+but a trajectory may, in principle, drive a position to $\le 0$, which
+loses. A \emph{strategy} $\sigma$ maps a signal history (most-recent
+first) to an \emph{action}: either a move (\textsf{left}/\textsf{right})
+or a guess of a cell. From a start $k_0$, the strategy determines a
+sequence of states $(\,\text{position}_t,\ \text{history}_t\,)$; the
+signal appended at time~$t$ is \Yes{} iff the (valid) new position~$p$
+satisfies $c(p)<t$. Bob \emph{wins from $k_0$} if there is a finite stop
+time~$T$ such that (i) every visited position through~$T$ is a valid cell
+($\ge 1$), (ii) every action before~$T$ is a move, and (iii) at time~$T$
+the strategy guesses exactly the current position $k_0 + D_T$, where
+$D_T$ is Bob's net displacement. \emph{Bob wins} (\lean{BobWins}~$c$)
+if a single strategy wins from \emph{every} start cell.
+
+% ------------------------------------------------------------
+\subsection{The alarm-clock view and the parity lock}
 \label{sec:reform}
 
 It is convenient to read the labels as wake-up times. Think of cell~$n$
@@ -244,7 +252,7 @@ eventually-identity~$c$ despite the perturbed initial segment.
 \section{Losing direction: eventually identity $\Rightarrow$ Bob loses}
 \label{sec:losing}
 
-\begin{theorem}\label{thm:losing}
+\begin{theorem}[\lean{EventuallyIdentity\us loses}]\label{thm:losing}
 If $c$ is eventually identity, Bob has no strategy that wins from every
 start cell.
 \end{theorem}
@@ -260,7 +268,7 @@ the position and $\mathrm{hist}(k,t)$ the signal history (most-recent
 first) at time~$t$. Bob's action at any decision point is a function of
 $\mathrm{hist}$ alone.
 
-\begin{lemma}[Parallel evolution]\label{lem:parallel}
+\begin{lemma}[Parallel evolution; \lean{parallel\us evolution}]\label{lem:parallel}
 Let $k_1, k_2$ be two start cells. Suppose that, started from~$k_1$, Bob
 makes no guess before time~$t$, and that at every time $s\le t$ the
 signal observed from $k_1$'s trajectory equals the signal observed from
@@ -304,7 +312,7 @@ N+1$. Choose $j$ with $2j > M$ and set
   k_1 = 2j, \qquad k_2 = 2j+1 .
 \]
 
-\begin{lemma}[Signal match]\label{lem:sigmatch}
+\begin{lemma}[Signal match; \lean{signal\us match}]\label{lem:sigmatch}
 Fix a no-guess strategy run from $k_1=2j$. At every time~$t$, every
 position~$p\ge 1$ reachable from $2j$ in $t$ moves (so $2j - t \le p$)
 that respects the parity lock ($t+p$ even) satisfies
@@ -323,10 +331,10 @@ $t+p = 2p+1$ is odd, violating the parity hypothesis $t+p$ even. So the
 signals agree.
 
 \emph{(b) $p \le N$ (perturbed region).} Here the trolley has travelled
-from $2j$ to $p\le N$, so $t \ge 2j - p \ge 2j - N > M - N \ge \dots$;
-concretely $2j>M\ge N+1$ forces $t > M$. Both $c(p)$ and $c(p{+}1)$ are at
-most~$M$ (using $c(N{+}1)=N{+}1\le M$ for the boundary), hence
-$c(p), c(p{+}1) < t$: both signals are \Yes. They agree.
+from $2j$ to $p\le N$, so $t \ge 2j - p \ge 2j - N$; concretely $2j>M\ge
+N+1$ forces $t > M$. Both $c(p)$ and $c(p{+}1)$ are at most~$M$ (using
+$c(N{+}1)=N{+}1\le M$ for the boundary), hence $c(p), c(p{+}1) < t$: both
+signals are \Yes. They agree.
 \end{proof}
 
 The two cases capture the dichotomy of Remark~\ref{rem:flat}: in the
@@ -345,9 +353,10 @@ lockstep with positions offset by exactly~$1$ and equal histories, as
 long as Bob has not guessed: the inductive step applies the signal match
 (Lemma~\ref{lem:sigmatch}) at $\mathrm{pos}(2j,t{+}1)$, whose
 hypotheses---validity $p\ge 1$ (Bob wins, so the trajectory is safe),
-reachability $2j-t\le p$ (a $\pm1$ walk), and parity (Lemma~\ref{lem:parity})---all
-hold. Hence the signal entering both histories at each step is identical,
-so $\mathrm{hist}(2j,t)=\mathrm{hist}(2j{+}1,t)$ and
+reachability $2j-t\le p$ (a $\pm1$ walk), and parity
+(Lemma~\ref{lem:parity})---all hold. Hence the signal entering both
+histories at each step is identical, so
+$\mathrm{hist}(2j,t)=\mathrm{hist}(2j{+}1,t)$ and
 $\mathrm{pos}(2j{+}1,t)=\mathrm{pos}(2j,t)+1$ for all~$t$. The traces
 agree at every time, and Corollary~\ref{cor:notboth} gives the
 contradiction.
@@ -363,15 +372,17 @@ argument is unaffected by the absence of a left end.
 \section{Winning direction: not eventually identity $\Rightarrow$ Bob wins}
 \label{sec:winning}
 
-The heart of the winning direction is a converse to the losing
-mechanism: when $c$ is not eventually identity, \emph{no} pair of start
-cells can stay indistinguishable. We make ``indistinguishable'' precise,
-prove the theorem, and then explain how distinguishability is turned into
-a winning strategy---fully for two natural families, and with an honest
-account of the general gap.
+The winning direction has three layers, treated in
+Sections~\ref{sec:distinguish}--\ref{sec:dichotomy}. First, a
+\emph{distinguishability theorem}: when $c$ is not eventually identity,
+\emph{no} pair of start cells can stay indistinguishable. Second, a
+generic \emph{reduction}: any single signal-independent trajectory that is
+safe, informative, and pairwise-separating is already a winning strategy.
+Third, an explicit construction of such a trajectory, which splits into
+two regimes according to whether $c$'s displacement is bounded above.
 
 % ------------------------------------------------------------
-\subsection{The distinguishability theorem}
+\subsection{The distinguishability theorem}\label{sec:distinguish}
 
 Reaching displacement~$D$ from the start costs time at least~$|D|$, and
 the parity lock forces $t\equiv D\pmod 2$. Within those constraints Bob
@@ -380,7 +391,7 @@ once awake stays awake) the only information at displacement~$D$ is the
 \emph{set of times $t\ge D$, $t\equiv D\pmod 2$, at which the cell is
 awake}---equivalently, the single comparison $c(a+D) < t$. This motivates:
 
-\begin{definition}[Indistinguishable pair]\label{def:indist}
+\begin{definition}[Indistinguishable pair; \lean{Indistinguishable}]\label{def:indist}
 Two start cells $a<b$ are \emph{indistinguishable} (for~$c$) if for every
 displacement $D\ge 0$ and every time $t\ge D$ with $t\equiv D\pmod 2$,
 \[
@@ -392,7 +403,10 @@ Quantifying over \emph{all} reachable $(D,t)$---including small times that
 catch early wake-ups---is essential; it is exactly the freedom that lets
 Bob's oscillation observe a cell's wake-up time at full resolution.
 
-\begin{theorem}[Distinguishability]\label{thm:lemmaA}
+\begin{theorem}[Distinguishability;
+  \lean{Indistinguishable\us implies\us eventually\us identity},
+  \lean{not\us eventually\us identity\us implies\us distinguishable}]
+\label{thm:lemmaA}
 If $a<b$ are indistinguishable for~$c$, then $b=a+1$ and $c(n)=n$ for all
 $n\ge a$. Consequently, if $c$ is not eventually identity, then \emph{no}
 pair of start cells is indistinguishable.
@@ -406,14 +420,11 @@ The proof has two regimes by the size of~$\Delta$. The case $\Delta=1$ is
 a clean shift argument; the case $\Delta\ge 2$ is the crux. We first
 extract the local structure shared by both.
 
-\begin{lemma}[Consecutiveness]\label{lem:consec}
+\begin{lemma}[Consecutiveness; \lean{indist\us consec}]\label{lem:consec}
 Call a displacement~$D$ \emph{active} (for the cell~$a$) if
 $c(a+D)\ge D$, and similarly for~$b$. If $a<b$ are indistinguishable and
 $D$ is active for both $a$ and $b$, then $c(a+D)$ and $c(b+D)$ are
-consecutive integers:
-\[
-  |\,c(a+D) - c(b+D)\,| = 1 .
-\]
+consecutive integers: $|\,c(a+D) - c(b+D)\,| = 1$.
 \end{lemma}
 \begin{proof}
 Let $X=c(a+D)$, $Y=c(b+D)$. Injectivity gives $X\neq Y$; say $X<Y$. If
@@ -424,14 +435,15 @@ is active and $t>X\ge D$), contradicting indistinguishability at $(D,t)$.
 Hence $Y=X+1$. The case $Y<X$ is symmetric.
 \end{proof}
 
-\begin{lemma}[Bad displacements are forward-closed]\label{lem:badprop}
+\begin{lemma}[Bad displacements are forward-closed;
+  \lean{bad\us D\us propagates}]\label{lem:badprop}
 Call $D$ \emph{bad} (for~$a$) if $c(a+D) < D$. If $a<b$ are
-indistinguishable and $D$ is bad, then $D+\Delta$ is bad: $c(a+D+\Delta) < D+\Delta$.
+indistinguishable and $D$ is bad, then $D+\Delta$ is bad:
+$c(a+D+\Delta) < D+\Delta$.
 \end{lemma}
 \begin{proof}
-$D$ bad means $c(a+D)<D$, i.e.\ the cell $a+D$ is awake at the admissible
-time $t$ with $t\equiv D \pmod 2$, $D\le t$, as soon as $t>c(a+D)$; take
-the least such admissible~$t$, so $t\le D+1$ and the signal is \Yes.
+$D$ bad means the cell $a+D$ is awake at the least admissible time
+$t\le D+1$ with $t\equiv D \pmod 2$, so its signal is \Yes.
 Indistinguishability transfers \Yes{} to $b+D = a+(D+\Delta)$:
 $c(a+D+\Delta) < t \le D+1$, and since the value is an integer
 $c(a+D+\Delta)\le D < D+\Delta$. (The point is purely that an
@@ -442,17 +454,13 @@ constraint $b=a+\Delta$ enters.)
 Lemma~\ref{lem:badprop} is decisive: on each residue class modulo
 $\Delta$, the bad displacements form an \emph{up-set}, so the
 \emph{active} (non-bad) displacements form a finite or cofinite
-\emph{prefix}---never an interleaving of good and bad. This is exactly the
-structural fact that earlier, more elaborate attempts (parity arguments,
-value-hogging bookkeeping) were trying to recover. With it, the crux is
-short.
+\emph{prefix}---never an interleaving of good and bad. With it, the crux
+is short.
 
-\begin{lemma}[Chain bound]\label{lem:chain}
+\begin{lemma}[Chain bound; \lean{chain\us bound}]\label{lem:chain}
 If $a<b$ are indistinguishable, fix a residue $r$ with $0\le r<\Delta$.
 For any~$k$ such that $r, r+\Delta, \dots, r+k\Delta$ are all active,
-\[
-  c(a + r + k\Delta) \;\le\; c(a+r) + k .
-\]
+$c(a + r + k\Delta) \le c(a+r) + k$.
 \end{lemma}
 \begin{proof}
 By Lemma~\ref{lem:consec}, consecutive active displacements on the
@@ -462,7 +470,8 @@ $+\Delta$ shift lands at $b + r + i\Delta$). Summing $k$ unit steps and
 the triangle inequality give $c(a+r+k\Delta)\le c(a+r)+k$.
 \end{proof}
 
-\begin{lemma}[$\Delta\ge 2$ is impossible]\label{lem:Delta2}
+\begin{lemma}[$\Delta\ge 2$ is impossible;
+  \lean{indist\us Delta\us ge\us 2\us impossible}]\label{lem:Delta2}
 If $a<b$ are indistinguishable with $\Delta=b-a\ge 2$, contradiction.
 \end{lemma}
 \begin{proof}
@@ -497,13 +506,15 @@ argument and \emph{no} even/odd split on~$\Delta$. The single lever is
 forward-closure of badness (Lemma~\ref{lem:badprop}), which turns the
 ``active'' set on each residue into a prefix; the chain bound then makes
 that prefix finite for $\Delta\ge 2$, and a one-line pigeonhole finishes.
-This is markedly simpler than---and subsumes---the earlier even/odd
-case analysis.
+This is markedly simpler than the even/odd case analysis we initially
+attempted, and it was the breakthrough that turned the crux from
+``research-level'' into elementary.
 \end{remark}
 
 It remains to handle $\Delta=1$.
 
-\begin{lemma}[$\Delta=1$ forces an identity tail]\label{lem:Delta1}
+\begin{lemma}[$\Delta=1$ forces an identity tail;
+  \lean{shift\us one\us implies\us eventually\us identity}]\label{lem:Delta1}
 If $a<b=a+1$ are indistinguishable, then $c(n)=n$ for all $n\ge a$.
 \end{lemma}
 \begin{proof}
@@ -520,8 +531,7 @@ $n\ge a$, i.e.\ $c(n)=n + C$ on $[a,\infty)$ with $C=c(a)-a$. If $C>0$,
 the values $\{1,\dots,C\}$ are absent from $c([a,\infty))$ and must be
 supplied by the finite set $c([1,a{-}1])$, which has only $a-1$ elements;
 bijectivity of $c$ on $\Np$ then forces $C=0$ (and $C<0$ was already
-excluded). Hence $c(n)=n$ for $n\ge a$. (In Lean this sign analysis is the
-pair \lean{indist\us Delta1\us pos} / \lean{indist\us Delta1\us neg}.)
+excluded). Hence $c(n)=n$ for $n\ge a$.
 \end{proof}
 
 \begin{proof}[Proof of Theorem~\ref{thm:lemmaA}]
@@ -533,208 +543,21 @@ pair is indistinguishable.
 \end{proof}
 
 % ------------------------------------------------------------
-\subsection{From distinguishability to a strategy: the obstruction}
-\label{sec:strategy}
-
-Theorem~\ref{thm:lemmaA} says that for a non-EI~$c$ every pair of cells
-admits a separating observation. Converting this into a single winning
-strategy is the substantial part of the problem, and naive attempts fail
-in instructive ways; we record the obstruction now and resolve it in
-Section~\ref{sec:winstrat}.
-
-\paragraph{The lag is monotone---and that is the whole difficulty.}
-Recall from~\eqref{eq:tD} that the \emph{lag} $\ell_t := t - D_t = 2L_t$
-equals twice Bob's left-move count. Since each move changes $D$ by $\pm1$
-and $t$ by $+1$, we have $\ell_{t+1}-\ell_t \in \{0, 2\}$: the lag is
-\textbf{monotone nondecreasing} and never returns to a smaller value.
-A separating observation for a pair $(a,b)$ occurs at a specific
-displacement~$D$ and a specific \emph{slack} $s = t-D = \ell_t$; by
-the alarm-clock identity~\eqref{eq:Lthreshold} it is the event
-\[
-  \bigl[\,c(a+D) < D+s\,\bigr] \;\neq\; \bigl[\,c(b+D) < D+s\,\bigr].
-\]
-Because the lag only increases, a separator at slack~$s$ is
-\emph{use-it-or-lose-it}: once Bob's lag has passed~$s$, he can never
-again present that pair with that slack. He must therefore visit
-separators in nondecreasing slack order.
-
-\paragraph{The tension.}
-This pits two requirements against each other:
-\begin{itemize}[topsep=2pt,itemsep=2pt]
-  \item \emph{Catching a low-slack discriminator} (an \emph{early}
-  wake-up, where $t$ is close to $D$) requires Bob to be \emph{riding the
-  diagonal}: large displacement~$D$, small slack. Once missed it is gone.
-  \item \emph{Bounding the start cell~$k_0$} requires Bob to be \emph{near
-  the origin}: small displacement, large slack, so that the threshold
-  $\ell_t - k_0$ in~\eqref{eq:Lthreshold} grows and probes a window of
-  cells around~$k_0$.
-\end{itemize}
-At any single instant Bob is at one $(D,\ell)$; he cannot be both near the
-origin and far down the diagonal. Reconciling the two---monitoring early
-discriminators while still bounding $k_0$---is the genuine combinatorial
-heart of the winning direction. Section~\ref{sec:negative} records three
-simulation-verified negative results showing that no shortcut (no fixed
-universal trajectory, no two-phase ``bracket then navigate'', no
-free-standing finite-belief induction) reconciles them; the resolution
-in Section~\ref{sec:winstrat} is a $c$-tailored staircase that interleaves
-the two regimes.
-
-We first give complete strategies for two natural families where the
-tension does not arise because every discriminator sits at a
-\emph{bounded} displacement.
-
-% ------------------------------------------------------------
-\subsection{Two complete winning families (locally decodable)}
-\label{sec:local}
-
-When the candidate pair is always separated by a wake-up that occurs at a
-\emph{bounded} displacement, Bob can resolve it by a fixed-amplitude
-oscillation that monitors a small window from time~$0$---catching even the
-early wake-ups that a navigate-then-observe approach would arrive too late
-to see. Two regimes are formalised.
-
-\begin{definition}[Locally $K{=}2$ decodable]\label{def:k2}
-$c$ is \emph{locally decodable} if the map
-$k_0 \mapsto \bigl(\text{first even \Yes{} time of } c(k_0),\;
-\text{first odd \Yes{} time of } c(k_0{+}1)\bigr)$
-is injective; equivalently the bucketed pair $(c(k_0), c(k_0{+}1))$
-determines~$k_0$.
-\end{definition}
-
-\begin{theorem}[$K{=}2$ winning theorem]\label{thm:k2}
-If $c$ is locally decodable, Bob wins. The strategy oscillates
-$D\in\{0,1\}$, reads off $c(k_0)$ and $c(k_0{+}1)$ from the first even
-and first odd \Yes, decodes~$k_0$, and guesses its current
-position---never leaving $\{k_0, k_0{+}1\}$, so safety is automatic.
-\end{theorem}
-
-\begin{example}[Adjacent transpositions]\label{ex:adj}
-Let $c$ swap $2i{-}1\leftrightarrow 2i$ for every $i$ (so $c(n)=n+1$ if
-$n$ is odd, $c(n)=n-1$ if $n$ is even). Here $g(n)=c(n)-n\in\{+1,-1\}$ is
-bounded, yet $c$ is not eventually identity; Bob wins by local decoding.
-This already shows the boundary is non-EI, not unbounded growth of~$g$.
-\end{example}
-
-\begin{example}[Block $3$-cycles on consecutive triples]\label{ex:cyc3}
-Let $c$ cyclically rotate each triple $\{3i{-}2,3i{-}1,3i\}$, e.g.\
-$3i{-}2\mapsto 3i{-}1\mapsto 3i\mapsto 3i{-}2$. This is locally decodable
-(the bucketed pair of adjacent labels recovers $k_0$), and Bob wins.
-\end{example}
-
-Some non-EI permutations need a third probed label. The block $3$-cycle
-written ``forwards'' is the canonical example.
-
-\begin{definition}[Locally $K{=}3$ decodable]\label{def:k3}
-$c$ is \emph{locally $3$-decodable} if the triple of first-\Yes{} times at
-displacements $0,1,2$---equivalently the bucketed triple
-$(c(k_0), c(k_0{+}1), c(k_0{+}2))$---determines~$k_0$.
-\end{definition}
-
-\begin{theorem}[$K{=}3$ winning theorem]\label{thm:k3}
-If $c$ is locally $3$-decodable, Bob wins, via a period-$4$ triangle-wave
-sweep of displacements $0,1,2,1,0,1,2,\dots$ with three detectors (first
-\Yes{} at displacements $0$, $1$, $2$). The displacement stays in
-$[0,2]$, so safety is automatic.
-\end{theorem}
-
-\begin{example}[Forward block $3$-cycle]\label{ex:blk}
-Let $c(m)=m+1$ unless $3\mid m$, in which case $c(m)=m-2$ (so each block
-$\{3b{+}1,3b{+}2,3b{+}3\}$ rotates forwards: $c(1)=2$, $c(2)=3$,
-$c(3)=1$). Then $c(m)\le m+1$ always, so \emph{no} rightward probe
-$[c(k_0{+}D) < T_1{+}D]$ ever separates the Phase-1 candidates---a
-navigate-only strategy fails. But cell $3$ wakes early, at time~$2$ (since
-$c(3)=1$), which splits $k_0=1$ from $k_0=2$ at displacement~$1$: at
-$(D{=}1,\,t{=}3)$, the world $k_0=2$ stands on the already-awake cell~$3$
-and reports \Yes, while $k_0=1$ stands on cell~$2$, still asleep
-($c(2)=3\not<3$), and reports \No. The $K{=}3$ sweep, monitoring small
-displacements from time~$0$, catches this early wake-up. So $c$ is
-locally $3$-decodable, and Bob wins.
-\end{example}
-
-Example~\ref{ex:blk} is instructive: it is a concrete non-EI Bob-win
-whose resolution \emph{requires} catching an early wake-up at a small
-displacement, which is precisely the regime the local decoders are built
-for---and precisely what naive ``oscillate then navigate right''
-strategies miss.
-
-\begin{remark}[The fixed-$K$ architecture cannot cover all non-EI~$c$]
-\label{rem:k5fail}
-The locally-$K$-decodable classes (any fixed amplitude~$K$, formalised in
-Lean for arbitrary $K\in\Np$) are genuinely incomplete. The
-\emph{block-$5$ cycle}---rotate each $\{5b{+}1,\dots,5b{+}5\}$
-forward---is non-EI, yet for \emph{every} $K$ some pair of start cells
-produces an identical $K{+}1$-tuple of first-\Yes{} times (checked
-exhaustively for $K=1,\dots,50$): the colliding pair $(4,5)$ has
-$c(4..9)=(5,1,7,8,9,10)$ and $c(5..10)=(1,7,8,9,10,6)$, which a coarse
-amplitude-$K$ sweep cannot tell apart even though
-Theorem~\ref{thm:lemmaA} guarantees them distinguishable (here at
-$D{=}0$, $t{=}2$: $c(4)=5\ge 2$ but $c(5)=1<2$). A single fixed-amplitude
-trajectory cannot finely monitor all displacements at once. The next
-section gives a $c$-tailored trajectory that does cover every non-EI~$c$.
-\end{remark}
-
-% ------------------------------------------------------------
-\subsection{Worked examples table}
-\label{sec:table}
-
-\begin{table}[h]
-\centering
-\renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{\textwidth}{@{}l l c X@{}}
-\toprule
-\textbf{Permutation $c$} & \textbf{EI?} & \textbf{Bob} & \textbf{Reason} \\
-\midrule
-Identity $c(n)=n$
-  & yes & \textbf{loses}
-  & $(2j,\,2j{+}1)$ collide: only even thresholds probeable
-    (Rem.~\ref{rem:flat}). \\
-Finitary (any finite-support perm.)
-  & yes & \textbf{loses}
-  & EI with $N=$ support bound; same collision for large $k_0$. \\
-Adjacent transpositions
-  & no & \textbf{wins}
-  & locally $2$-decodable (Ex.~\ref{ex:adj}); bounded $g$. \\
-Block $3$-cycle (rotated triples)
-  & no & \textbf{wins}
-  & locally $2$- or $3$-decodable (Ex.~\ref{ex:cyc3},\,\ref{ex:blk}). \\
-Block $5$-cycle (rotated quintuples)
-  & no & \textbf{wins}
-  & not EI; needs the staircase---no fixed-$K$ decoder suffices
-    (Rem.~\ref{rem:k5fail}). \\
-Any non-EI $c$
-  & no & \textbf{wins}
-  & band-top staircase separates every pair (\S\ref{sec:winstrat},
-    Thm.~\ref{thm:lemmaA}). \\
-\bottomrule
-\end{tabularx}
-\caption{Outcomes by family. Eventually-identity $\iff$ Bob loses.}
-\end{table}
-
-% ============================================================
-\section{The winning strategy for every non-EI $c$}
-\label{sec:winstrat}
-
-We now give the construction that wins for an arbitrary
-non-eventually-identity~$c$. It has two layers. First, a generic
-\emph{reduction}: any single signal-independent trajectory that is safe,
-eventually informative, and pairwise separating already constitutes a
-winning strategy. Second, an explicit such trajectory: the
-\emph{band-top lag-monotone staircase}. The reduction is fully proven and
-axiom-clean; the staircase's three properties are proven modulo one
-isolated combinatorial recurrence lemma (the anti-correlated
-joint-finite regime), reached by a joint-condition dichotomy whose
-joint-infinite half---covering all unbounded-displacement~$c$---is itself
-proven axiom-clean (Sections~\ref{sec:residual},~\ref{sec:status}).
-
-% ------------------------------------------------------------
 \subsection{The reduction: separation $+$ safety $+$ Yes $\Rightarrow$ Bob wins}
 \label{sec:reduction}
 
+Theorem~\ref{thm:lemmaA} says only that every pair of cells admits
+\emph{some} separating observation. Turning this into a single winning
+strategy is the substantial part of the problem. The key conceptual move
+is that Bob does not need an \emph{adaptive} (signal-dependent) move
+schedule at all: a fixed, signal-independent exploration trajectory
+suffices, provided it is tailored to~$c$. He plays the trajectory blind,
+using the signals only to decide \emph{when to stop and guess}.
+
 Fix a deterministic move sequence $m\colon \N\to\{\mathrm{L},\mathrm{R}\}$
-and let Bob play it \emph{ignoring the signals for his moves}, using the
-signals only to decide \emph{when to stop and guess}. Write
-$\mathrm{pos}_m(k_0,t)$ for the trajectory's position from start~$k_0$.
-Call the trajectory:
+and write $\mathrm{pos}_m(k_0,t)$ for its position from start~$k_0$. The
+strategy \lean{ofMoves}~$m$ replays $m$'s moves blindly. Call the
+trajectory:
 \begin{itemize}[topsep=2pt,itemsep=1pt]
   \item \emph{safe} if $\mathrm{pos}_m(k_0,t)\ge 1$ for all $k_0,t$
   (never falls off the left);
@@ -787,380 +610,421 @@ In Lean, the ``stop and guess'' wrapper is the belief-state strategy
 signal-consistent candidates is a singleton, then guesses. The match
 between the wrapped and bare trajectories up to the first resolved time,
 and the correctness of the guess, are discharged in
-\lean{localizes\us BobWins} (axiom-clean). What remains is to exhibit one
-fixed trajectory with the three properties.
+\lean{localizes\us BobWins}. \emph{All trajectories we construct keep
+$D\ge 0$ at all times}, so safety is automatic: $\mathrm{pos} = k_0 + D
+\ge k_0 \ge 1$. What remains is to exhibit one fixed trajectory that is
+separating and Yes-emitting.
 
 % ------------------------------------------------------------
-\subsection{The band-top lag-monotone staircase}
-\label{sec:staircase}
+\subsection{Lag monotonicity and why a single fixed lag fails}
+\label{sec:lag}
 
-Recall the lag $\ell_t = t-D_t = 2L_t$ is monotone (\S\ref{sec:strategy}),
-and a separator for $(a,b)$ at displacement~$D$ lives at a definite even
-\emph{slack} $s$, where the trajectory must have lag exactly~$s$. The
-construction therefore organises the work by slack.
+The trajectory's structure is governed by one invariant. Define the
+\emph{lag} $\ell_t := t - D_t = 2L_t$ (twice Bob's left-move count,
+by~\eqref{eq:tD}). Since each move changes $D$ by $\pm1$ and $t$ by $+1$,
+\[
+  \ell_{t+1}-\ell_t \in \{0, 2\}:
+\]
+the lag is \textbf{monotone nondecreasing and never returns to a smaller
+value}. By the alarm-clock identity~\eqref{eq:Lthreshold}, a separating
+observation for a pair $(a,b)$ at displacement~$D$ lives at a definite
+even \emph{slack} $s = t-D = \ell_t$, namely the event
+\[
+  \bigl[\,c(a+D) < D+s\,\bigr] \;\neq\; \bigl[\,c(b+D) < D+s\,\bigr].
+\]
+Because the lag only increases, a separator at slack~$s$ is
+\emph{use-it-or-lose-it}: once Bob's lag has passed~$s$, he can never
+again present that pair with that slack. He must therefore visit
+separators in nondecreasing slack order. This single fact dictates the
+whole construction.
 
-\paragraph{Recurring slack.}
-For distinct $a,b$, call an even slack~$s$ \emph{recurring} if
-slack-$s$ separators for $(a,b)$ occur at arbitrarily large
-displacements: $\forall D_0\,\exists D\ge D_0$ with a slack-$s$ separator
-at~$D$. The construction needs, for each pair, \emph{one} recurring slack
-$s(a,b)$, and it needs $s(a,b)\ge \max(a,b)$ (explained below). The
-existence of such a slack is the sole combinatorial input
-(Theorem~\ref{thm:bandrec}, discharged in Lean by the joint-condition
-dichotomy down to a single residual lemma, \S\ref{sec:residual}).
+The natural hope is that, for each pair $(a,b)$, separators \emph{recur}
+at one \emph{fixed} even slack $s(a,b)$: there are infinitely many
+displacements~$D$ at which $(a,b)$ is separated at the \emph{same}
+slack~$s$. If that held universally, Bob could fix a slack per pair and
+ride right to catch a recurrence. We call this the \emph{band recurrence}.
+It is tempting but \textbf{false}.
 
-\paragraph{The staircase.}
-Enumerate the ordered distinct pairs $(a,b)$, $a<b$, by the key
-$\bigl(s(a,b),\,\max(a,b),\,\min(a,b)\bigr)$ in increasing order. Because
-$s(a,b)\ge\max(a,b)$, only finitely many pairs have any given key value
-(at most $\binom{S}{2}$ pairs have $s\le S$, since $\max(a,b)\le S$),
-so the keys form a well-order of order type~$\omega$: every pair has only
-finitely many predecessors. This $\omega$-ordering is exactly why the
-lower bound $s(a,b)\ge\max(a,b)$ is load-bearing---without it, infinitely
-many pairs could share one slack level and the enumeration would not have
-type~$\omega$.
-
-Process the pairs in this order. The state is the current
-$(D,\ell)$ with $t = D+\ell$, starting at $(0,0)$. Two primitives keep
-$D\ge 0$: \textbf{R} appends a right move ($D\mathbin{+}{=}1$, lag fixed),
-and \textbf{L} appends a left move (\emph{only when $D\ge 1$};
-$D\mathbin{-}{=}1$, $\ell\mathbin{+}{=}2$). For pair $(a,b)$ with target
-slack $s := s(a,b)$:
-\begin{enumerate}[topsep=2pt,itemsep=1pt]
-  \item \textbf{Raise} the lag from its current (smaller, by the key
-  order) value to~$s$, oscillating $D\in\{0,1\}$ via R,L pairs---each pair
-  bumps $\ell$ by~$2$ while returning $D$ to its prior value.
-  \item \textbf{Ride} right at fixed lag~$s$ until the displacement lands
-  on a slack-$s$ separator for $(a,b)$; one exists at unbounded
-  displacement by recurrence, so the ride terminates.
-  \item \textbf{Tail}: ride right until the displacement exceeds the phase
-  index, forcing displacements to grow without bound across phases.
-\end{enumerate}
-In the Lean formalisation this is a small state machine (\lean{trajSt},
-\lean{stairMoves}) with sub-phases \lean{raiseR}/\lean{raiseL}/\lean{ride};
-the identity $t = D + \ell$ with even lag $\ell = 2k\,(+2$ while riding$)$
-is the invariant \lean{time\us eq\us D\us add\us lag}.
-
-\begin{lemma}[Safety; \lean{stair\us safe}]
-The staircase never falls off: from any $k_0\ge 1$, position
-$=k_0 + D_t\ge 1$.
-\end{lemma}
-\begin{proof}
-$D_t\ge 0$ always: \textbf{R} raises~$D$, and \textbf{L} is emitted only
-at $D\ge 1$ (Lean \lean{raiseL\us D\us pos}), so it lands at $D\ge 0$.
-Hence $\mathrm{pos} = k_0 + D_t \ge 1$.
-\end{proof}
-
-\begin{lemma}[Separation; \lean{stair\us separates}]
-For every $a\neq b$, the staircase's histories from $a$ and $b$ eventually
-differ.
-\end{lemma}
-\begin{proof}
-The pair is processed at a finite phase (its predecessors in the
-key-order are finite). At that phase the ride at lag $s(a,b)$ lands on a
-slack-$s(a,b)$ separator, where by definition the signals at the common
-displacement differ. (Lean: \lean{separates\us OPair}, via the
-slack-bucket structure \lean{bucket}/\lean{keyOf}.)
-\end{proof}
-
-\begin{lemma}[Yes-emission; \lean{stair\us yes}]
-From every start~$k_0$ the staircase eventually reads a \Yes.
-\end{lemma}
-\begin{proof}
-By~\eqref{eq:Lthreshold} a \Yes{} at displacement~$D$ is
-$c(k_0+D) < D+\ell$, i.e. $g(k_0+D) < \ell - k_0$. The lag $\ell\to\infty$
-(the targets $s(a,b)\ge\max(a,b)\to\infty$), and every displacement lies
-in some phase's ride window (\lean{ride\us window\us cover}). Pick a phase
-of lag $\ell > k_0$ and a \emph{weak descent} of~$k_0$---a displacement
-$D$ with $c(k_0+D)\le k_0+D$, of which there are infinitely many for any
-permutation (\lean{weak\us descents\us infinite}, axiom-clean). Then
-$c(k_0+D)\le k_0+D < (k_0+D) + (\ell-k_0) = D+\ell$, a \Yes.
-\end{proof}
-
-\begin{remark}[Why a fixed trajectory suffices after all]
-Earlier analysis (Section~\ref{sec:negative}) suggested the winner had to
-be a genuinely adaptive belief-state machine. The resolution is that the
-\emph{moves} can be fixed (signal-independent) provided the trajectory is
-tailored to~$c$; Bob uses the signals only to choose his stop time. The
-staircase's move schedule depends on~$c$ (through the recurring slacks
-$s(a,b)$ and the ride lengths), but it is a single predetermined sequence,
-which is exactly what the reduction (Theorem~\ref{thm:reduction}) consumes.
+\begin{remark}[The band recurrence is false: the AP-split counterexample]
+\label{rem:apsplit}
+Consider the permutation that splits $\Np$ into an arithmetic-progression
+shape: on the even cells, $c(2k) = 2k + 2\lfloor\sqrt{k}\rfloor$ (the even
+labels ascend slowly, with displacement $g\to\infty$), and the odd cells
+fill the remaining values in increasing order (their displacement drifts
+to $-\infty$). This is a genuine non-eventually-identity bijection. For
+the pair $(2,4)$ the separating slack \emph{climbs} like $\sqrt{D}$: at
+even displacement $D$ the separating window is roughly
+$(2+2\sqrt{D},\,4+2\sqrt{D}]$, of width $\approx 2$, escaping upward. Any
+fixed even slack $s$ sits inside that window only for $D$ in a bounded
+range and is then abandoned forever as the window climbs. Hence \emph{no}
+fixed slack recurs at unbounded displacement, and the band recurrence
+fails. Bob still wins---the separators exist, they merely sit at a
+\emph{growing} slack---but only a trajectory that raises its lag without
+bound can catch them. This is the concrete realisation of the principle
+that no single fixed move schedule is universal, and it motivates the
+dichotomy of the next section.
 \end{remark}
 
-Combining the three lemmas with Theorem~\ref{thm:reduction} proves the
-winning direction: every non-EI~$c$ is a Bob-win
-(\lean{notEI\us BobWins}), modulo the existence of the recurring slacks
-(Theorem~\ref{thm:bandrec}), whose joint-infinite half is already
-axiom-clean and to which we now turn.
+% ------------------------------------------------------------
+\subsection{The dichotomy: a $c$-tailored trajectory in each regime}
+\label{sec:dichotomy}
 
-% ============================================================
-\section{Prior negative results: why the strategy is as it is}
-\label{sec:negative}
+Whether the band recurrence holds turns out to be governed by a single
+structural property of~$c$. Say $c$ is \emph{bounded above} if there is a
+constant $B$ with $c(n)\le n+B$ for all~$n$ (equivalently, $g(n)=c(n)-n$
+is bounded above). The main theorem's winning direction dispatches on
+this property (\lean{main}'s \lean{by\us cases} in \lean{Answer\dt lean}):
+\begin{itemize}[topsep=3pt,itemsep=4pt,leftmargin=*]
+  \item \textbf{Bounded above.} The band recurrence \emph{holds}: each
+  pair has a fixed recurring even slack, and a lag-monotone
+  \emph{fixed-lag staircase} catches it (Section~\ref{sec:bounded}).
+  \item \textbf{Unbounded above.} The band recurrence may fail
+  (Remark~\ref{rem:apsplit}), but separators exist at \emph{arbitrarily
+  large} even slack, and a $c$-tailored \emph{growing-lag staircase}
+  visits one per pair, raising its lag monotonically
+  (Section~\ref{sec:unbounded}).
+\end{itemize}
+In both regimes the trajectory is a single, predetermined,
+signal-independent move sequence with $D\ge 0$ throughout, fed to the
+reduction (Theorem~\ref{thm:reduction}). No adaptive belief-state
+strategy is needed.
 
-Three simulation-verified negative results explain why simpler strategies
-do not work, and hence why the staircase architecture is needed. All were
-established by exact-dynamics simulation respecting the parity lock.
+\subsubsection{Bounded above: the fixed-lag staircase}
+\label{sec:bounded}
 
-\begin{enumerate}[topsep=2pt,itemsep=4pt,leftmargin=*]
-  \item \textbf{No fixed \emph{universal} trajectory.} A single
-  $c$-\emph{independent} move schedule cannot work for all non-EI~$c$.
-  Several natural candidates (fixed-$K$ triangle wave, growing triangle,
-  slow ``dwelling'' sweep, sawtooth ``right~$a$ / left~$1$'') were tested
-  against random period-$B$ permutations; even the best sawtooth---which
-  separates all $k_0\le 40$ for block-$5$, reverse-block-$5$, block-$3$,
-  and adjacent transpositions---still \emph{collides} on $71$ of $1247$
-  random periodic non-EI~$c$. The move schedule must read structure
-  from~$c$. (This is why the staircase's slacks $s(a,b)$ are
-  $c$-dependent.)
+The combinatorial input here is the band recurrence at a $\max$-bounded
+slack.
 
-  \item \textbf{Two-phase ``bracket then navigate'' fails.} The natural
-  plan---oscillate at $D=0$ to pin $c(k_0)\in\{\tau{-}2,\tau{-}1\}$
-  (the first-\Yes{} time~$\tau$ is even, so the two survivors have
-  \emph{consecutive} $c$-values), then navigate to a discriminator---is
-  doomed because the surviving pair's discriminators may all have
-  \emph{already expired}. For block-$5$ the pair $(1,2)$ separates only at
-  slack $t-D\le 2$ (e.g. $D{=}3,t{=}3$), all of which lie in the past once
-  the bracket completes at $\tau=4$; Bob cannot navigate backward in time.
-  This is the low-slack-vs-bounding tension of \S\ref{sec:strategy} made
-  concrete.
-
-  \item \textbf{``Finite belief $\Rightarrow$ winnable'' is false.}
-  Winnability is \emph{not} a function of how many candidates remain. A
-  two-element belief reached at a late state whose only discriminators lie
-  in the past is genuinely lost. Winnability is a property of
-  \emph{reachable, non-stranding} states---which is precisely what the
-  monotone-lag staircase guarantees by visiting separators in
-  nondecreasing slack order, never overshooting a pair's slack before
-  separating it.
-\end{enumerate}
-
-The common root cause is the lag-monotonicity tension
-(\S\ref{sec:strategy}): catching low-slack discriminators wants
-$D\approx t$ (riding the diagonal); bounding $k_0$ wants $D$ small (near
-the origin). They conflict at every instant, and only a slack-ordered
-interleaving---the staircase---reconciles them.
-
-% ============================================================
-\section{The residual lemmas}
-\label{sec:residual}
-
-The entire winning construction rests on a single combinatorial input:
-that each pair has a recurring slack $s(a,b)\ge\max(a,b)$.
-
-\begin{theorem}[Band recurrence at a $\max$-bounded slack;
-\lean{band\us recurrence\us ge\us max}]\label{thm:bandrec}
-For non-eventually-identity~$c$ and any distinct $a,b$, there is an
-\emph{even} slack $s\ge\max(a,b)$ whose slack-$s$ separators recur at
-arbitrarily large displacement:
-$\forall D_0\,\exists D\ge D_0$ such that
+\begin{theorem}[Band recurrence under bounded displacement;
+  \lean{band\us of\us boundedAbove}]\label{thm:bandrec}
+If $c$ is not eventually identity and is bounded above, then for any
+distinct $a,b$ there is an \emph{even} slack $s\ge\max(a,b)$ whose
+slack-$s$ separators recur at arbitrarily large displacement:
+$\forall D_0\,\exists D\ge D_0$ with
 $[\,c(a{+}D)<D{+}s\,]\neq[\,c(b{+}D)<D{+}s\,]$.
 \end{theorem}
+\begin{proof}[Proof idea]
+Work with the integer displacement $f(n)=c(n)-n$. If the band failed at
+every even slack $s\ge\max(a,b)$, then past some finite floor the two
+displaced signals would \emph{agree} for all~$D$
+(\lean{signals\us agree\us of\us no\us separator}, via the window
+description $\min<D{+}s\le\max$). Boundedness above, combined with
+infinitely many weak ascents (\lean{weak\us ascents\us infinite}), pins a
+\emph{top recurring value} $v^\star\ge 0$ for~$f$. If $v^\star=0$ then
+$f(n)\le 0$ cofinitely, i.e.\ $c(n)\le n$ for all large~$n$, and the cut
+lemma below forces $c$ eventually identity---contradiction. If
+$v^\star\ge 1$, the agreement relation, propagated along the residue ray
+modulo $\Delta=b-a$, contradicts the recurrence of $v^\star$. Either way
+the band holds.
+\end{proof}
 
-This is sharper than what the axiom-clean machinery already delivers.
-\lean{separators\us unbounded} (proven, axiom-clean) gives separators at
-unbounded displacement but at \emph{possibly unbounded slack}; the slack
-can drift to~$\infty$. Theorem~\ref{thm:bandrec} additionally
-\emph{pins the slack} into a fixed finite window $[\max(a,b),\,\max(a,b)+O(1)]$,
-and it is this fixed-slack recurrence that the staircase's per-pair ride
-needs (it rides at one lag and must meet a separator there).
+The cut lemma used above is the elegant heart of this regime and is worth
+isolating.
 
-\paragraph{The joint-condition dichotomy.}
-In Lean, Theorem~\ref{thm:bandrec} is \emph{not} discharged by a single
-all-slacks argument (an earlier route through such a lemma is recorded as a
-defeated approach in \S\ref{sec:approaches}). Instead, for an ordered pair
-$a<b$, set $M:=b$, $p:=M\bmod 2$, and fix the \emph{even} slack
-$s:=M+p$ (so $s=M$ when $M$ is even, $s=M+1$ when $M$ is odd; in all cases
-$s\ge\max(a,b)$). Define the \textbf{joint set}
-\[
-  J \;:=\; \bigl\{\,D \;:\; c(a{+}D)\le a{+}D \ \text{ and } \
-  c(b{+}D)\ge b{+}D+p \,\bigr\},
-\]
-the displacements at which a \emph{weak descent of the lower cell~$a$}
-coincides with a \emph{parity-corrected ascent of the upper cell~$b$}. The
-dichotomy splits on whether $J$ recurs at unbounded displacement:
-\begin{itemize}[topsep=2pt,itemsep=2pt]
-  \item \textbf{Joint-infinite} ($J$ unbounded). \emph{Proven
-  axiom-clean} (\lean{band\us recurrence\us ge\us max\us of\us jointInfinite}
-  via \lean{memJ\us imp\us separator}). At every $D\in J$ the fixed slack
-  $s=M+p$ separates the pair: the weak descent of~$a$ puts the window's
-  lower edge $\min\bigl(c(a{+}D),c(b{+}D)\bigr)\le c(a{+}D)\le a{+}D <
-  M{+}D \le D{+}s$ (using $a<b=M$), while the parity-corrected ascent of~$b$
-  puts the upper edge $\max\bigl(c(a{+}D),c(b{+}D)\bigr)\ge c(b{+}D)\ge
-  b{+}D{+}p = D{+}s$. Hence $D{+}s\in(\min,\max]$ is a slack-$s$ separator
-  (\lean{separatorAtSlack\us iff\us window}), and the recurrence transports
-  directly. This case \textbf{covers the entire unbounded-displacement
-  regime}: every unbounded~$c$ is joint-infinite on every pair (verified),
-  so the former separate unbounded-case residue is \emph{removed}.
-  \item \textbf{Joint-finite} ($J$ bounded). The lone residue,
-  \lean{band\us recurrence\us ge\us max\us of\us jointFinite}. This is the
-  single ``anti-correlated'' regime in which weak-descents of~$a$ and
-  parity-corrected ascents of~$b$ never co-occur cofinitely (the canonical
-  witness is the \emph{parity-shift} permutation $c(2k){=}2k{+}2$,
-  $c(2k{+}1){=}2k{-}1$, whose $J$ is empty for that ordered pair). It is
-  empirically bounded-displacement, true, and computationally verified
-  (\S below), but unformalised.
-\end{itemize}
-The joint-finite residue is \emph{true}---verified over
-$\sim\!10^4$--$10^7$ cases with zero counterexamples (\S below)---but not
-yet formally proven; it is the \textbf{only \lean{sorry}} in the
-development.
+\begin{lemma}[Cut lemma; \lean{descent\us cofinite\us imp\us EI}]\label{lem:cut}
+If $c(n)\le n$ for all $n\ge N$, then $c$ is eventually identity.
+\end{lemma}
+\begin{proof}
+Let $B$ bound $c$ on the finite segment $\{1,\dots,N\}$. For any
+$M\ge\max(N,B)$, the descent hypothesis past~$N$ and the bound below~$N$
+together show $c$ maps $\{1,\dots,M\}$ \emph{into itself}; being an
+injection of a finite set into itself, it is \emph{onto} $\{1,\dots,M\}$.
+Hence $c(M{+}1)$ cannot land in $\{1,\dots,M\}$ (those values are already
+hit), so $c(M{+}1)>M$; with $c(M{+}1)\le M{+}1$ from descent, $c$
+fixes~$M{+}1$. Applying this for every $M=n{-}1$ past the threshold gives
+EI. (The ascent-cofinite mirror follows by applying this to $c^{-1}$.)
+\end{proof}
 
-\paragraph{Why it is true.} \lean{weak\us descents\us infinite} (proven,
-axiom-clean) gives infinitely many~$D$ with $c(a+D)\le a+D$, which forces
-the \emph{lower} cell's contribution into the slack window
-$[\max(a,b),\max(a,b)+O(1)]$; \lean{weak\us ascents\us infinite}
-(axiom-clean) does the same for the upper edge via the ascent of~$b$. The
-joint-infinite case is precisely the statement that these two infinite
-sets---$\{D:c(a{+}D)\le a{+}D\}$ and $\{D:c(b{+}D)\ge b{+}D{+}p\}$---meet
-infinitely often, and there it is \emph{proven}. Only when they fail to
-align cofinitely (the joint-finite regime) does the band recurrence still
-hold by a global counting argument that no single bijectivity engine
-discharges. Theorem~\ref{thm:bandrec} as a whole has been
-\textbf{decisively verified computationally}: over $2300$ (family, pair)
-combinations---block-$B$ cycles, reverse blocks, the adjacent-transposition
-involution, sparse swap-at-powers, the parity-shift $c(2k)=2k{+}2$,
-$c(2k{+}1)=2k{-}1$, unbounded-growth growing-block and growing-reverse-block
-families, random period-$B$ permutations, random bijections on a
-$6\cdot10^4$ prefix, and large-displacement involutions---with \emph{zero}
-counterexamples, and the recurring-slack excess $s-\max(a,b)$ is uniformly
-$\le 2$ (the canonical witness $s=M+(M\bmod 2)$ works for almost every
-pair; only the parity-shift family needs $\max+2$). Crucially, the joint
-discriminator confirmed that \emph{no} unbounded family is joint-finite, so
-the axiom-clean joint-infinite case absorbs the whole unbounded regime.
+\paragraph{The staircase.}
+Given the recurring slacks, the trajectory is assembled as a
+\emph{band-top lag-monotone staircase} (\lean{BandProvider},
+\lean{BobWins\us of\us bandProvider}). Enumerate the ordered distinct
+pairs $(a,b)$, $a<b$, by the key $\bigl(s(a,b),\max(a,b),\min(a,b)\bigr)$
+in increasing order. Because $s(a,b)\ge\max(a,b)$, only finitely many
+pairs have any given slack (at most $\binom{S}{2}$ pairs have $s\le S$),
+so the keys form a well-order of type~$\omega$: every pair has finitely
+many predecessors. For each pair in turn, the staircase (i) \emph{raises}
+its lag from the current value to $s(a,b)$ by oscillating $D\in\{0,1\}$
+via R,L pairs (each pair bumps $\ell$ by~$2$ while returning $D$); (ii)
+\emph{rides} right at fixed lag $s(a,b)$ until the displacement lands on a
+recurring separator, which exists by Theorem~\ref{thm:bandrec}; (iii)
+\emph{tails} right so displacements grow without bound across phases. Each
+step keeps $D\ge 0$, so the trajectory is safe; it is separating by
+construction and Yes-emitting because the lag $\to\infty$ and every cell
+has infinitely many weak descents (\lean{weak\us descents\us infinite}).
 
-\subsection{Approaches considered for the residual lemma}
-\label{sec:approaches}
+\subsubsection{Unbounded above: the growing-lag staircase}
+\label{sec:unbounded}
 
-The lemma is not for want of trying. We first record three natural proof
-routes for the original \emph{all-slacks} formulation, each ruled out by an
-explicit non-EI permutation that defeats it; together they explain why that
-formulation is genuinely hard rather than merely unfinished. A literature
-search located only analogues---the parity-sweep of Hunters-and-Rabbit
-pursuit games and a K\"onig/min-cut argument---none of which applies off the
-shelf. We then describe the convergent-permutation classification we tested
-the split against, and finally the joint-condition dichotomy that
-supersedes the all-slacks route and is what the Lean development now uses.
+When $c$ is unbounded above, the band recurrence can fail
+(Remark~\ref{rem:apsplit}), so a fixed-lag ride is impossible. The
+replacement is a recurrence not at a fixed slack but at \emph{arbitrarily
+large} even slack.
 
-\begin{enumerate}[topsep=2pt,itemsep=4pt,leftmargin=*]
-  \item \textbf{Slack-localised Lemma~A (information deficit).} The natural
-  hope is to re-run the distinguishability engine
-  (Lemma~\ref{lem:consec}) at a single fixed slack. But the contrapositive
-  hypothesis ``no slack-$s$ separator for all $D\ge D_0$'' supplies signal
-  \emph{agreement at exactly one time $t=D+s$ per displacement}---a single
-  bit per~$D$. The engine that pins $|c(a+D)-c(b+D)|=1$ reads the signal at
-  \emph{three} distinct times per displacement; one bit per~$D$ simply does
-  not reproduce the consecutive-values conclusion. Moreover the universal
-  quantifier over slacks is load-bearing: the \emph{parity-shift}
-  permutation $c(2k)=2k{+}2$, $c(2k{+}1)=2k{-}1$ agrees at a single fixed
-  slack forever yet is non-EI, so no \emph{one} slack can be hard-wired.
-  (This is why the existing axiom-clean \texttt{IndistFrom} machinery, which
-  floors the displacement rather than the slack, does not supply the lemma.)
+\begin{theorem}[Separators at arbitrarily large even slack;
+  \lean{q2even}]\label{thm:q2even}
+If $c$ is unbounded above, then for every distinct $a<b$ and every
+prescribed lag floor~$L$ there exists an \emph{even} slack $s\ge L$ and a
+displacement~$D$ with $[\,c(a{+}D)<D{+}s\,]\neq[\,c(b{+}D)<D{+}s\,]$.
+\end{theorem}
+\begin{proof}[Proof idea]
+Suppose not: for some floor~$L$ \emph{no} even slack $s\ge L$ separates at
+any~$D$ (the ``bad adversary''). Writing the separation window at
+displacement~$D$ as $(\min v_a,v_b,\ \max v_a,v_b]$ with $v_a=a+g(a{+}D)$,
+$v_b=b+g(b{+}D)$, the adversary says this window contains no even integer
+$\ge L$. Whenever the window's top exceeds~$L$, this forces it to have
+\emph{width exactly $1$} with an \emph{odd} top
+(\lean{width1\us of\us no\us even\us in\us window}); width~$1$ at a link
+means $|c(a{+}D)-c(b{+}D)|=1$, which (since $b{+}D=a{+}(D{+}\delta)$,
+$\delta=b-a$) shows $g$ does not decrease going left by~$\delta$ at any
+high link. Unboundedness above provides, for any~$M$, a \emph{spike} cell
+on the $a$-ray with $g\ge M$ (\lean{phi\us spike\us on\us a\us ray}).
+Walking left in steps of~$\delta$ from the spike
+(\lean{leftward\us walk}), $g$ stays $\ge M$ all the way down to a fixed
+\emph{chain-start} cell in $\{a,\dots,a{+}\delta{-}1\}$. But $g$ on those
+finitely many fixed cells is bounded by a constant; choosing $M$ above
+that constant yields a contradiction. Hence the bad adversary is
+impossible and the separators exist at every lag floor. (A residue
+pigeonhole over the $\delta$ chains makes the spike-to-chain-start step
+fully rigorous for all $\delta$.)
+\end{proof}
 
-  \item \textbf{Band-collapse with cut counting.} A second route models the
-  agreement constraints as a flow/cut on the bipartite incidence of cells
-  against awake-times and tries to close the band by a min-cut argument. The
-  \emph{same} parity-shift permutation $c(2k)=2k{+}2$, $c(2k{+}1)=2k{-}1$
-  defeats it: it is non-EI yet has \emph{balanced, residue-constant}
-  displacement $g(n)=c(n)-n\in\{+2,-2\}$, so the cut never closes---the
-  collapse argument certifies agreement that the permutation does not in
-  fact exhibit. A displacement-floored closure cannot see the parity
-  structure that actually separates the pair.
+\paragraph{The growing-lag staircase.}
+The unbounded trajectory (\lean{GrowStair\dt gmoves}) enumerates the
+pairs (\lean{nthPair}) and processes them in turn. For the $i$-th phase it
+requests, via Theorem~\ref{thm:q2even}, a separator at an even slack
+\emph{at least} the current lag plus a margin (the lag floor
+\lean{Lfloor}~$i$, which strictly exceeds all prior lags). It then
+walks/oscillates to raise the lag to that slack and rides right to the
+separator, always keeping $D\ge 0$. Because each phase's requested slack
+exceeds the previous lag, the lags strictly increase across phases and the
+$\omega$-enumeration of pairs is well-founded. Safety
+(\lean{grow\us safe}), separation (\lean{grow\us separates}), and
+Yes-emission (\lean{grow\us yes}) are proved exactly as before and fed to
+the reduction. This is the only place a \emph{growing} lag is essential;
+it is what catches the climbing separators of the AP-split example
+(Remark~\ref{rem:apsplit}).
 
-  \item \textbf{Positive-density averaging.} A third route would derive the
-  recurrence from a positive lower density of separators (so that two
-  positive-density sets must intersect). This fails because the recurrence is
-  intrinsically \emph{sparse}: the \emph{swap-at-powers} permutation (which
-  transposes only cells indexed by powers of~$2$) is non-EI yet has only
-  $O(\log N)$ separators among the first~$N$ displacements, a density tending
-  to~$0$. The two infinite displacement-sets must therefore be coordinated
-  \emph{exactly}, not merely on average.
-\end{enumerate}
+\begin{remark}[Why a fixed trajectory suffices after all]
+Earlier we believed the winner had to be a genuinely adaptive
+belief-state machine, because no single fixed move schedule could
+reconcile catching low-slack discriminators (which want $D\approx t$) with
+bounding $k_0$ (which wants $D$ small). The resolution is that the
+\emph{moves} can be fixed (signal-independent) provided the trajectory is
+tailored to~$c$: its slacks and ride lengths depend on~$c$, but it is a
+single predetermined sequence, which is exactly what the reduction
+consumes. Lag monotonicity is then not an obstruction but an organising
+principle---the staircase simply visits separators in nondecreasing slack
+order.
+\end{remark}
 
-The honest characterisation of the all-slacks formulation is that it is a
-\emph{cofinitely-sparse coordination of two infinite displacement-sets}
-($\{D:\text{a separator exists}\}$ and $\{D:c(a+D)\le a+D\}$, which must
-meet at a common slack-bounded displacement infinitely often). It survives
-only in the cofinite-$D$ limit via a global counting argument. This is the
-common wall the three routes above hit: the per-slack displacement floor
-does not uniformise across slacks.
+% ------------------------------------------------------------
+\subsection{Two complete winning families (locally decodable)}
+\label{sec:local}
 
-\paragraph{Convergent-permutation classes (C/D), tested and discarded.}
-A natural hope is to split the lemma along the classical
-convergent/divergent dichotomy for permutations of~$\N$ (Agnew, Bourbaki,
-Kronrod; surveyed by Witu\l a). For a permutation~$p$, let $t(p,n)$ count
-the maximal consecutive runs in $p(\{1,\dots,n\})$; $p$ is \emph{convergent}
-(class~C) when $\limsup_n t(p,n)<\infty$ and \emph{divergent} (class~D) when
-$t(p,n)\to\infty$, and Witu\l a's Lemma~7.3 supplies a block-count identity
-relating the ``ascent'' and ``descent'' index sets $U(p),V(p)$. We
-classified every documented witness and found the split \emph{does not align
-with the difficulty boundary}: the parity-shift, swap-at-powers,
-growing-reverse-block, and all block/random-periodic/adjacent-involution
-witnesses are \emph{all class~C} (bounded block count), so the five failed
-routes all live in class~C. A purpose-built genuine class-D non-EI
-permutation has $U(p)\cup V(p)$ covering a $0.995$ density of cells, making
-the block-count machinery vacuous on the per-pair question. The finer
-Johnston subgroup split within class~C (intervals move boundedly) likewise
-fails to isolate the hard cases (the hardest wall, parity-shift, is inside
-it while a non-member is handled by the same window engine). The
-classification supplied clean \emph{vocabulary} to test the split cleanly,
-and the verdict was negative.
+Before the general construction, we record two natural families that win
+by a much simpler, fully self-contained strategy: a fixed-amplitude
+oscillation. These were the first parts of the winning direction we
+formalised, and they remain the cleanest worked instances.
 
-\paragraph{The joint-condition dichotomy (the route now used).}
-The route that does make progress is the joint-condition split of
-\S\ref{sec:residual}: for an ordered pair $a<b$, dispatch on whether the
-joint set $J=\{D:c(a{+}D)\le a{+}D \ \wedge\ c(b{+}D)\ge b{+}D{+}p\}$
-(with $p=b\bmod 2$) recurs at unbounded displacement. Its breakthrough is
-the \emph{joint-infinite} half,
-\lean{band\us recurrence\us ge\us max\us of\us jointInfinite} (\emph{proven
-axiom-clean} via the window arithmetic \lean{memJ\us imp\us separator}):
-whenever the weak-descent ray of~$a$ meets the parity-corrected ascent ray
-of~$b$, the \emph{fixed} even slack $s=b+(b\bmod 2)\ge\max(a,b)$ separates
-the pair, so the recurrence follows outright. This is exactly the
-uniformity the all-slacks wall lacked---a single slack, pinned by the two
-bijectivity engines (\lean{weak\us descents\us infinite},
-\lean{weak\us ascents\us infinite}), with no per-slack floor to
-uniformise. Decisively, \emph{every} unbounded-displacement~$c$ is
-joint-infinite (verified), so the joint-infinite case absorbs the entire
-unbounded regime---the swap-at-power log-sparsity of route~3 and the
-former unbounded residue both disappear. The only surviving case is the
-\emph{joint-finite} ``anti-correlated'' regime,
-\lean{band\us recurrence\us ge\us max\us of\us jointFinite}: the
-parity-shift permutation that defeated routes~1 and~2 above is its
-canonical witness ($J$ empty for the relevant pair), and there the two
-rays never align cofinitely.
+\begin{definition}[Locally $K$-decodable]\label{def:k}
+$c$ is \emph{locally $K$-decodable} if the tuple of first-\Yes{} times at
+displacements $0,1,\dots,K{-}1$---equivalently the bucketed tuple
+$(c(k_0),\dots,c(k_0{+}K{-}1))$---determines~$k_0$.
+\end{definition}
 
-The sole surviving residue is therefore the \emph{joint-finite
-anti-correlated recurrence}; the joint-infinite half---covering all
-unbounded-displacement permutations---is proven axiom-clean. The residue
-is the genuine combinatorial heart of the winning direction---the one
-piece not yet given a Lean proof.
+\begin{theorem}[$K$-decodable winning theorems; \lean{LocallyDecodable\us BobWins}
+  ($K{=}2$), \lean{LocallyK3Decodable\us BobWins} ($K{=}3$),
+  \lean{LocallyKDecodable\us BobWins} (any~$K$)]\label{thm:k}
+If $c$ is locally $K$-decodable, Bob wins, via a period-$2K$ triangle-wave
+sweep of displacements $0,1,\dots,K{-}1,\dots,1,0,\dots$ with $K$
+detectors (first \Yes{} at each displacement). The displacement stays in
+$[0,K{-}1]$, so safety is automatic.
+\end{theorem}
+
+\begin{example}[Adjacent transpositions; \lean{adjPerm\us BobWins}]\label{ex:adj}
+Let $c$ swap $2i{-}1\leftrightarrow 2i$ for every $i$ (so $c(n)=n+1$ if
+$n$ is odd, $c(n)=n-1$ if $n$ is even). Here $g(n)=c(n)-n\in\{+1,-1\}$ is
+bounded, yet $c$ is not eventually identity; Bob wins by local decoding at
+$K{=}2$. This already shows the boundary is non-EI, not unbounded growth
+of~$g$.
+\end{example}
+
+\begin{example}[Forward block $3$-cycle; \lean{blkPerm\us BobWins}]\label{ex:blk}
+Let $c(m)=m+1$ unless $3\mid m$, in which case $c(m)=m-2$ (each block
+$\{3b{+}1,3b{+}2,3b{+}3\}$ rotates forward). Then $c(m)\le m+1$ always, so
+\emph{no} rightward probe ever separates the candidates by navigation
+alone. But cell~$3$ wakes early, at time~$2$ (since $c(3)=1$), which
+splits $k_0=1$ from $k_0=2$ at displacement~$1$: at $(D{=}1,t{=}3)$ the
+world $k_0=2$ stands on the already-awake cell~$3$ and reports \Yes, while
+$k_0=1$ stands on cell~$2$, still asleep, and reports \No. The $K{=}3$
+sweep, monitoring small displacements from time~$0$, catches this early
+wake-up, so $c$ is locally $3$-decodable and Bob wins.
+\end{example}
+
+\begin{remark}[The fixed-$K$ architecture cannot cover all non-EI~$c$]
+\label{rem:k5fail}
+The locally-$K$-decodable classes (any fixed amplitude~$K$, formalised in
+Lean for arbitrary $K$) are genuinely incomplete. The \emph{block-$5$
+cycle}---rotate each $\{5b{+}1,\dots,5b{+}5\}$ forward---is non-EI, yet for
+\emph{every} $K$ some pair of start cells produces an identical
+$K$-tuple of first-\Yes{} times: the colliding pair $(4,5)$ has
+$c(4..9)=(5,1,7,8,9,10)$ and $c(5..10)=(1,7,8,9,10,6)$, which a coarse
+amplitude-$K$ sweep cannot tell apart even though Theorem~\ref{thm:lemmaA}
+guarantees them distinguishable (here at $D{=}0$, $t{=}2$: $c(4)=5\ge 2$
+but $c(5)=1<2$). A single fixed-amplitude trajectory cannot finely monitor
+all displacements at once. This is precisely why the general winning
+direction needs the $c$-tailored staircase of Section~\ref{sec:dichotomy},
+whose lag varies with the pair.
+\end{remark}
+
+% ------------------------------------------------------------
+\subsection{Worked examples table}
+\label{sec:table}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}l l c X@{}}
+\toprule
+\textbf{Permutation $c$} & \textbf{EI?} & \textbf{Bob} & \textbf{Reason} \\
+\midrule
+Identity $c(n)=n$
+  & yes & \textbf{loses}
+  & $(2j,\,2j{+}1)$ collide: only even thresholds probeable
+    (Rem.~\ref{rem:flat}). \\
+Finitary (any finite-support perm.)
+  & yes & \textbf{loses}
+  & EI with $N=$ support bound; same collision for large $k_0$. \\
+Adjacent transpositions
+  & no & \textbf{wins}
+  & locally $2$-decodable (Ex.~\ref{ex:adj}); bounded $g$;
+    bounded-above staircase. \\
+Forward block $3$-cycle
+  & no & \textbf{wins}
+  & locally $3$-decodable (Ex.~\ref{ex:blk}); bounded above. \\
+Parity-shift $c(2k){=}2k{+}2,\,c(2k{+}1){=}2k{-}1$
+  & no & \textbf{wins}
+  & bounded above ($g\in\{\pm2\}$); fixed-lag staircase
+    (\S\ref{sec:bounded}). \\
+AP-split (Rem.~\ref{rem:apsplit})
+  & no & \textbf{wins}
+  & unbounded above; growing-lag staircase (\S\ref{sec:unbounded});
+    no fixed lag works. \\
+Any non-EI $c$
+  & no & \textbf{wins}
+  & dichotomy of \S\ref{sec:dichotomy} (Thm.~\ref{thm:main}). \\
+\bottomrule
+\end{tabularx}
+\caption{Outcomes by family. Eventually-identity $\iff$ Bob loses; the
+two non-EI regimes (bounded/unbounded above) are won by the
+corresponding staircase.}
+\end{table}
+
+The two italicised non-EI rows are the instructive boundary cases. The
+\emph{parity-shift} permutation has displacement $g(n)\in\{+2,-2\}$,
+constant on residues---a balanced, non-eventually-identity permutation
+that is bounded above; it is exactly the kind of example that defeats
+naive cut-counting arguments, yet the bounded-above staircase wins it
+with a single fixed lag. The \emph{AP-split} permutation
+(Remark~\ref{rem:apsplit}) is its unbounded-above counterpart: there
+\emph{no} fixed lag recurs, and only the growing-lag staircase succeeds.
 
 % ============================================================
-\section{Machine-verification status}
-\label{sec:status}
+\section{Machine-verified formalisation in Lean~4}
+\label{sec:lean}
 
-The argument is formalised in Lean~4 (with Mathlib) in the development
-\texttt{griddles-p4-lean}; \verb|lake build| succeeds ($3334$ jobs). We
-report the status precisely. A substantial core---the losing direction, the
-distinguishability theorem, the \emph{entire candidate-collapsing reduction},
-and the full $K$-decodable family---is machine-checked and \emph{axiom-clean},
-and the winning direction is fully formalised (the staircase's safety,
-separation, and Yes-emission lemmas are all proved) \textbf{modulo one
-combinatorial lemma} reached from Theorem~\ref{thm:bandrec}
-(\lean{band\us recurrence\us ge\us max}) by the joint-condition dichotomy
-of \S\ref{sec:residual}: the \emph{joint-infinite} case
-(\lean{band\us recurrence\us ge\us max\us of\us jointInfinite}), which
-covers all unbounded-displacement~$c$, is itself \emph{proven axiom-clean},
-and the lone residue is the \emph{joint-finite} anti-correlated case
-\lean{band\us recurrence\us ge\us max\us of\us jointFinite}. This is the
-\emph{only} \lean{sorry} in the entire development. We do \emph{not} claim
-the main theorem is fully proven or axiom-clean.
+To provide the highest degree of certainty, the entire argument is
+formalised and machine-checked in \textbf{Lean~4} (with Mathlib) in the
+development \lean{griddles-p4-lean}. The headline is unconditional:
 
-For each item, ``axiom-clean'' means the Lean \verb|#print axioms| audit
-lists only the three standard foundational axioms \verb|propext|,
-\verb|Classical.choice|, \verb|Quot.sound|, with \emph{no} \verb|sorryAx|.
-Results carrying \verb|sorryAx| do so \emph{solely} through the single
-joint-finite residue of Theorem~\ref{thm:bandrec}.
+\begin{quote}
+\itshape
+The main theorem \lean{main}, namely
+\lean{BobWins~c~$\leftrightarrow$~$\lnot$~EventuallyIdentity~c},
+is \textbf{fully \lean{sorry}-free}, and its axiom audit
+\[
+  \verb|#print axioms main| \;=\; [\verb|propext|,\ \verb|Classical.choice|,\ \verb|Quot.sound|]
+\]
+lists \emph{only} the three standard foundational axioms, with \emph{no}
+\verb|sorryAx|. The full library builds with \lean{lake build}
+(3335~jobs).
+\end{quote}
+
+``Axiom-clean'' means precisely this: the \verb|#print axioms| audit shows
+only \verb|propext|, \verb|Classical.choice|, and \verb|Quot.sound|. Every
+component theorem below is individually axiom-clean, and so is their
+combination in \lean{main}.
+
+\subsection{Module structure}
+
+The library is organised in dependency order:
+
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=2pt]
+  \item \textbf{\lean{Defs}} --- Game semantics: \lean{Perm},
+  \lean{Strategy}, \lean{Action}, the trajectory functions
+  (\lean{state}/\lean{position}/\lean{history}/\lean{displacement}), and
+  the predicates \lean{WinsFrom}, \lean{BobWins}, \lean{EventuallyIdentity}.
+  \item \textbf{\lean{Parity}} --- The parity lock
+  ($t-D_t$ even) and the position lower bound.
+  \item \textbf{\lean{Losing}} --- The entire losing direction:
+  \lean{parallel\us evolution}, \lean{signal\us match}, and the headline
+  \lean{EventuallyIdentity\us loses}.
+  \item \textbf{\lean{LemmaA}} --- The distinguishability theorem
+  (Theorem~\ref{thm:lemmaA}), including the $\Delta\ge2$ crux by
+  forward-closure (\lean{indist\us Delta\us ge\us 2\us impossible}) and
+  the $\Delta=1$ shift (\lean{shift\us one\us implies\us eventually\us
+  identity}); the corollary \lean{not\us eventually\us identity\us
+  implies\us distinguishable}.
+  \item \textbf{\lean{WinningRestricted} / \lean{WinningKProbe} /
+  \lean{WinningKProbeGen}} --- The locally $K$-decodable winning classes
+  (Theorem~\ref{thm:k}) for $K{=}2$, $K{=}3$, and arbitrary~$K$, with
+  worked examples \lean{adjPerm}, \lean{cyc3Perm}, \lean{blkPerm}.
+  \item \textbf{\lean{WinningAdaptive}} --- The reduction infrastructure:
+  \lean{separatorAtSlack} and \lean{separatorAtSlack\us iff\us window};
+  the bijectivity engines \lean{weak\us descents\us infinite} and
+  \lean{weak\us ascents\us infinite}; first-Yes finiteness
+  (\lean{yesSet\us finite}); the reduction \lean{ofMoves\us localizes} and
+  \lean{localizes\us BobWins}; the \lean{BandProvider} interface and the
+  band-top staircase \lean{BobWins\us of\us bandProvider}.
+  \item \textbf{\lean{BoundedAbove}} --- The cut lemma
+  (Lemma~\ref{lem:cut}): \lean{descent\us cofinite\us imp\us EI} and its
+  mirror \lean{ascent\us cofinite\us imp\us EI}.
+  \item \textbf{\lean{BandBoundedAbove}} --- The bounded-above band
+  recurrence \lean{band\us of\us boundedAbove}
+  (Theorem~\ref{thm:bandrec}), packaged as
+  \lean{bandProvider\us of\us boundedAbove} and the bounded-above winner
+  \lean{notEI\us boundedAbove\us BobWins}.
+  \item \textbf{\lean{Q2Even}} --- The unbounded-above separator lemma
+  \lean{q2even} (Theorem~\ref{thm:q2even}), via the leftward-chain and
+  residue-pigeonhole argument.
+  \item \textbf{\lean{GrowStair}} --- The growing-lag staircase
+  (\lean{gmoves}) and the unbounded-above winner
+  \lean{notEI\us unboundedAbove\us BobWins}.
+  \item \textbf{\lean{Answer}} --- The main theorem \lean{main}, and the
+  consistency capstone \lean{locallyDecodable\us main}.
+\end{enumerate}
+
+\subsection{The main theorem}
+
+The capstone, stated and proved in Lean~4, dispatches the winning
+direction on bounded-above:
+
+\begin{quote}
+\lean{theorem main (c : Perm) : BobWins c $\leftrightarrow$ $\lnot$ EventuallyIdentity c}
+\end{quote}
+
+The forward implication ($\to$) is the losing direction
+(\lean{EventuallyIdentity\us loses}). The reverse ($\leftarrow$) does a
+\lean{by\us cases} on whether $c$ is bounded above
+($\exists B,\ \forall n,\ (c\,n)\le n+B$): the bounded-above branch calls
+\lean{notEI\us boundedAbove\us BobWins} (the fixed-lag staircase fed by
+\lean{band\us of\us boundedAbove}), and the unbounded-above branch calls
+\lean{notEI\us unboundedAbove\us BobWins} (the growing-lag staircase fed
+by \lean{q2even}). Both branches route through the axiom-clean reduction
+\lean{localizes\us BobWins}, so the whole proof is \lean{sorry}-free.
+
+\subsection{Formalisation status}
 
 \begin{table}[h]
 \centering
@@ -1170,6 +1034,9 @@ joint-finite residue of Theorem~\ref{thm:bandrec}.
 \toprule
 \textbf{Component} & \textbf{Status} & \textbf{Lean name} \\
 \midrule
+Main \emph{iff} (Thm.~\ref{thm:main})
+  & axiom-clean
+  & \lean{main} \\
 Losing direction (Thm.~\ref{thm:losing})
   & axiom-clean
   & \lean{EventuallyIdentity\us loses} \\
@@ -1177,127 +1044,65 @@ Distinguishability (Thm.~\ref{thm:lemmaA})
   & axiom-clean
   & \lean{Indistinguishable\us implies\us eventually\us identity};
     \lean{not\us eventually\us identity\us implies\us distinguishable} \\
-Separators at unbounded displacement
+Cut lemma (Lem.~\ref{lem:cut})
   & axiom-clean
-  & \lean{separators\us unbounded} \\
-Infinitely many weak descents / ascents
-  & axiom-clean
-  & \lean{weak\us descents\us infinite},
-    \lean{weak\us ascents\us infinite} \\
-Joint set ⇒ fixed-slack separator
-  & axiom-clean
-  & \lean{memJ\us imp\us separator} \\
-Joint-infinite case (covers unbounded)
-  & axiom-clean
-  & \lean{band\us recurrence\us ge\us max\us of\us jointInfinite} \\
+  & \lean{descent\us cofinite\us imp\us EI} \\
 First-Yes finiteness (Lem.~\ref{lem:yesfin})
   & axiom-clean
   & \lean{yesSet\us finite} \\
 Reduction (Thm.~\ref{thm:reduction})
   & axiom-clean
   & \lean{localizes\us BobWins}, \lean{ofMoves\us localizes} \\
-Staircase safety / separation / Yes
-  & via Thm.~\ref{thm:bandrec}
-  & \lean{Staircase\dt stair\us safe},
-    \lean{Staircase\dt stair\us separates},
-    \lean{Staircase\dt stair\us yes} \\
-Separating fixed trajectory exists
-  & via Thm.~\ref{thm:bandrec}
-  & \lean{separating\us trajectory\us exists} \\
-$K\in\Np$ locally-decodable winning classes
+Bounded-above band (Thm.~\ref{thm:bandrec})
   & axiom-clean
-  & \lean{LocallyDecodable\us BobWins} (K=2),
-    \lean{LocallyK3Decodable\us BobWins} (K=3),
+  & \lean{band\us of\us boundedAbove} \\
+Bounded-above winner
+  & axiom-clean
+  & \lean{notEI\us boundedAbove\us BobWins} \\
+Unbounded-above separators (Thm.~\ref{thm:q2even})
+  & axiom-clean
+  & \lean{q2even} \\
+Unbounded-above winner
+  & axiom-clean
+  & \lean{notEI\us unboundedAbove\us BobWins} \\
+$K$-decodable winning classes (Thm.~\ref{thm:k})
+  & axiom-clean
+  & \lean{LocallyDecodable\us BobWins} ($K{=}2$),
+    \lean{LocallyK3Decodable\us BobWins} ($K{=}3$),
     \lean{LocallyKDecodable\us BobWins} (any~$K$) \\
-Capstone (decodable consistency)
+Decodable consistency capstone
   & axiom-clean
   & \lean{locallyDecodable\us main} \\
-\midrule
-\textbf{Residue: joint-finite (anti-correlated)}
-  & \textbf{the lone \lean{sorry}}
-  & \lean{band\us recurrence\us ge\us max\us of\us jointFinite} \\
-Band recurrence (Thm.~\ref{thm:bandrec})
-  & via the residue
-  & \lean{band\us recurrence\us ge\us max} (dispatches on joint set $J$) \\
-Winning direction (\S\ref{sec:winstrat})
-  & via Thm.~\ref{thm:bandrec}
-  & \lean{notEI\us BobWins} \\
-Main \emph{iff} (Thm.~\ref{thm:main})
-  & via Thm.~\ref{thm:bandrec}
-  & \lean{main} \\
 \bottomrule
 \end{tabularx}
-\caption{Formalisation status. ``axiom-clean'' = no \lean{sorryAx} (only
-the three standard axioms). ``via Thm.~\ref{thm:bandrec}'' / ``via the
-residue'' = the result's only \lean{sorryAx} flows through the single
-joint-finite residual lemma. The losing direction, the distinguishability
-theorem, the candidate-collapsing reduction, the proven-axiom-clean
-separator inputs, the axiom-clean joint-infinite case (covering all
-unbounded-displacement~$c$), and the entire $K\in\Np$ decodable family are
-machine-checked with no \lean{sorry}.}
+\caption{Formalisation status. Every component---including the main
+\emph{iff}---is machine-checked with no \lean{sorry}; ``axiom-clean'' = the
+\lean{\#print axioms} audit lists only \lean{propext},
+\lean{Classical\dt choice}, \lean{Quot\dt sound}.}
 \end{table}
 
-\paragraph{What is machine-checked, no \lean{sorry}.}
-The losing direction; the distinguishability theorem
-(Theorem~\ref{thm:lemmaA}) including its $\Delta\ge2$ crux by the
-elementary forward-closure argument; the separator inputs
-(\lean{separators\us unbounded}, \lean{weak\us descents\us infinite},
-\lean{weak\us ascents\us infinite}); the \emph{joint-infinite} case of the
-band recurrence (\lean{band\us recurrence\us ge\us max\us of\us
-jointInfinite}, via the window arithmetic \lean{memJ\us imp\us separator}),
-which covers \emph{all} unbounded-displacement~$c$; the candidate-collapsing
-reduction (Theorem~\ref{thm:reduction}, including first-Yes finiteness); and
-the complete $K\in\Np$ locally-decodable winning family with its concrete
-instances ($\texttt{adjPerm}$, $\texttt{cyc3Perm}$, $\texttt{blkPerm}$).
-All of these pass the \verb|#print axioms| audit with no \verb|sorryAx|.
-(The earlier bounded-displacement scaffolding---Step~A
-\lean{separatorAtSlack\us slack\us le\us of\us bddDisp} and the finite
-pigeonhole \lean{fixedSlack\us ge\us of\us window\us recurrence}---remains
-in the development, axiom-clean, but is superseded by the joint dichotomy
-and no longer feeds \lean{main}.)
+\subsection{The journey, and what made it work}
 
-\paragraph{What the one \lean{sorry} is.}
-The development contains \textbf{exactly one} \verb|sorry| in total: the
-joint-finite residue of Theorem~\ref{thm:bandrec} reached by the
-joint-condition dichotomy,
-\lean{band\us recurrence\us ge\us max\us of\us jointFinite} (the
-anti-correlated regime in which weak-descents of the lower cell and
-parity-corrected ascents of the upper cell never co-occur cofinitely). Its
-companion \emph{joint-infinite} case
-(\lean{band\us recurrence\us ge\us max\us of\us jointInfinite}), covering
-the entire unbounded-displacement regime, is proven axiom-clean. Every
-result that carries \verb|sorryAx|---\lean{band\us recurrence\us ge\us max},
-\lean{separating\us trajectory\us exists}, the three staircase lemmas
-\lean{Staircase\dt stair\us safe}/\lean{stair\us separates}/\lean{stair\us yes},
-\lean{notEI\us BobWins}, and \lean{main}---inherits it from this single lemma
-alone, and from nothing else. There are no orphan \verb|sorry|s: an earlier
-all-slacks route (through the now-deleted lemma
-\lean{noSeparator\us allSlack\us imp\us eventuallyIdentity}) and the prior
-two-residue displacement dichotomy (its bounded case
-\lean{band\us recurrence\us finite\us window\us of\us bddDisp} and unbounded
-case \lean{band\us recurrence\us ge\us max\us of\us unbddDisp}, both now
-deleted) were retired as dead code; their defeated approaches are archived
-in the project notes. The band-top staircase now consumes
-\lean{band\us recurrence\us ge\us max} directly, leaving the project with
-this one \verb|sorry| and no others, as the \verb|#print axioms main| audit
-(\verb|[propext, sorryAx, Classical.choice, Quot.sound]|) confirms.
-
-\paragraph{Summary---honest boundary.}
-The \emph{answer} (Theorem~\ref{thm:main}) is settled, and the
-\emph{architecture} of both directions is fully formalised: the losing
-direction and distinguishability theorem are machine-checked and
-axiom-clean, and the winning direction is reduced---through an
-axiom-clean reduction and a fully formalised staircase construction
-whose safety, separation, and Yes-emission lemmas are all proved---to one
-explicit, precisely stated, computationally-verified ($\sim\!10^4$--$10^7$
-cases, zero counterexamples) combinatorial lemma: the anti-correlated
-joint-finite recurrence, whose companion joint-infinite case---covering all
-unbounded-displacement permutations---is proven axiom-clean. The main
-theorem is therefore \textbf{machine-verified modulo one true,
-computationally-verified combinatorial lemma (the anti-correlated
-joint-finite recurrence); the joint-infinite case---covering all
-unbounded-displacement permutations---is proven axiom-clean}; it is not yet
-a complete, \lean{sorry}-free proof.
+The proof was not found in this clean shape. Three milestones reshaped it.
+First, the distinguishability crux (Theorem~\ref{thm:lemmaA},
+$\Delta\ge2$) was long believed to need global surjectivity bookkeeping or
+a delicate even/odd case split; it fell to the elementary forward-closure
+argument (Lemma~\ref{lem:badprop}), which turns the active set on each
+residue into a finite prefix. Second, the winning direction was initially
+reduced to a single combinatorial ``band recurrence'' lemma believed true
+and computationally well-supported. That belief was \emph{wrong}: the
+AP-split permutation (Remark~\ref{rem:apsplit}) is an explicit
+counterexample, and recognising this was the turning point. Third, the
+band recurrence's failure is \emph{structural}, not accidental---it fails
+exactly when $c$ is unbounded above---which yielded the clean dichotomy of
+Section~\ref{sec:dichotomy}. The bounded-above regime keeps the original
+fixed-lag staircase (now resting on the cut lemma rather than the false
+recurrence); the unbounded-above regime gets a growing-lag staircase fed
+by \lean{q2even}, proved via a leftward-chain and residue-pigeonhole
+argument. Crucially, no adaptive belief-state strategy was ever
+needed---a fixed, $c$-tailored, signal-independent trajectory suffices in
+both regimes, which is precisely what the candidate-collapsing reduction
+(Theorem~\ref{thm:reduction}) consumes.
 
 % ============================================================
 \section*{Acknowledgements}
@@ -1305,13 +1110,29 @@ a complete, \lean{sorry}-free proof.
 % ============================================================
 
 The solution to this puzzle --- including the characterisation of Bob's
-winning condition, the distinguishability theorem, the fixed-$K$
-impossibility argument, and the band-top lag-monotone staircase
-construction --- was developed in collaboration with
+winning condition, the distinguishability theorem, the discovery that the
+band recurrence is false, and the bounded/unbounded staircase dichotomy
+--- was developed in collaboration with
 \href{https://claude.ai}{Claude} (Anthropic).  The simulation and
-belief-state game-solver code, the Lean~4 formalisation, and this writeup
-were subsequently produced in collaboration with
+game-solver code, the Lean~4 formalisation, and this writeup were
+produced in collaboration with
 \href{https://claude.ai/code}{Claude Code} (Anthropic).
+
+% ============================================================
+\section*{References}
+% ============================================================
+
+{\small
+
+[1] The Mathlib Community (2020).
+\textit{Lean 4 Mathematical Library (\textsc{Mathlib4})}.
+\url{https://leanprover-community.github.io}.
+
+[2] de Moura, L.\ \& Ullrich, S.\ (2021).
+The Lean~4 Theorem Prover and Programming Language.
+\textit{CADE~28}, LNCS \textbf{12699}, 625--635.
+
+}
 
 % ============================================================
 
