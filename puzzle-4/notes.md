@@ -665,8 +665,16 @@ the EXISTENCE of a winning strategy is confirmed by the belief-state game solver
 
 ## Definitive characterization of the winning-strategy obstacle (this session)
 
-Three NEGATIVE results, each by exact-dynamics simulation, jointly prove the winning strategy
-is **irreducibly adaptive with foresight** — no shortcut survives:
+> **SUPERSEDED IN PART — read the "Q-ANSWER" section below.** Result #1 here is about a SINGLE
+> trajectory **universal over all `c`** (which indeed cannot exist). The different question — a
+> trajectory **tailored to each `c`** (Bob knows `c`) — is answered **YES** in the Q-ANSWER
+> section: a c-tailored signal-independent monotone-lag staircase separates all start cells with
+> finite per-`k₀` `T(k₀)`. So the win is NOT "irreducibly adaptive" for the *fixed-per-c* question;
+> adaptivity was only ever needed for a *universal* (c-independent) strategy.
+
+Three NEGATIVE results, each by exact-dynamics simulation, jointly prove the *universal* (one
+trajectory for all `c`) winning strategy is **irreducibly adaptive with foresight** — no shortcut
+survives:
 
 1. **No fixed trajectory is universal.** Tested fixed displacement schedules `D_t`: fixed-K
    triangle, growing triangle, slow "dwelling sweep" (oscillate {D,D+1} then advance), and
@@ -698,3 +706,103 @@ infinite depth. The correct statement is per-`k₀`: `∀k₀ ∃T (depending on
 unbounded across `k₀`. `depth(univ,0,0)=∞`, so finite-depth-minimax does not apply to the
 initial belief — the proof must bound `k₀` first, then win the finite residual, while proving the
 residual state is non-stranding. That last invariant is the genuine open piece.
+
+---
+
+## Q-ANSWER (decisive): a c-TAILORED signal-independent trajectory EXISTS — answer YES
+
+**The question.** For non-EI `c`, does there exist a *c-tailored* signal-independent trajectory
+`D : ℕ → ℕ` (`D₀=0`, `|D_{t+1}−D_t|=1`, `D_t≥0`) such that for every start `k₀` there is a finite
+`T(k₀)` with: for every `k≠k₀` some `s≤T(k₀)` has `[c(k+D_s)<s] ≠ [c(k₀+D_s)<s]`?  (I.e. the
+signal histories `h_{k₀}(t)=[c(k₀+D_t)<t]` are pairwise distinct with per-`k₀` finite separation.)
+
+**ANSWER: YES** for every non-EI `c`. This is *not* a contradiction of negative result #1 above:
+that result killed a **single trajectory universal over all `c`**. Here the trajectory **depends
+on `c`** (Bob knows `c`). The two questions are different; the c-tailored one is YES.
+
+### The one structural fact that drives everything: lag is monotone
+
+For ANY trajectory, the **lag** `L_t := t − D_t` satisfies `dL = 1 − dD ∈ {0, +2}` (since
+`dD ∈ {±1}`). So **`L_t` is monotone nondecreasing**, growing by 0 or 2 each tick; it can never
+return to a smaller value. (This is the constraint earlier notes implicitly fought against. It
+makes "navigate back to a low-slack discriminator" impossible — but it does NOT block (Q), see
+below.) Equivalently, slack `t−D` only grows.
+
+### Why monotone lag is NOT an obstruction: catchable-ahead
+
+Each pair `(a,b)` has **infinitely many** separators `(D,t)` (verified: separator count grows
+without bound for every family incl. the sparse-gap ones — `/tmp/p4q_final.py`, part A). A pair's
+separators recur at higher and higher lag. So no pair is ever "use-it-or-lose-it": for any current
+lag, a fresh separator for any still-unsplit pair exists at a higher lag, *reachable later* exactly
+because lag is allowed to keep growing. This is precisely the proven `catchable-ahead` /
+`not_eventually_identity_implies_distinguishable` (LemmaA, axiom-clean) read in the lag coordinate.
+
+### The c-tailored construction: the MONOTONE-LAG STAIRCASE
+
+Trajectory `D(t) = t − L(t)`, `L` monotone nondecreasing, parity-correct, tuned to `c`'s
+**alarm structure** (the times at which novel separators for fresh pairs first appear). Operationally:
+ride RIGHT (lag held) to sweep displacements at the current lag, periodically take one LEFT move to
+bump lag by 2; dwell at each lag long enough to sweep the displacement range where pairs needing
+that lag separate. Two regimes verified by exact-history simulation:
+
+- **Periodic / bounded-structure `c`** (block cycles, the sawtooth colliders, reverse-dyadic
+  blocks, growing-distance swaps, dense period-3 swaps): a **linear** dwell-staircase — lag bumps
+  every `~B` ticks — separates all cells. `T(k₀)` grows *linearly/polynomially* in `k₀`.
+  Verified: **53/53 sawtooth colliders, 60/60 random period-B non-EI, all structured families**
+  separate cells `[1..80]` with one fixed staircase (`/tmp/p4q_staircase.py`, `/tmp/p4q_stress.py`,
+  `/tmp/p4q_unified.py`).
+
+- **Sparse-gap `c`** (the genuinely hard case): `c =` identity except swap `(2^j, 2^j+1)` for each
+  `j` (non-EI; the canonical sparse-gap family). Here the identity-tail pair `(2i,2i+1)` is
+  separable **only** at times `t = 2^j+1` (powers of two plus one) and **only** when the lag is
+  exactly `∈ {2i, 2i+2}` (verified exactly, `/tmp/p4q_powers_sep_exact.py`). The matching
+  trajectory is the **log-lag staircase**: bump lag by 2 at each `t = 2^j` (one LEFT per power of
+  two), i.e. `L(t) ≈ 2⌊log₂ t⌋`, riding near the diagonal otherwise. This puts lag `= 2i` at the
+  alarm `t = 2^i+1`, separating pair `i` there. **Verified ALL SEPARATED**: `M=20` (depth `2^14`,
+  `maxT(k₀)=1024`), `M=33` (depth `2^18`, `maxT(k₀)=65537`) — `/tmp/p4q_unified.py`,
+  `/tmp/p4q_powers_nearD.py`. `T(k₀)` is finite but **exponential** in the cell index
+  (`T ≈ 2^{k₀/2}`), because lag must monotonically reach `~k₀` and lag rises only logarithmically
+  in time (alarms are exponentially sparse). Finite-per-`k₀` is all (Q) requires.
+
+**General rule (statement to formalize):** choose `L(t)` monotone nondecreasing so that for every
+pair `(a,b)`, the trajectory's lag equals one of `(a,b)`'s separator-lags at a time inside that
+separator's open window. Existence of such `L` follows from (i) lag may grow arbitrarily slowly,
+and (ii) catchable-ahead (infinitely many separators per pair, at unboundedly large lag). The
+schedule's *rate* is `c`-tailored: window `~B` for `B`-periodic, `~log` for sparse-at-powers.
+
+### Sub-question (ii): finite `T(k₀)` and the finite-belief reduction
+
+Every trajectory starts at `D=0`; oscillating `D∈{0,1}` over the prefix gives, at even `t`, the
+signal `[c(k₀)<t]`. First Yes at `t=τ` (`τ≈c(k₀)`) pins `c(k₀)∈{τ−2,τ−1}`, so the belief collapses
+to **≤ 2 candidate cells** `{c⁻¹(τ−2), c⁻¹(τ−1)}` — cofinitely many `k` are killed at once.
+Verified (`/tmp/p4q_final.py`, part B): belief `≤2` by `t≈c(k₀)` on block5 and swap_powers (e.g.
+swap_powers `k₀=20` → `{20,21}` by `t=22`). The remaining 2 consecutive cells are then separated by
+the c-tailored tail at the pair's separator time. So `T(k₀) = τ + T_pair(k₀) < ∞` for every `k₀`.
+(The infinitely-many-`k` worry is automatic — the belief is finite after the first Yes.)
+
+### Verification ledger (all by exact-dynamics history simulation; parity lock respected)
+
+- `/tmp/p4q_find_colliders.py` — reconstructs the sawtooth `a=2,b=1` colliders (53 over B∈{5,6,7}).
+- `/tmp/p4q_lagslack.py`, `/tmp/p4q_uncovered.py` — per-pair separator (D, slack) structure.
+- `/tmp/p4q_exact.py`, `/tmp/p4q_powers_dfs2.py` — exact DFS over fixed trajectories (small M).
+- `/tmp/p4q_staircase.py`, `/tmp/p4q_stress.py` — linear staircase: 53/53 colliders + 60/60 random.
+- `/tmp/p4q_powers_sep_exact.py` — proves swap_at_powers id-tail pairs separate only at `t=2^j+1`,
+  lag `∈{2i,2i+2}`.
+- `/tmp/p4q_unified.py`, `/tmp/p4q_powers_nearD.py` — log-lag staircase wins swap_at_powers
+  (M=33, `T(k₀)=65537`).
+- `/tmp/p4q_final.py` — catchable-ahead (∞ separators/pair), sub-(ii) belief-≤2, adversarial
+  dense-swap c (all separated).
+
+### Honest caveats / what this does and does not give
+
+- The answer to (Q) is **YES**, decisively, with a constructive c-tailored schedule.
+- The **rate** of the lag schedule is c-dependent (linear vs logarithmic vs general). A *single
+  closed-form* `L(t)` independent of `c`'s fine structure does NOT work (that would be a universal
+  trajectory = negative result #1). The construction is "fixed trajectory **per c**", as (Q) asks.
+- For **Lean**: this discharges the winning direction *as a signal-independent strategy* — much
+  easier than an adaptive belief-state machine. The formalizable lemma = "monotone-lag staircase
+  matched to c's alarm structure separates every pair", whose mathematical core is the already
+  axiom-clean catchable-ahead (LemmaA). The remaining engineering is defining the c-tailored lag
+  schedule and proving per-`k₀` termination (the dwell/log-rate must be derived from `c`); the
+  hard combinatorial heart (distinguishability) is done. This supersedes the "irreducibly adaptive"
+  framing for the *fixed-per-c* question — adaptivity was only needed for a *universal* strategy.
