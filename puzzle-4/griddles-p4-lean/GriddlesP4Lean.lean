@@ -18,6 +18,7 @@
 -- early-wake discriminators). The winning direction is back to the abstract-LemmaA route.
 import GriddlesP4Lean.Defs
 import GriddlesP4Lean.Parity
+import GriddlesP4Lean.BoundedAbove
 import GriddlesP4Lean.Losing
 import GriddlesP4Lean.LemmaA
 import GriddlesP4Lean.WinningRestricted
