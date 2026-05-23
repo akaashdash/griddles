@@ -1747,3 +1747,24 @@ empirically (AP-split, doubling/growing-rev, 40 random unbounded-above; 0 counte
 adversary (consecutive-odd-top) is NOT killable by parity alone (decreasing blocks preserve odd-top);
 it IS killed locally by a second gap. STATUS: replaced the FALSE band lemma with a TRUE (empirically)
 Q2-even that is partially proven (δ≥2 open). Case 1 (bounded-above⟹band) being formalized separately.
+
+## Loop iteration (2026-05-23 #12): Q2-even CLOSED for EVEN δ (parity collision); odd δ true-but-open
+
+EVEN-δ closure (airtight, unconditional — no global counting): assume bad adversary (⋆) for a δ-even
+pair. At a tall a-ray spike n: (⋆)@D₀ pins c(n+δ)=c(n)±ε (width-1); then va(D₁)=c(n+δ)−D₁ depends on
+c(n+δ) ALONE (no circularity) and is ≥L, so (⋆)@D₁ is triggered; injectivity ⟹ c(n+2δ)=c(n)+2ε. The
+two tops max(D₀),max(D₁) differ by δ−1 (ε=+1) or δ+1 (ε=−1) — ODD iff δ even ⟹ opposite parity ⟹
+can't both be odd, contradicting (⋆). So Q2-even holds for ALL EVEN-δ pairs. (δ odd: δ±1 even ⟹ same
+parity ⟹ no contradiction; this method fails for odd δ.)
+ADVERSARY TEST (odd δ): reverse growing ODD-length blocks ⟹ interiors width-1 with odd tops (no even
+sep in interiors). But Q2-even STILL HOLDS for (1,2),(2,3),(1,4),(3,4): the block BOUNDARIES give
+even-lag separators at GROWING lag (verified: even sep-lag grows to ~disp). So the adversary is
+defeated by boundaries; Q2-even is ROBUST for odd δ too — just unproven.
+DOWNSTREAM NEED: ofMoves_localizes' hsep is ∀a≠b (ALL gaps δ), so localization needs Q2-even for ALL
+δ (even AND odd). Even-δ-only is insufficient (adjacent/odd-distance pairs unseparated). So odd-δ
+Q2-even is genuinely required.
+STATUS: Q2-even TRUE for all δ (empirically, incl targeted adversaries); PROVEN for even δ; the
+remaining MATH BOTTLENECK is odd-δ Q2-even (needs the global boundary/displacement-variation argument:
+unbounded-above ⟹ width-1-odd-top-everywhere is impossible because displacement variation forces
+width≥2 or even-top at growing lag — the agent's descending-block/surjectivity-tiling count, not
+finished). Case-1 (bounded-above⟹band) Lean formalization running separately.
