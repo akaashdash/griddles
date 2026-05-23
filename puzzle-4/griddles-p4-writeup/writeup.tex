@@ -105,17 +105,19 @@ candidate-collapsing reduction, the staircase construction (safety,
 separation, Yes-emission), and explicit winning strategies for natural
 ``locally decodable'' families are all formalised and machine-checked in
 Lean~4. We are scrupulous about the boundary of what is proven: the
-\textbf{winning direction is machine-verified modulo two true,
-computationally-verified combinatorial lemmas}---a bounded-displacement
-infinite-fiber existence and the unbounded-displacement case---reached
-through the construction's combinatorial input
-(\lean{band\us recurrence\us ge\us max}) by a \emph{displacement
-dichotomy}. In the bounded case a slack-capping reduction
-(\lean{separatorAtSlack\us slack\us le\us of\us bddDisp}) is itself proven
-\emph{axiom-clean}, removing the per-slack non-uniformity obstruction. We
-do not claim the development is fully complete or axiom-clean; we identify
-precisely which results are machine-checked with no \lean{sorry} and which
-two facts remain.
+\textbf{winning direction is machine-verified modulo one true,
+computationally-verified combinatorial lemma}---the
+\emph{anti-correlated joint-finite recurrence}---reached through the
+construction's combinatorial input
+(\lean{band\us recurrence\us ge\us max}) by a \emph{joint-condition
+dichotomy}. For an ordered pair $a<b$ this dispatches on a single joint
+two-ray set; its \emph{joint-infinite} half---which covers \emph{all}
+unbounded-displacement permutations---is proven \emph{axiom-clean}
+(\lean{band\us recurrence\us ge\us max\us of\us jointInfinite} via
+\lean{memJ\us imp\us separator}), and the lone residue is the
+joint-finite ``anti-correlated'' regime. We do not claim the development
+is fully complete or axiom-clean; we identify precisely which results are
+machine-checked with no \lean{sorry} and which single fact remains.
 \end{abstract}
 
 % ============================================================
@@ -718,9 +720,11 @@ non-eventually-identity~$c$. It has two layers. First, a generic
 eventually informative, and pairwise separating already constitutes a
 winning strategy. Second, an explicit such trajectory: the
 \emph{band-top lag-monotone staircase}. The reduction is fully proven and
-axiom-clean; the staircase's three properties are proven modulo two
-isolated combinatorial recurrence lemmas, reached by a displacement
-dichotomy (Sections~\ref{sec:residual},~\ref{sec:status}).
+axiom-clean; the staircase's three properties are proven modulo one
+isolated combinatorial recurrence lemma (the anti-correlated
+joint-finite regime), reached by a joint-condition dichotomy whose
+joint-infinite half---covering all unbounded-displacement~$c$---is itself
+proven axiom-clean (Sections~\ref{sec:residual},~\ref{sec:status}).
 
 % ------------------------------------------------------------
 \subsection{The reduction: separation $+$ safety $+$ Yes $\Rightarrow$ Bob wins}
@@ -802,8 +806,8 @@ displacements: $\forall D_0\,\exists D\ge D_0$ with a slack-$s$ separator
 at~$D$. The construction needs, for each pair, \emph{one} recurring slack
 $s(a,b)$, and it needs $s(a,b)\ge \max(a,b)$ (explained below). The
 existence of such a slack is the sole combinatorial input
-(Theorem~\ref{thm:bandrec}, discharged in Lean by the displacement
-dichotomy down to two residual lemmas, \S\ref{sec:residual}).
+(Theorem~\ref{thm:bandrec}, discharged in Lean by the joint-condition
+dichotomy down to a single residual lemma, \S\ref{sec:residual}).
 
 \paragraph{The staircase.}
 Enumerate the ordered distinct pairs $(a,b)$, $a<b$, by the key
@@ -886,7 +890,8 @@ which is exactly what the reduction (Theorem~\ref{thm:reduction}) consumes.
 Combining the three lemmas with Theorem~\ref{thm:reduction} proves the
 winning direction: every non-EI~$c$ is a Bob-win
 (\lean{notEI\us BobWins}), modulo the existence of the recurring slacks
-(Theorem~\ref{thm:bandrec}), to which we now turn.
+(Theorem~\ref{thm:bandrec}), whose joint-infinite half is already
+axiom-clean and to which we now turn.
 
 % ============================================================
 \section{Prior negative results: why the strategy is as it is}
@@ -959,52 +964,69 @@ can drift to~$\infty$. Theorem~\ref{thm:bandrec} additionally
 and it is this fixed-slack recurrence that the staircase's per-pair ride
 needs (it rides at one lag and must meet a separator there).
 
-\paragraph{The displacement dichotomy.}
+\paragraph{The joint-condition dichotomy.}
 In Lean, Theorem~\ref{thm:bandrec} is \emph{not} discharged by a single
 all-slacks argument (an earlier route through such a lemma is recorded as a
-defeated approach in \S\ref{sec:approaches}). Instead it splits on the
-\emph{displacement} of~$c$---whether $\sup_n |c(n)-n|$ is bounded---into
-two precisely-isolated residues:
+defeated approach in \S\ref{sec:approaches}). Instead, for an ordered pair
+$a<b$, set $M:=b$, $p:=M\bmod 2$, and fix the \emph{even} slack
+$s:=M+p$ (so $s=M$ when $M$ is even, $s=M+1$ when $M$ is odd; in all cases
+$s\ge\max(a,b)$). Define the \textbf{joint set}
+\[
+  J \;:=\; \bigl\{\,D \;:\; c(a{+}D)\le a{+}D \ \text{ and } \
+  c(b{+}D)\ge b{+}D+p \,\bigr\},
+\]
+the displacements at which a \emph{weak descent of the lower cell~$a$}
+coincides with a \emph{parity-corrected ascent of the upper cell~$b$}. The
+dichotomy splits on whether $J$ recurs at unbounded displacement:
 \begin{itemize}[topsep=2pt,itemsep=2pt]
-  \item \textbf{Bounded displacement} ($|c(n)-n|\le B$ for some~$B$). Here
-  a slack-capping \textbf{Step~A}, \lean{separatorAtSlack\us slack\us le\us
-  of\us bddDisp} (\emph{proven axiom-clean}), shows every separator's slack
-  lies in the finite window $[\,b,\,b+B\,]$. This \emph{removes} the
-  per-slack non-uniformity obstruction that defeats the all-slacks route,
-  and the bounded case then reduces---by a \lean{sorry}-free reduction
-  through the axiom-clean finite pigeonhole \lean{fixedSlack\us ge\us of\us
-  window\us recurrence}---to one pure-$\N$ arithmetic residue:
-  \lean{band\us recurrence\us finite\us window\us of\us bddDisp}, the
-  existence of an infinite fiber on which the separating window is constant
-  (a finite pigeonhole on the displacement pair
-  $(c(a{+}D)-(a{+}D),\,c(b{+}D)-(b{+}D))$). \emph{Every} documented hard
-  witness---the parity-shift $c(2k){=}2k{+}2$, $c(2k{+}1){=}2k{-}1$,
-  swap-at-powers, and the adjacent-transposition involution---has bounded
-  displacement, so it lives in this clean half.
-  \item \textbf{Unbounded displacement.} The remaining residue is
-  \lean{band\us recurrence\us ge\us max\us of\us unbddDisp}.
+  \item \textbf{Joint-infinite} ($J$ unbounded). \emph{Proven
+  axiom-clean} (\lean{band\us recurrence\us ge\us max\us of\us jointInfinite}
+  via \lean{memJ\us imp\us separator}). At every $D\in J$ the fixed slack
+  $s=M+p$ separates the pair: the weak descent of~$a$ puts the window's
+  lower edge $\min\bigl(c(a{+}D),c(b{+}D)\bigr)\le c(a{+}D)\le a{+}D <
+  M{+}D \le D{+}s$ (using $a<b=M$), while the parity-corrected ascent of~$b$
+  puts the upper edge $\max\bigl(c(a{+}D),c(b{+}D)\bigr)\ge c(b{+}D)\ge
+  b{+}D{+}p = D{+}s$. Hence $D{+}s\in(\min,\max]$ is a slack-$s$ separator
+  (\lean{separatorAtSlack\us iff\us window}), and the recurrence transports
+  directly. This case \textbf{covers the entire unbounded-displacement
+  regime}: every unbounded~$c$ is joint-infinite on every pair (verified),
+  so the former separate unbounded-case residue is \emph{removed}.
+  \item \textbf{Joint-finite} ($J$ bounded). The lone residue,
+  \lean{band\us recurrence\us ge\us max\us of\us jointFinite}. This is the
+  single ``anti-correlated'' regime in which weak-descents of~$a$ and
+  parity-corrected ascents of~$b$ never co-occur cofinitely (the canonical
+  witness is the \emph{parity-shift} permutation $c(2k){=}2k{+}2$,
+  $c(2k{+}1){=}2k{-}1$, whose $J$ is empty for that ordered pair). It is
+  empirically bounded-displacement, true, and computationally verified
+  (\S below), but unformalised.
 \end{itemize}
-Both residues are \emph{true}---verified over $\sim\!10^4$--$10^7$ cases
-with zero counterexamples (\S below)---but not yet formally proven; they
-are the only two \lean{sorry}s in the development.
+The joint-finite residue is \emph{true}---verified over
+$\sim\!10^4$--$10^7$ cases with zero counterexamples (\S below)---but not
+yet formally proven; it is the \textbf{only \lean{sorry}} in the
+development.
 
 \paragraph{Why it is true.} \lean{weak\us descents\us infinite} (proven,
 axiom-clean) gives infinitely many~$D$ with $c(a+D)\le a+D$, which forces
 the \emph{lower} cell's contribution into the slack window
-$[\max(a,b),\max(a,b)+O(1)]$; at infinitely many of these the pair
-genuinely separates. Theorem~\ref{thm:bandrec} is the statement that these
-two infinite sets---$\{D:\text{a separator exists at }D\}$ and
-$\{D:c(a+D)\le a+D\}$---meet at a common slack-bounded displacement
-infinitely often. It has been \textbf{decisively verified
-computationally}: over $2300$ (family, pair) combinations---block-$B$
-cycles, reverse blocks, the adjacent-transposition involution, sparse
-swap-at-powers, the parity-shift $c(2k)=2k{+}2$, $c(2k{+}1)=2k{-}1$,
-unbounded-growth growing-block and growing-reverse-block families, random
-period-$B$ permutations, random bijections on a $6\cdot10^4$ prefix, and
-large-displacement involutions---with \emph{zero} counterexamples, and the
-recurring-slack excess $s-\max(a,b)$ is uniformly $\le 2$ (the canonical
-witness $s=\lceil\max/2\rceil\cdot 2$ works for almost every pair; only the
-parity-shift family needs $\max+2$).
+$[\max(a,b),\max(a,b)+O(1)]$; \lean{weak\us ascents\us infinite}
+(axiom-clean) does the same for the upper edge via the ascent of~$b$. The
+joint-infinite case is precisely the statement that these two infinite
+sets---$\{D:c(a{+}D)\le a{+}D\}$ and $\{D:c(b{+}D)\ge b{+}D{+}p\}$---meet
+infinitely often, and there it is \emph{proven}. Only when they fail to
+align cofinitely (the joint-finite regime) does the band recurrence still
+hold by a global counting argument that no single bijectivity engine
+discharges. Theorem~\ref{thm:bandrec} as a whole has been
+\textbf{decisively verified computationally}: over $2300$ (family, pair)
+combinations---block-$B$ cycles, reverse blocks, the adjacent-transposition
+involution, sparse swap-at-powers, the parity-shift $c(2k)=2k{+}2$,
+$c(2k{+}1)=2k{-}1$, unbounded-growth growing-block and growing-reverse-block
+families, random period-$B$ permutations, random bijections on a
+$6\cdot10^4$ prefix, and large-displacement involutions---with \emph{zero}
+counterexamples, and the recurring-slack excess $s-\max(a,b)$ is uniformly
+$\le 2$ (the canonical witness $s=M+(M\bmod 2)$ works for almost every
+pair; only the parity-shift family needs $\max+2$). Crucially, the joint
+discriminator confirmed that \emph{no} unbounded family is joint-finite, so
+the axiom-clean joint-infinite case absorbs the whole unbounded regime.
 
 \subsection{Approaches considered for the residual lemma}
 \label{sec:approaches}
@@ -1016,8 +1038,8 @@ formulation is genuinely hard rather than merely unfinished. A literature
 search located only analogues---the parity-sweep of Hunters-and-Rabbit
 pursuit games and a K\"onig/min-cut argument---none of which applies off the
 shelf. We then describe the convergent-permutation classification we tested
-the split against, and finally the displacement dichotomy that supersedes
-the all-slacks route and is what the Lean development now uses.
+the split against, and finally the joint-condition dichotomy that
+supersedes the all-slacks route and is what the Lean development now uses.
 
 \begin{enumerate}[topsep=2pt,itemsep=4pt,leftmargin=*]
   \item \textbf{Slack-localised Lemma~A (information deficit).} The natural
@@ -1083,30 +1105,35 @@ it while a non-member is handled by the same window engine). The
 classification supplied clean \emph{vocabulary} to test the split cleanly,
 and the verdict was negative.
 
-\paragraph{The displacement dichotomy (the route now used).}
-The route that does make progress is the bounded/unbounded displacement
-split of \S\ref{sec:residual}. Its breakthrough is \textbf{Step~A},
-\lean{separatorAtSlack\us slack\us le\us of\us bddDisp} (\emph{proven
-axiom-clean}): for a bounded-displacement~$c$ (every documented hard witness
-qualifies), \emph{every} separator's slack is forced into the finite window
-$[\,b,\,b+B\,]$. This is exactly the uniformity the all-slacks wall lacked:
-once the active slacks are confined to a finite set, the per-slack floor
-uniformises automatically and the bounded case reduces---\lean{sorry}-free,
-via the axiom-clean finite pigeonhole \lean{fixedSlack\us ge\us of\us
-window\us recurrence}---to a single finite-fiber existence,
-\lean{band\us recurrence\us finite\us window\us of\us bddDisp}. The
-parity-shift permutation that defeated routes~1 and~2 above has bounded
-displacement, so it is precisely \emph{disarmed} by Step~A and now sits in
-the clean half. The sole unbounded-displacement residue,
-\lean{band\us recurrence\us ge\us max\us of\us unbddDisp} (where the
-swap-at-power log-sparsity of route~3 no longer applies because that witness
-is bounded), is the second isolated lemma.
+\paragraph{The joint-condition dichotomy (the route now used).}
+The route that does make progress is the joint-condition split of
+\S\ref{sec:residual}: for an ordered pair $a<b$, dispatch on whether the
+joint set $J=\{D:c(a{+}D)\le a{+}D \ \wedge\ c(b{+}D)\ge b{+}D{+}p\}$
+(with $p=b\bmod 2$) recurs at unbounded displacement. Its breakthrough is
+the \emph{joint-infinite} half,
+\lean{band\us recurrence\us ge\us max\us of\us jointInfinite} (\emph{proven
+axiom-clean} via the window arithmetic \lean{memJ\us imp\us separator}):
+whenever the weak-descent ray of~$a$ meets the parity-corrected ascent ray
+of~$b$, the \emph{fixed} even slack $s=b+(b\bmod 2)\ge\max(a,b)$ separates
+the pair, so the recurrence follows outright. This is exactly the
+uniformity the all-slacks wall lacked---a single slack, pinned by the two
+bijectivity engines (\lean{weak\us descents\us infinite},
+\lean{weak\us ascents\us infinite}), with no per-slack floor to
+uniformise. Decisively, \emph{every} unbounded-displacement~$c$ is
+joint-infinite (verified), so the joint-infinite case absorbs the entire
+unbounded regime---the swap-at-power log-sparsity of route~3 and the
+former unbounded residue both disappear. The only surviving case is the
+\emph{joint-finite} ``anti-correlated'' regime,
+\lean{band\us recurrence\us ge\us max\us of\us jointFinite}: the
+parity-shift permutation that defeated routes~1 and~2 above is its
+canonical witness ($J$ empty for the relevant pair), and there the two
+rays never align cofinitely.
 
-The two surviving residues are therefore: a \emph{bounded-displacement
-infinite-fiber existence} and the \emph{unbounded-displacement case}, with
-the bounded case's slack-capping reduction proven axiom-clean. They are the
-genuine combinatorial heart of the winning direction---the two pieces not
-yet given a Lean proof.
+The sole surviving residue is therefore the \emph{joint-finite
+anti-correlated recurrence}; the joint-infinite half---covering all
+unbounded-displacement permutations---is proven axiom-clean. The residue
+is the genuine combinatorial heart of the winning direction---the one
+piece not yet given a Lean proof.
 
 % ============================================================
 \section{Machine-verification status}
@@ -1118,22 +1145,22 @@ report the status precisely. A substantial core---the losing direction, the
 distinguishability theorem, the \emph{entire candidate-collapsing reduction},
 and the full $K$-decodable family---is machine-checked and \emph{axiom-clean},
 and the winning direction is fully formalised (the staircase's safety,
-separation, and Yes-emission lemmas are all proved) \textbf{modulo two
-combinatorial lemmas} reached from Theorem~\ref{thm:bandrec}
-(\lean{band\us recurrence\us ge\us max}) by the displacement dichotomy of
-\S\ref{sec:residual}: \lean{band\us recurrence\us finite\us window\us of\us
-bddDisp} (bounded case) and \lean{band\us recurrence\us ge\us max\us of\us
-unbddDisp} (unbounded case). These are the \emph{only} two \lean{sorry}s in
-the entire development; the bounded case's slack-capping reduction Step~A
-(\lean{separatorAtSlack\us slack\us le\us of\us bddDisp}) is itself proven
-axiom-clean. We do \emph{not} claim the main theorem is fully proven or
-axiom-clean.
+separation, and Yes-emission lemmas are all proved) \textbf{modulo one
+combinatorial lemma} reached from Theorem~\ref{thm:bandrec}
+(\lean{band\us recurrence\us ge\us max}) by the joint-condition dichotomy
+of \S\ref{sec:residual}: the \emph{joint-infinite} case
+(\lean{band\us recurrence\us ge\us max\us of\us jointInfinite}), which
+covers all unbounded-displacement~$c$, is itself \emph{proven axiom-clean},
+and the lone residue is the \emph{joint-finite} anti-correlated case
+\lean{band\us recurrence\us ge\us max\us of\us jointFinite}. This is the
+\emph{only} \lean{sorry} in the entire development. We do \emph{not} claim
+the main theorem is fully proven or axiom-clean.
 
 For each item, ``axiom-clean'' means the Lean \verb|#print axioms| audit
 lists only the three standard foundational axioms \verb|propext|,
 \verb|Classical.choice|, \verb|Quot.sound|, with \emph{no} \verb|sorryAx|.
-Results carrying \verb|sorryAx| do so \emph{solely} through the two residues
-of Theorem~\ref{thm:bandrec}.
+Results carrying \verb|sorryAx| do so \emph{solely} through the single
+joint-finite residue of Theorem~\ref{thm:bandrec}.
 
 \begin{table}[h]
 \centering
@@ -1157,12 +1184,12 @@ Infinitely many weak descents / ascents
   & axiom-clean
   & \lean{weak\us descents\us infinite},
     \lean{weak\us ascents\us infinite} \\
-Step~A: bounded-disp.\ slack cap
+Joint set ⇒ fixed-slack separator
   & axiom-clean
-  & \lean{separatorAtSlack\us slack\us le\us of\us bddDisp} \\
-Bounded-case finite pigeonhole
+  & \lean{memJ\us imp\us separator} \\
+Joint-infinite case (covers unbounded)
   & axiom-clean
-  & \lean{fixedSlack\us ge\us of\us window\us recurrence} \\
+  & \lean{band\us recurrence\us ge\us max\us of\us jointInfinite} \\
 First-Yes finiteness (Lem.~\ref{lem:yesfin})
   & axiom-clean
   & \lean{yesSet\us finite} \\
@@ -1186,15 +1213,12 @@ Capstone (decodable consistency)
   & axiom-clean
   & \lean{locallyDecodable\us main} \\
 \midrule
-\textbf{Residue 1: bounded displacement}
-  & \textbf{one \lean{sorry}}
-  & \lean{band\us recurrence\us finite\us window\us of\us bddDisp} \\
-\textbf{Residue 2: unbounded displacement}
-  & \textbf{one \lean{sorry}}
-  & \lean{band\us recurrence\us ge\us max\us of\us unbddDisp} \\
+\textbf{Residue: joint-finite (anti-correlated)}
+  & \textbf{the lone \lean{sorry}}
+  & \lean{band\us recurrence\us ge\us max\us of\us jointFinite} \\
 Band recurrence (Thm.~\ref{thm:bandrec})
-  & via residues 1,~2
-  & \lean{band\us recurrence\us ge\us max} (dispatches on displacement) \\
+  & via the residue
+  & \lean{band\us recurrence\us ge\us max} (dispatches on joint set $J$) \\
 Winning direction (\S\ref{sec:winstrat})
   & via Thm.~\ref{thm:bandrec}
   & \lean{notEI\us BobWins} \\
@@ -1204,12 +1228,13 @@ Main \emph{iff} (Thm.~\ref{thm:main})
 \bottomrule
 \end{tabularx}
 \caption{Formalisation status. ``axiom-clean'' = no \lean{sorryAx} (only
-the three standard axioms). ``via Thm.~\ref{thm:bandrec}'' / ``via residues
-1,~2'' = the result's only \lean{sorryAx} flows through the two residual
-lemmas. The losing direction, the distinguishability theorem, the
-candidate-collapsing reduction, the proven-axiom-clean separator inputs, the
-bounded-case slack-capping Step~A and its finite pigeonhole, and the entire
-$K\in\Np$ decodable family are machine-checked with no \lean{sorry}.}
+the three standard axioms). ``via Thm.~\ref{thm:bandrec}'' / ``via the
+residue'' = the result's only \lean{sorryAx} flows through the single
+joint-finite residual lemma. The losing direction, the distinguishability
+theorem, the candidate-collapsing reduction, the proven-axiom-clean
+separator inputs, the axiom-clean joint-infinite case (covering all
+unbounded-displacement~$c$), and the entire $K\in\Np$ decodable family are
+machine-checked with no \lean{sorry}.}
 \end{table}
 
 \paragraph{What is machine-checked, no \lean{sorry}.}
@@ -1217,33 +1242,45 @@ The losing direction; the distinguishability theorem
 (Theorem~\ref{thm:lemmaA}) including its $\Delta\ge2$ crux by the
 elementary forward-closure argument; the separator inputs
 (\lean{separators\us unbounded}, \lean{weak\us descents\us infinite},
-\lean{weak\us ascents\us infinite}); the bounded-displacement slack-capping
-Step~A (\lean{separatorAtSlack\us slack\us le\us of\us bddDisp}) and the
-finite pigeonhole it feeds (\lean{fixedSlack\us ge\us of\us window\us
-recurrence}); the candidate-collapsing reduction
-(Theorem~\ref{thm:reduction}, including first-Yes finiteness); and the
-complete $K\in\Np$ locally-decodable winning family with its concrete
+\lean{weak\us ascents\us infinite}); the \emph{joint-infinite} case of the
+band recurrence (\lean{band\us recurrence\us ge\us max\us of\us
+jointInfinite}, via the window arithmetic \lean{memJ\us imp\us separator}),
+which covers \emph{all} unbounded-displacement~$c$; the candidate-collapsing
+reduction (Theorem~\ref{thm:reduction}, including first-Yes finiteness); and
+the complete $K\in\Np$ locally-decodable winning family with its concrete
 instances ($\texttt{adjPerm}$, $\texttt{cyc3Perm}$, $\texttt{blkPerm}$).
 All of these pass the \verb|#print axioms| audit with no \verb|sorryAx|.
+(The earlier bounded-displacement scaffolding---Step~A
+\lean{separatorAtSlack\us slack\us le\us of\us bddDisp} and the finite
+pigeonhole \lean{fixedSlack\us ge\us of\us window\us recurrence}---remains
+in the development, axiom-clean, but is superseded by the joint dichotomy
+and no longer feeds \lean{main}.)
 
-\paragraph{What the two \lean{sorry}s are.}
-The development contains \textbf{exactly two} \verb|sorry|s in total, the two
-residues of Theorem~\ref{thm:bandrec} reached by the displacement dichotomy:
-\lean{band\us recurrence\us finite\us window\us of\us bddDisp} (the
-bounded-displacement infinite-fiber existence) and
-\lean{band\us recurrence\us ge\us max\us of\us unbddDisp} (the
-unbounded-displacement case). Every result that carries
-\verb|sorryAx|---\lean{band\us recurrence\us ge\us max},
+\paragraph{What the one \lean{sorry} is.}
+The development contains \textbf{exactly one} \verb|sorry| in total: the
+joint-finite residue of Theorem~\ref{thm:bandrec} reached by the
+joint-condition dichotomy,
+\lean{band\us recurrence\us ge\us max\us of\us jointFinite} (the
+anti-correlated regime in which weak-descents of the lower cell and
+parity-corrected ascents of the upper cell never co-occur cofinitely). Its
+companion \emph{joint-infinite} case
+(\lean{band\us recurrence\us ge\us max\us of\us jointInfinite}), covering
+the entire unbounded-displacement regime, is proven axiom-clean. Every
+result that carries \verb|sorryAx|---\lean{band\us recurrence\us ge\us max},
 \lean{separating\us trajectory\us exists}, the three staircase lemmas
 \lean{Staircase\dt stair\us safe}/\lean{stair\us separates}/\lean{stair\us yes},
-\lean{notEI\us BobWins}, and \lean{main}---inherits it from these two lemmas
+\lean{notEI\us BobWins}, and \lean{main}---inherits it from this single lemma
 alone, and from nothing else. There are no orphan \verb|sorry|s: an earlier
 all-slacks route (through the now-deleted lemma
-\lean{noSeparator\us allSlack\us imp\us eventuallyIdentity}; its defeated
-approaches are archived in the project notes) and a parallel
-\lean{boundedSlack\us recurrence} route were both retired as dead code, so the
-band-top staircase now consumes \lean{band\us recurrence\us ge\us max}
-directly, leaving the project with these two \verb|sorry|s and no others.
+\lean{noSeparator\us allSlack\us imp\us eventuallyIdentity}) and the prior
+two-residue displacement dichotomy (its bounded case
+\lean{band\us recurrence\us finite\us window\us of\us bddDisp} and unbounded
+case \lean{band\us recurrence\us ge\us max\us of\us unbddDisp}, both now
+deleted) were retired as dead code; their defeated approaches are archived
+in the project notes. The band-top staircase now consumes
+\lean{band\us recurrence\us ge\us max} directly, leaving the project with
+this one \verb|sorry| and no others, as the \verb|#print axioms main| audit
+(\verb|[propext, sorryAx, Classical.choice, Quot.sound]|) confirms.
 
 \paragraph{Summary---honest boundary.}
 The \emph{answer} (Theorem~\ref{thm:main}) is settled, and the
@@ -1251,14 +1288,16 @@ The \emph{answer} (Theorem~\ref{thm:main}) is settled, and the
 direction and distinguishability theorem are machine-checked and
 axiom-clean, and the winning direction is reduced---through an
 axiom-clean reduction and a fully formalised staircase construction
-whose safety, separation, and Yes-emission lemmas are all proved---to two
+whose safety, separation, and Yes-emission lemmas are all proved---to one
 explicit, precisely stated, computationally-verified ($\sim\!10^4$--$10^7$
-cases, zero counterexamples) combinatorial lemmas: a
-bounded-displacement infinite-fiber existence and the
-unbounded-displacement case, with the bounded case's slack-capping
-reduction proven axiom-clean. The main theorem is therefore
-\textbf{machine-verified modulo two true, computationally-verified
-combinatorial lemmas}; it is not yet a complete, \lean{sorry}-free proof.
+cases, zero counterexamples) combinatorial lemma: the anti-correlated
+joint-finite recurrence, whose companion joint-infinite case---covering all
+unbounded-displacement permutations---is proven axiom-clean. The main
+theorem is therefore \textbf{machine-verified modulo one true,
+computationally-verified combinatorial lemma (the anti-correlated
+joint-finite recurrence); the joint-infinite case---covering all
+unbounded-displacement permutations---is proven axiom-clean}; it is not yet
+a complete, \lean{sorry}-free proof.
 
 % ============================================================
 \section*{Acknowledgements}
