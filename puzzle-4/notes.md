@@ -1440,3 +1440,20 @@ bounded/unbounded displacement dichotomy that now routes `main`: the bounded cas
 (`separatorAtSlack_slack_le_of_bddDisp`) caps the separating slack into the finite set `[max, max+B]`,
 removing the per-slack non-uniformity wall, leaving the two isolated residues
 `band_recurrence_finite_window_of_bddDisp` (bounded) and `band_recurrence_ge_max_of_unbddDisp`.
+
+## Loop iteration (2026-05-23): cleaner bounded-case sufficient condition
+
+NEW reduction for the bounded residue `band_recurrence_finite_window_of_bddDisp`:
+  G (separating displacements) ⊇ { D : c(b+D) > b+D  AND  |c(a+D) − c(b+D)| ≥ 2 }.
+Reason: strict ascent at b+D gives max(va,vb) ≥ M+1; gap ≥ 2 gives a width-≥2 window,
+which therefore contains an even slack ≥ M (via separatorAtSlack_iff_window). So that set
+⊆ G. VERIFIED infinite for every bounded non-EI family tested (parity-shift, involution,
+swap-powers [infinite but log-sparse], block-3/5, rev-block-5, random period-6).
+- For parity-shift / involution / swap-powers: gap=1 at strict-ascent-b NEVER occurs, so
+  {strict-asc-b ∧ gap≥2} = {strict-asc-b}, infinite ⇒ G infinite ⇒ done outright.
+- Residual edge: gap=1 cofinitely on strict-ascent-b ⇒ c(a+D)=c(b+D)±1 there ⇒ (bounded)
+  φ(a+D) ≥ φ(b+D)+(δ−1) ≥ δ, a recurring value with c(A)=A+x on an infinite A. This is
+  CONSISTENT with non-EI (parity-shift IS such a balanced shift), so it does NOT contradict;
+  those c need the recurrence from OTHER (non-strict-asc-b) separators. So this sufficient
+  condition handles most bounded c but not the gap=1-cofinite edge — that edge is where the
+  remaining bounded difficulty concentrates.
