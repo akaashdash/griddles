@@ -636,7 +636,54 @@ in `band_recurrence_ge_max` is unavoidable, matching the WALL above.
 **Reusable pieces landed by that attempt** (both axiom-clean, NO `sorryAx`): the geometric
 `separatorAtSlack_iff_window` (separator ⟺ `min < D+s ≤ max`) and the dual bijectivity engine
 `weak_ascents_infinite` (companion to `weak_descents_infinite`, governing the window's *upper* edge).
-The `sorry` itself is UNCHANGED. -/
+The `sorry` itself is UNCHANGED.
+
+## ATTEMPT LOG — "residue-class structure + bijection cut-balance closure" (re-verified, STILL OPEN)
+
+A further attempt evaluated the proposed *residue-class (from a threshold dichotomy) + cut-balance*
+route, scaffolded by the Hunters-and-Rabbit parity-sweep intuition.  Every step was checked with
+`uv run` (scripts `attack_verify.py`, `attack_steps.py`, `attack_step3.py`, `swap_check.py`,
+`obstruction_final.py` in `griddles-p4-verify/`).  **Truth re-confirmed** (every non-EI family has
+unbounded separators at some even slack ≥ max; the `swap_at_powers` "near-misses" are log-sparse
+separators at `D = 2ᵏ − b`, confirmed scaling to `D ≈ 2.6·10⁵` at `NMAX = 2.8·10⁵`).  The attack
+does NOT close; the failure is **Step 3**, and the precise reasons:
+
+  • **Reframing (verified, 0/374400 mismatches).**  A slack-`s` separator at `D` is exactly
+    `[φ(a+D) < e+δ] XOR [φ(b+D) < e]` where `e := s − b`, `δ := b − a`, `φ(n) := c(n) − n`.  So
+    `hno` at slack `s = b+e` is the eventual-in-`D` equivalence `[φ(a+D) < e+δ] ⟺ [φ(b+D) < e]`.
+    **Parity caveat the task's "(★) for even `e`" glossed:** `s` even & `e = s−b` ⇒ `e` even ⟺ `b`
+    even.  For **odd `b` there is no `e = 0`** (`e` ranges over the ODDs), so Step 1's "`e=0` residue
+    anchor of `A := {φ ≥ 1}`" simply does not exist for half the pairs — the smallest available slack
+    is `leastEvenGe(b)` giving `e₀ = 1`.
+
+  • **Step 3's invoked sufficient condition is too weak (explicit witness).**  Step 3 claims "`φ`
+    eventually constant `= k ≠ 0` on a residue class mod `δ` CONTRADICTS bijectivity via cut-balance."
+    This is FALSE: the **parity-shift** `c(2k)=2k+2, c(2k+1)=2k−1, c(1)=2` has `φ ≡ +2` on the even
+    class and `φ ≡ −2` on the odd class (mod `δ=2`) — *constant nonzero on every residue class* — yet
+    is a genuine bijection with bounded cut `B(N) ≡ 1`.  The `+2` and `−2` classes balance each other.
+    Residue-class constancy is just a *structured density*, and structured densities can balance, so
+    cut-balance does not fire.  (Same wall as the prior log's "density alone fails / route A's `ψ`
+    bounded is false".)  The cut identity itself was re-verified: `B(N) := |{n≤N : c(n)>N}| =
+    |{n>N : c(n)≤N}|` holds for ALL tested `c,N`, and `EI ⟺ B(N)=0` eventually is correct — but
+    `B(N) → ∞` on `growing_blocks_rev` (non-EI), so Step 3 cannot route through "`B` bounded".
+
+  • **Why the residue route does NOT circumvent the non-uniform `m₀(e)` (the crux).**  On
+    parity-shift pair `(2,4)` (`δ=2`), `hno`-style agreement HYP_e HOLDS for `e ∈ {0,4,6,8,…}` and
+    FAILS only at `e = 2` (separators at every even `D`; this is slack `6 = leastEvenGe(max)+2`).  The
+    HOLDING `e`'s pin level-set structure fully consistent with `φ = (+2 on evens, −2 on odds)` — a
+    *bijective non-EI* permutation.  **The single bit certifying non-EI lives in the one FAILING `e`**,
+    and there is no uniform mechanism to locate that `e` across pairs (the recurring slack is in
+    `{leastEvenGe(max), leastEvenGe(max)+2}` with no closed form).  So Steps 1–2 cannot deliver
+    anything *strictly stronger* than residue-density (e.g. "`φ ≥ 0` on all classes" or a signed
+    imbalance) — which is exactly what Step 3 would need.  That extraction burden IS the same residue
+    as the parallel `boundedSlack_recurrence`.
+
+**Net.**  Every route attempted so far (band-collapse, single-ray pigeonhole, cut-flow route A,
+and now residue-class + cut-balance) hits the identical wall: `hno`'s per-slack displacement floor
+`D₀(s)` does not uniformize across `s`, and no proposed structure-extraction yields more than a
+density that a balanced bijection (parity-shift) satisfies.  The productive next move is to attack
+the parallel `boundedSlack_recurrence` directly (the global-count residue), not the lemma side.  No
+new mechanism found; `sorry` UNCHANGED, build GREEN. -/
 theorem noSeparator_allSlack_imp_eventuallyIdentity
     (c : Perm) (a b : ℕ+) (hab : a ≠ b)
     (hno : ∀ s : ℕ, Even s → max a.val b.val ≤ s →
