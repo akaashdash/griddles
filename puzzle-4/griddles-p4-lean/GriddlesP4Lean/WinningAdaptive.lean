@@ -42,16 +42,23 @@ clearly-named combinatorial localization fact (`adaptive_localizes`).
 ## Honesty note
 
 The winning direction (`notEI_BobWins`) is now `sorry`-free **modulo exactly ONE isolated
-combinatorial recurrence lemma**, reached via `band_recurrence_ge_max`'s **JOINT-condition
-dichotomy**.  For the ordered pair `a < b` the dispatch is on whether the joint set
-`J = {D : c(a+D) ≤ a+D ∧ c(b+D) ≥ b+D + b.val%2}` recurs at unbounded displacement:
+combinatorial recurrence lemma**, reached via `band_recurrence_ge_max`'s **SYMMETRIC JOINT-condition
+trichotomy**.  For the ordered pair `a < b`, with `M = b.val`, the dispatch is on whether either of
+two mirror joint sets recurs at unbounded displacement:
+* `J  = {D : c(a+D) ≤ a+D ∧ c(b+D) ≥ b+D + M%2}` (a weak-descends, b ascends-with-parity),
+* `J'' = {D : c(a+D) ≥ a+D + q ∧ c(b+D) ≤ b+D}` (a ascends-with-offset, b weak-descends), where
+  `q = leastEvenGe(M+1) − a.val`.
 
 * **J-infinite** → `band_recurrence_ge_max_of_jointInfinite` is FULLY PROVEN axiom-clean (via
-  `memJ_imp_separator` + `separatorAtSlack_iff_window`).  This absorbs the **entire unbounded
-  displacement regime** (verified: no unbounded `c` is J-finite), so the former separate
-  unbounded-case residue is gone.
-* **J-finite** → `band_recurrence_ge_max_of_jointFinite` is the SINGLE residue (the anti-correlated
-  bounded regime; statement empirically true, see `joint_finite_residue.py`).
+  `memJ_imp_separator` + `separatorAtSlack_iff_window`), fixed even slack `M + M%2`.
+* **J''-infinite** → `band_recurrence_ge_max_of_jointInfinite'` is FULLY PROVEN axiom-clean (via
+  `memJ''_imp_separator` + `separatorAtSlack_iff_window`), fixed even slack `leastEvenGe(M+1)`.
+* **BOTH finite** → `band_recurrence_ge_max_of_bothJointFinite` is the SINGLE residue.  This regime
+  is exactly **bounded displacement + pointwise comonotone** (`φ(a+D)` and `φ(b+D)` never have
+  opposite signs): 0 separator failures, 0 opposite-sign pairs, 0 unbounded both-finite cases over
+  ~6·10⁷ checks (`joint_dichotomy_dual.py`).  The recurring separating slack is pinned to
+  `{M, M+2}` (`bothfinite_mechanism.py`).  The symmetric route strictly shrinks the prior
+  `J`-finite residue.
 
 This replaces the earlier two-residue split (`band_recurrence_finite_window_of_bddDisp` bounded +
 `band_recurrence_ge_max_of_unbddDisp` unbounded), both now removed.  *Every* game-semantic and
@@ -973,31 +980,117 @@ theorem band_recurrence_ge_max_of_jointInfinite
 
 #print axioms band_recurrence_ge_max_of_jointInfinite
 
-/-! ### JOINT-FINITE case (the single isolated residue)
+/-! ### SYMMETRIC joint set `J''` (shrinks the residue, AXIOM-CLEAN)
 
-When the joint set `J` is *finite* (the "anti-correlated" regime — weak-descents of `a` and
-ascents-with-parity of `b` co-occur only finitely often), the fixed-slack-`(M+p)` route does not
-fire infinitely.  The band recurrence STILL holds — the smallest even slack `≥ M` recurs (excess
-`≤ 2`, verified on `parity_shift`, the canonical J-empty witness, `joint_dichotomy.py`).  This is
-the *only* remaining residue: every J-infinite `c` (including the entire unbounded regime) is
-handled axiom-clean above.
+The original `J` makes the *smaller* cell `a` weak-descend and the *larger* cell `b`
+ascend-with-parity.  Its **mirror image** `J''` makes the *larger* cell `b` weak-descend and the
+*smaller* cell `a` *ascend with offset* `q`.  Both produce a fixed-even-slack separator, but they
+fire in **opposite sign-regimes**, so combining them shrinks the residue from "`J` finite" to
+"`J` AND `J''` both finite".
+
+For the ordered pair `a < b`, set `M = b.val`, the symmetric fixed even slack
+`s' = leastEvenGe (M + 1)` (`= M+1` if `M` odd, `M+2` if `M` even — even and `≥ M`), and the
+ascent offset `q = s' - a.val` (so `a.val + q = s'`, since `s' ≥ M+1 > a.val`).
+
+  `J'' := { D : c(a+D) ≥ (a+D) + q  ∧  c(b+D) ≤ (b+D) }`
+
+* Lower edge: `y = c(b+D) ≤ M + D < M + 1 + D ≤ s' + D = D + s'`, so `min x y ≤ y < D + s'`.
+* Upper edge: `x = c(a+D) ≥ (a.val + D) + q = (a.val + q) + D = s' + D = D + s'`, so
+  `max x y ≥ x ≥ D + s'`.
+
+Verified: 0 separator failures over ~6·10⁷ checks (`joint_dichotomy_dual.py`), and the both-finite
+residue is *pointwise comonotone* (no opposite-sign `(φ_a, φ_b)` pair) and bounded. -/
+
+/-- **The symmetric joint set `J''` (membership predicate), ordered pair `a < b`.**  `D ∈ J''` iff
+    the *larger* cell `b+D` weak-descends and the *smaller* cell `a+D` ascends by the offset
+    `q = leastEvenGe (b.val + 1) - a.val`. -/
+def memJ'' (c : Perm) (a b : ℕ+) (D : ℕ) : Prop :=
+  (cellAt a D).val + (leastEvenGe (b.val + 1) - a.val) ≤ (c (cellAt a D)).val ∧
+    (c (cellAt b D)).val ≤ (cellAt b D).val
+
+/-- **`J''`-membership ⇒ fixed-slack separator (AXIOM-CLEAN).**  Every `D ∈ J''` (for the ordered
+    pair `a < b`) is a slack-`s'` separator at the *fixed even* slack `s' = leastEvenGe (b.val + 1)`,
+    which is even and `≥ b.val = max a.val b.val`.  Mirror of `memJ_imp_separator`. -/
+theorem memJ''_imp_separator (c : Perm) (a b : ℕ+) (hab : a < b) {D : ℕ} (hD : memJ'' c a b D) :
+    Even (leastEvenGe (b.val + 1)) ∧ b.val ≤ leastEvenGe (b.val + 1) ∧
+      separatorAtSlack c a b (leastEvenGe (b.val + 1)) D := by
+  obtain ⟨hasc, hwd⟩ := hD
+  set x := (c (cellAt a D)).val with hx
+  set y := (c (cellAt b D)).val with hy
+  set M := b.val with hM
+  set s := leastEvenGe (M + 1) with hs
+  -- a.val < M (since a < b = M)
+  have haM : a.val < M := by rw [hM]; exact_mod_cast hab
+  -- s ≥ M + 1 > a.val, so a.val ≤ s and the offset cancels: a.val + (s - a.val) = s.
+  have hsM1 : M + 1 ≤ s := by rw [hs]; exact le_leastEvenGe (M + 1)
+  have hqcancel : a.val + (s - a.val) = s := by omega
+  -- ascent-with-offset of a, in raw cell coordinates: (a.val + D) + (s - a.val) ≤ x
+  have hasc' : (a.val + D) + (s - a.val) ≤ x := by
+    rw [hx]; have := hasc; rw [cellAt_val] at this; rw [hs]; exact this
+  -- x ≥ D + s
+  have hxge : D + s ≤ x := by omega
+  -- weak descent of b, in raw cell coordinates: y ≤ b.val + D
+  have hwd' : y ≤ M + D := by rw [hy]; have := hwd; rw [cellAt_val] at this; rw [hM]; exact this
+  -- y < D + s (since y ≤ M + D < M + 1 + D ≤ s + D)
+  have hylt : y < D + s := by omega
+  refine ⟨leastEvenGe_even (M + 1), ?_, ?_⟩
+  · -- M ≤ s
+    omega
+  · -- the separator via the window characterization
+    rw [separatorAtSlack_iff_window]
+    refine ⟨?_, ?_⟩
+    · -- min x y < D + s : y < D + s
+      exact lt_of_le_of_lt (min_le_right x y) hylt
+    · -- D + s ≤ max x y : x ≥ D + s
+      exact le_trans hxge (le_max_left x y)
+
+#print axioms memJ''_imp_separator
+
+/-- **JOINT-INFINITE case for `J''` (AXIOM-CLEAN), ordered pair `a < b`.**  If the symmetric joint
+    set `J''` recurs at unbounded displacement, the fixed even slack `s' = leastEvenGe (b.val + 1)`
+    `≥ max a.val b.val` has separators at unbounded displacement.  Mirror of
+    `band_recurrence_ge_max_of_jointInfinite`. -/
+theorem band_recurrence_ge_max_of_jointInfinite'
+    (c : Perm) (a b : ℕ+) (hab : a < b)
+    (hJ : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ memJ'' c a b D) :
+    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
+      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
+  have hmax : max a.val b.val = b.val := max_eq_right (le_of_lt hab)
+  refine ⟨leastEvenGe (b.val + 1), leastEvenGe_even (b.val + 1), ?_, fun D₀ => ?_⟩
+  · rw [hmax]; have := le_leastEvenGe (b.val + 1); omega
+  · obtain ⟨D, hDge, hmem⟩ := hJ D₀
+    exact ⟨D, hDge, (memJ''_imp_separator c a b hab hmem).2.2⟩
+
+#print axioms band_recurrence_ge_max_of_jointInfinite'
+
+/-! ### BOTH-JOINT-FINITE case (the single isolated residue, now strictly smaller)
+
+When **both** `J` *and* its mirror `J''` are finite (for the ordered pair `a < b`), the original
+fixed-slack-`(M+p)` route and the symmetric fixed-slack-`s'` route both fail to fire infinitely.
+The band recurrence STILL holds.  This is the *only* remaining residue: every `J`-infinite `c`
+(including the entire unbounded regime) is handled axiom-clean by
+`band_recurrence_ge_max_of_jointInfinite`, and every `J''`-infinite `c` by
+`band_recurrence_ge_max_of_jointInfinite'`.
 
 ## STATUS: TRUE, decisively verified; the SOLE remaining `sorry` of `band_recurrence_ge_max`.
-The hypothesis (for the ordered pair `a < b`) is `∃ D₀, ∀ D ≥ D₀, ¬ memJ c a b D` (J finite).
-The honest residue is the anti-correlated bounded regime: when weak-descents of the smaller cell
-and parity-correct ascents of the larger cell never align cofinitely, the recurring slack is still
-pinned to `[M, M+2]` by a global counting argument, but no single bijectivity engine forces the
-co-occurrence — the same WALL documented for the prior bounded `S_infinite_of_bddDisp` route, now
-isolated to strictly fewer permutations (the J-finite ones; verified bounded — no unbounded `c` is
-J-finite, `joint_dichotomy.py`). -/
-theorem band_recurrence_ge_max_of_jointFinite
+The hypotheses (for `a < b`) are `∃ D₀, ∀ D ≥ D₀, ¬ memJ c a b D` (J finite) AND
+`∃ D₀, ∀ D ≥ D₀, ¬ memJ'' c a b D` (J'' finite).  Both-finite was verified to be exactly the
+**bounded + pointwise-comonotone** regime: cofinitely `φ(a+D) = c(a+D)-(a+D)` and
+`φ(b+D) = c(b+D)-(b+D)` have the *same sign* (never opposite) and are bounded — 0 opposite-sign
+pairs and 0 unbounded both-finite cases over ~6·10⁷ checks (`joint_dichotomy_dual.py`).  This is
+strictly fewer permutations than the former `J`-finite residue: the symmetric route absorbs every
+`c` whose displacements anti-correlate in the `J''` direction.  The honest obstruction (documented
+in the report) is that closing "bounded + comonotone ⇒ band recurrence" requires a partial-sum /
+fiber-bijection counting argument with no off-the-shelf Mathlib engine. -/
+theorem band_recurrence_ge_max_of_bothJointFinite
     (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a < b)
-    (hJfin : ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ → ¬ memJ c a b D) :
+    (hJfin : ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ → ¬ memJ c a b D)
+    (hJ''fin : ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ → ¬ memJ'' c a b D) :
     ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
       ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
   sorry
 
-#print axioms band_recurrence_ge_max_of_jointFinite
+#print axioms band_recurrence_ge_max_of_bothJointFinite
 
 /-- **THE BAND RECURRENCE (`main`'s consumer), via the JOINT dichotomy.**  For non-EI `c` and a
     distinct pair, a *fixed* even slack `s ≥ max a.val b.val` has separators at unbounded
@@ -1026,10 +1119,16 @@ theorem band_recurrence_ge_max (c : Perm) (h : ¬ EventuallyIdentity c) (a b : �
     by_cases hJ : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ memJ c lo hi D
     · -- J-infinite (clean).
       exact band_recurrence_ge_max_of_jointInfinite c lo hi hlohi hJ
-    · -- J-finite (residue).  Negation gives `∃ D₀, ∀ D ≥ D₀, ¬ memJ c lo hi D`.
-      push_neg at hJ
-      obtain ⟨D₀, hD₀⟩ := hJ
-      exact band_recurrence_ge_max_of_jointFinite c h lo hi hlohi ⟨D₀, fun D hD => hD₀ D hD⟩
+    · by_cases hJ'' : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ memJ'' c lo hi D
+      · -- J''-infinite (clean, symmetric route).
+        exact band_recurrence_ge_max_of_jointInfinite' c lo hi hlohi hJ''
+      · -- BOTH J and J'' finite (the single residue).  Each negation `push_neg`'s to its
+        -- finiteness statement.
+        push_neg at hJ hJ''
+        obtain ⟨D₀, hD₀⟩ := hJ
+        obtain ⟨D₁, hD₁⟩ := hJ''
+        exact band_recurrence_ge_max_of_bothJointFinite c h lo hi hlohi
+          ⟨D₀, fun D hD => hD₀ D hD⟩ ⟨D₁, fun D hD => hD₁ D hD⟩
   rcases lt_or_gt_of_ne hab with hlt | hgt
   · -- a < b : directly.
     exact ordered a b hlt

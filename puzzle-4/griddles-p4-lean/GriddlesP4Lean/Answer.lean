@@ -23,8 +23,10 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
   · -- Winning direction.  Discharged by `notEI_BobWins` (WinningAdaptive): the **band-top
     -- lag-monotone staircase** — a fixed signal-independent trajectory — localizes every start
     -- cell, and `localizes_BobWins` packages that into `BobWins`.  This is FULLY PROVEN modulo a
-    -- SINGLE isolated combinatorial recurrence residue (`band_recurrence_ge_max_of_jointFinite`,
-    -- reached via `band_recurrence_ge_max`'s JOINT-condition dichotomy).
+    -- SINGLE isolated combinatorial recurrence residue (`band_recurrence_ge_max_of_bothJointFinite`,
+    -- reached via `band_recurrence_ge_max`'s SYMMETRIC JOINT-condition trichotomy: J-infinite and
+    -- J''-infinite are BOTH proven axiom-clean, leaving only the both-finite = bounded+comonotone
+    -- residue).
     --
     -- Historical note on the architecture (the prior `sorry` was here):
     --
@@ -110,11 +112,13 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
     exact notEI_BobWins c h_not_ei
 
 -- Axiom audit.  `main` is `sorry`-free *modulo* a SINGLE isolated combinatorial recurrence residue
--- (`band_recurrence_ge_max_of_jointFinite`, the anti-correlated bounded regime of
--- `band_recurrence_ge_max`'s JOINT-condition dichotomy): its `#print axioms` shows `sorryAx` only
--- through that one residue (the J-infinite case, absorbing the unbounded regime, is axiom-clean).
--- The losing direction and ALL the game-semantic / construction plumbing of the winning direction
--- are fully proven.
+-- (`band_recurrence_ge_max_of_bothJointFinite`, the bounded + pointwise-comonotone regime of
+-- `band_recurrence_ge_max`'s SYMMETRIC JOINT-condition trichotomy): its `#print axioms` shows
+-- `sorryAx` only through that one residue.  Both the J-infinite case (absorbing the entire unbounded
+-- regime) AND the symmetric J''-infinite case are proven axiom-clean, so the residue is exactly the
+-- both-finite regime (bounded |φ|, φ(a+D) and φ(b+D) never opposite-signed; recurring separating
+-- slack pinned to {M, M+2}).  The losing direction and ALL the game-semantic / construction plumbing
+-- of the winning direction are fully proven.
 #print axioms main
 
 /-- **Capstone for the locally-decodable class** (fully `sorry`-free).  Connecting the

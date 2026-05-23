@@ -1,4 +1,4 @@
-This is LuaHBTeX, Version 1.24.0 (TeX Live 2026)  (format=lualatex 2026.3.22)  23 MAY 2026 05:28
+This is LuaHBTeX, Version 1.24.0 (TeX Live 2026)  (format=lualatex 2026.3.22)  23 MAY 2026 07:23
  restricted system commands enabled.
 **writeup.tex
 (./writeup.tex
@@ -652,7 +652,7 @@ Package microtype Info: Loading generic protrusion settings for font family
 
 {/usr/local/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
 LaTeX Font Info:    Trying to load font information for T1+phv on input line 13
-5.
+7.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/t1phv.fd
 File: t1phv.fd 2020/03/25 scalable font definitions for T1/phv.
@@ -662,49 +662,49 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
-69.
+71.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 ) [2]
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <10> not available
-(Font)              Font shape `T1/phv/m/sl' tried instead on input line 233.
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 235.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 242.
+(hyperref)                removing `math shift' on input line 244.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\Rightarrow' on input line 242.
+(hyperref)                removing `\Rightarrow' on input line 244.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 242.
+(hyperref)                removing `math shift' on input line 244.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 296.
+(hyperref)                removing `math shift' on input line 298.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 296.
+(hyperref)                removing `math shift' on input line 298.
 
 [3]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 361.
+(hyperref)                removing `math shift' on input line 363.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\Rightarrow' on input line 361.
+(hyperref)                removing `\Rightarrow' on input line 363.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 361.
+(hyperref)                removing `math shift' on input line 363.
 
 [4] [5]
-Underfull \hbox (badness 3579) in paragraph at lines 595--600
+Underfull \hbox (badness 3579) in paragraph at lines 597--602
 [][]\T1/ptm/b/n/10 Def-i-ni-tion 3.9 \T1/ptm/m/n/10 (Lo-cally $\OML/cmm/m/it/10
  K[]\OT1/cmr/m/n/10 2$ \T1/ptm/m/n/10 de-cod-able)\T1/ptm/b/n/10 . []$\OML/cmm/
 m/it/10 c$ \T1/ptm/m/it/10 is \T1/ptm/m/n/10 lo-cally de-cod-able \T1/ptm/m/it/
@@ -714,57 +714,71 @@ m/it/10 c$ \T1/ptm/m/it/10 is \T1/ptm/m/n/10 lo-cally de-cod-able \T1/ptm/m/it/
 [6]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 712.
+(hyperref)                removing `math shift' on input line 714.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 712.
+(hyperref)                removing `math shift' on input line 714.
 
 [7]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 726.
+(hyperref)                removing `math shift' on input line 730.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 726.
+(hyperref)                removing `math shift' on input line 730.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 726.
+(hyperref)                removing `math shift' on input line 730.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 726.
+(hyperref)                removing `math shift' on input line 730.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 726.
+(hyperref)                removing `math shift' on input line 730.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\Rightarrow' on input line 726.
+(hyperref)                removing `\Rightarrow' on input line 730.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 726.
+(hyperref)                removing `math shift' on input line 730.
 
 
-Underfull \hbox (badness 5460) in paragraph at lines 809--818
+Underfull \hbox (badness 5460) in paragraph at lines 813--822
 []\T1/ptm/b/n/10 The stair-case.[] \T1/ptm/m/n/10 Enu-mer-ate the or-dered dis-t
 inct pairs $\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 a; b\OT1/cmr/m/n/10 )$\T1/ptm/m/n
 /10 , $\OML/cmm/m/it/10 a < b$\T1/ptm/m/n/10 , by the key
  []
 
-[8] [9] [10] [11]
+[8] [9]
+Underfull \hbox (badness 1590) in paragraph at lines 982--994
+[]\T1/ptm/b/n/10 Joint-infinite \T1/ptm/m/n/10 ($\OML/cmm/m/it/10 J$ \T1/ptm/m/
+n/10 un-bounded). \T1/ptm/m/it/10 Proven axiom-clean \T1/ptm/m/n/10 (\T1/lmtt/m
+/n/9 band_recurrence_ge_max_of_
+ []
+
+[10]
+LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <9> not available
+(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 1005.
+ [11]
+Missing character: There is no ⇒ (U+21D2) in font ptmr8t!
+Missing character: There is no ⇒ (U+21D2) in font ptmr8t!
+Missing character: There is no ⇒ (U+21D2) in font ptmr8t!
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [12]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+Underfull \vbox (badness 1137) has occurred while \output is active []
 
- [13]
-[14] (./writeup.aux)
+ [13
+Missing character: There is no ⇒ (U+21D2) in font ptmr8t!
+] [14] (./writeup.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -776,14 +790,14 @@ Package rerunfilecheck Info: File `writeup.out' has not changed.
 Here is how much of LuaTeX's memory you used:
  14867 strings out of 476076
  125129,794899 words of node,token memory allocated
- 2670 words of node memory still in use:
-   8 hlist, 2 vlist, 2 rule, 1 local_par, 4 glue, 253 kern, 1 penalty, 3 glyph, 
-215 attribute, 62 glue_spec, 215 attribute_list, 1 write nodes
-   avail lists: 1:6,2:1881,3:519,4:158,5:511,6:69,7:12931,8:48,9:538,10:25,11:10
-71
+ 2872 words of node memory still in use:
+   8 hlist, 2 vlist, 2 rule, 1 local_par, 4 glue, 275 kern, 1 penalty, 3 glyph, 
+238 attribute, 62 glue_spec, 238 attribute_list, 1 write nodes
+   avail lists: 1:6,2:1811,3:519,4:148,5:452,6:68,7:13676,8:48,9:539,10:25,11:10
+22
  36891 multiletter control sequences out of 65536+600000
  110 fonts using 7581895 bytes
- 72i,12n,75p,1283b,520s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 72i,12n,75p,1310b,520s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}{/usr/local/tex
 live/2026/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/texlive/2026/texmf-
 dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2026/texmf-di
@@ -806,7 +820,7 @@ mf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2026/texmf-dist/fon
 ts/type1/urw/times/utmbi8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/u
 rw/times/utmr8a.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/urw/times/ut
 mri8a.pfb>
-Output written on writeup.pdf (14 pages, 329067 bytes).
+Output written on writeup.pdf (14 pages, 333902 bytes).
 
 PDF statistics: 417 PDF objects out of 1000 (max. 8388607)
  339 compressed objects within 4 object streams
