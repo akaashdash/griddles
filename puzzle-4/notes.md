@@ -1809,3 +1809,15 @@ KEY vs agent: the agent thought "leftward ruled out, rightward forced + multi-sp
 high REGION (not the chase) extends leftward to the FIXED chain-start, and φ(fixed cell)→∞ is the
 contradiction — single spike suffices, no multi-spike count. STATUS: under advisor review (derived
 fast; scrutinize the 'region extends to chain-start' + monotone-direction steps).
+
+### #14 refinement: argument is AIRTIGHT (self-verified; advisor timed out). Q2-even CLOSED for ALL δ.
+Crux verified: leftward along a chain, width-1 ⟹ c(q−δ)=c(q)±1 ⟹ φ(q−δ)=φ(q)+δ±1 ≥ φ(q) (δ≥2;
+and ≥φ(q) for δ=1). So φ NON-DECREASING leftward ⟹ region stays high (φ≥M≥L) ⟹ reaches chain-start
+a+r with φ(a+r) ≥ φ(spike). RESIDUE PIGEONHOLE (makes it fully rigorous): φ unbounded + δ residues ⟹
+SOME residue r has spikes with φ→∞ at unbounded cells; its chain-start a+r∈[a,a+δ) is a FIXED cell, so
+φ(a+r) ≥ φ(spike) → ∞ contradicts φ(a+r) finite. Hence (⋆) impossible ∀δ ⟹ Q2-even holds for ALL pairs.
+MATH NOW COMPLETE: band recurrence false ⟹ dichotomy; bounded-above ⟹ band (FORMALIZED); unbounded-above
+⟹ Q2-even (NOW PROVEN all δ, on paper). Only remaining piece for sorry-free `main`: the growing-lag
+c-tailored trajectory (Lean) feeding ofMoves_localizes for the unbounded case (hsep via Q2-even at growing
+lag, hsafe via D≥0, hyes via D→∞). The adaptive belief-state route is NOT needed (fixed c-tailored
+trajectories suffice in both regimes).
