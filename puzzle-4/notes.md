@@ -1821,3 +1821,22 @@ MATH NOW COMPLETE: band recurrence false ⟹ dichotomy; bounded-above ⟹ band (
 c-tailored trajectory (Lean) feeding ofMoves_localizes for the unbounded case (hsep via Q2-even at growing
 lag, hsafe via D≥0, hyes via D→∞). The adaptive belief-state route is NOT needed (fixed c-tailored
 trajectories suffice in both regimes).
+
+## Loop iteration (2026-05-23 #15): ✅ COMPLETE — main is FULLY SORRY-FREE & AXIOM-CLEAN (commit 4bdb734)
+
+`#print axioms TrolleyRetrieval.main` = [propext, Classical.choice, Quot.sound] — NO sorryAx. Full build
+green (3338 jobs). `theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c` fully machine-verified.
+Winning direction (Answer.main by_cases on bounded-above ∃B ∀n (c n).val≤n.val+B):
+  • bounded-above → band_of_boundedAbove (BandBoundedAbove.lean) → BandProvider-parameterized staircase
+    (BobWins_of_bandProvider) → notEI_boundedAbove_BobWins (axiom-clean).
+  • unbounded-above → q2even (Q2Even.lean) → GrowStair.lean growing-lag c-tailored trajectory (gmoves:
+    enumerate pairs via nthPair, phaseInfo requests q2even separator at lag Lfloor i=lag+2D+2(i+1),
+    walk+oscillate+tail keeping D≥0; grow_safe/grow_separates/grow_yes) → ofMoves_localizes →
+    localizes_BobWins → notEI_unboundedAbove_BobWins (axiom-clean).
+Losing direction: EventuallyIdentity_loses (Losing.lean), proven.
+Journey this session: discovered the prior "one true lemma" (band recurrence) was FALSE (AP-split);
+confirmed answer safe; designed bounded/unbounded dichotomy (no adaptive belief-state); formalized
+descent/ascent-cofinite⟹EI, band_of_boundedAbove, q2even (Q2-even all δ via leftward-chain+residue-
+pigeonhole), and the growing-lag trajectory. PUZZLE 4 LEAN PROOF COMPLETE.
+Cleanup TODO (optional): delete orphan dead code band_recurrence_ge_max[_of_bothJointFinite] in
+WinningAdaptive (off main's path). Writeup update (task #21) still pending.
