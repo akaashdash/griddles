@@ -31,19 +31,23 @@ clearly-named combinatorial localization fact (`adaptive_localizes`).
    unique consistent candidate **is** `k₀`, safety transfers from the exploration trajectory,
    and the "first guess at the stop time" obligation is discharged via `Nat.find`.
 
-4. **Isolated lemma** (`adaptive_localizes`): the single `sorry`.  It asserts that for non-EI
-   `c` there *exists* a never-guessing exploration strategy that localizes every start cell.
-   This is the hard adaptive-combinatorics content; it should be discharged using
-   `not_eventually_identity_implies_distinguishable` (`LemmaA`).
+4. **The construction** (`Staircase`, `separating_trajectory_exists`, `adaptive_localizes`): a
+   *fixed signal-independent* trajectory — the **band-top lag-monotone staircase** — that is safe,
+   Yes-emitting, and separates every pair of start cells.  This is the (formerly feared
+   "irreducibly adaptive") winning strategy; it turns out a c-tailored *fixed* trajectory works.
+   It is fully proven modulo a single isolated combinatorial lemma `band_recurrence_ge_max`.
 
-5. **Conclusion** (`notEI_BobWins`): chains the reduction with the isolated lemma.
+5. **Conclusion** (`notEI_BobWins`): chains the reduction with the construction.
 
 ## Honesty note
 
-Exactly **one** `sorry` is introduced (`adaptive_localizes`).  Everything else builds and is
-`sorry`-free; the reduction is airtight in the sense that the guess-correctness, safety, and
-first-guess-timing obligations of `WinsFrom` are all fully discharged from the localization
-hypothesis.  See `#print axioms notEI_BobWins` at the end of the file.
+The winning direction (`notEI_BobWins`) is now `sorry`-free **modulo exactly two isolated
+combinatorial recurrence lemmas**: the pre-existing `boundedSlack_recurrence` (owned by a separate
+number-theory effort) and the new `band_recurrence_ge_max` (the `max`-bounded recurring-slack
+strengthening needed for the `ω`-ordering of slack buckets).  *Every* game-semantic and
+construction step — the state machine defining the moves, displacement tracking, safety, the
+per-bucket separation, and the Yes obligation — is FULLY PROVEN.  See the `#print axioms` profiles
+at `separating_trajectory_exists` and `notEI_BobWins`.
 -/
 
 namespace TrolleyRetrieval
@@ -1464,11 +1468,76 @@ lemma stair_separates (a b : ℕ+) (hab : a ≠ b) :
     obtain ⟨s, hs⟩ := separates_OPair c h ⟨(b, a), hgt⟩
     exact ⟨s, hs.symm⟩
 
+/-! #### Yes-emitting
+
+Every displacement `D` lies in some phase's ride window `[rideTarget k', rideTarget (k'+1)]`
+(`ride_window_cover`); choosing a window with sufficiently large lag (`2(k'+1) > k₀`) and a weak
+descent `c(k₀+D) ≤ k₀+D` (`weak_descents_infinite`) makes the signal fire. -/
+
+/-- `rideTarget` is monotone. -/
+lemma rideTarget_mono {i j : ℕ} (hij : i ≤ j) : rideTarget c h i ≤ rideTarget c h j := by
+  induction j with
+  | zero =>
+      have : i = 0 := Nat.le_zero.mp hij
+      subst this; exact le_refl _
+  | succ n ih =>
+      rcases Nat.lt_succ_iff_lt_or_eq.mp (Nat.lt_succ_of_le hij) with hlt | heq
+      · exact le_trans (ih (Nat.lt_succ_iff.mp hlt)) (rideTarget_mono_step c h n)
+      · subst heq; exact le_refl _
+
+/-- **Ride-window cover.**  Every displacement `D ≥ rideTarget k₀'` lies in the ride window of some
+    phase `k'+1` with `k' ≥ k₀'` (so its lag `2(k'+1)` is at least `2(k₀'+1)`). -/
+lemma ride_window_cover (kfloor D : ℕ) (hD : rideTarget c h kfloor ≤ D) :
+    ∃ k', kfloor ≤ k' ∧ rideTarget c h k' ≤ D ∧ D ≤ rideTarget c h (k' + 1) := by
+  classical
+  -- kfloor ≤ D (since rideTarget kfloor ≥ kfloor)
+  have hkfloor_le_D : kfloor ≤ D := le_trans (rideTarget_ge_idx c h kfloor) hD
+  -- max index j ≤ D with rideTarget j ≤ D, via Nat.findGreatest
+  set k' := Nat.findGreatest (fun j => rideTarget c h j ≤ D) D with hk'
+  have hk'_le : rideTarget c h k' ≤ D :=
+    Nat.findGreatest_spec (P := fun j => rideTarget c h j ≤ D) hkfloor_le_D hD
+  have hk'_ge : kfloor ≤ k' :=
+    Nat.le_findGreatest hkfloor_le_D hD
+  have hk'_hi : D ≤ rideTarget c h (k' + 1) := by
+    by_contra hcon
+    push_neg at hcon
+    have hle : rideTarget c h (k' + 1) ≤ D := le_of_lt hcon
+    have hk1_le_D : k' + 1 ≤ D := le_trans (rideTarget_ge_idx c h (k' + 1)) hle
+    have hgt : Nat.findGreatest (fun j => rideTarget c h j ≤ D) D < k' + 1 := by
+      rw [← hk']; exact Nat.lt_succ_self k'
+    exact Nat.findGreatest_is_greatest hgt hk1_le_D hle
+  exact ⟨k', hk'_ge, hk'_le, hk'_hi⟩
+
+/-- **Yes-emitting.**  From every start cell, the staircase trajectory eventually reads a "Yes". -/
+lemma stair_yes (k₀ : ℕ+) :
+    ∃ s : ℕ, signalOf c (position c (ofMoves (stairMoves c h)) (k₀ : ℤ) s) s = true := by
+  -- Pick a lag floor `kfloor = k₀.val` so every later phase has lag `> k₀.val`.
+  set kfloor := k₀.val with hkfloor
+  -- A weak descent `D ≥ rideTarget kfloor`: `c(k₀+D) ≤ k₀+D`.
+  obtain ⟨D, hDge, hwd⟩ := weak_descents_infinite c k₀ (rideTarget c h kfloor)
+  -- The covering phase `k' ≥ kfloor`.
+  obtain ⟨k', hk'ge, hlo, hhi⟩ := ride_window_cover c h kfloor D hDge
+  -- The ride state at `⟨D, k', ride⟩`.
+  obtain ⟨t, ht⟩ := reach_ride c h k' D hlo hhi
+  refine ⟨t, ?_⟩
+  rw [signal_at_ride c h k₀ ht]
+  -- need (c (cellAt k₀ D)).val < D + (2*k'+2)
+  rw [decide_eq_true_eq]
+  -- weak descent: (c (cellAt k₀ D)).val ≤ (cellAt k₀ D).val = k₀.val + D
+  have hwd' : (c (cellAt k₀ D)).val ≤ k₀.val + D := by
+    rw [cellAt_val] at hwd; exact hwd
+  -- lag big: 2*(k'+1) ≥ 2*(kfloor+1) > k₀.val
+  have hlag : k₀.val < 2 * k' + 2 := by
+    have : kfloor ≤ k' := hk'ge
+    rw [hkfloor] at this
+    omega
+  omega
+
 end Staircase
 
-/-! ### The isolated hard lemma -/
+/-! ### The separating fixed trajectory (now PROVEN modulo `band_recurrence_ge_max`) -/
 
-/-- **Separating fixed trajectory (the single remaining `sorry`).**
+/-- **Separating fixed trajectory.**
 
 For every non-eventually-identity `c`, there is ONE fixed (signal-independent) move sequence `m`
 whose trajectory is (i) *safe* — never falls off the left edge from any start (equivalently
@@ -1478,12 +1547,16 @@ eventually differ.
 
 This is the purely combinatorial heart, with **no game/belief semantics left**: by
 `ofMoves_localizes` (proven), (i)+(ii)+(iii) imply `Localizes` for every start, hence (via
-`localizes_BobWins`) `BobWins`.  The construction is a *c-tailored* lag-monotone "staircase":
-ride right to sweep displacements at the current lag, take single left moves to raise the lag,
-dwelling at each lag long enough to reach the next pair's separator.  Existence of separators at
-unbounded displacement (the "catchable-ahead" fact, the unbounded form of `separators_exist`)
-guarantees every pair is eventually caught; first-Yes finiteness (`yesSet_finite`) gives the
-finite per-`k₀` stop time.  Discharging this is the remaining work. -/
+`localizes_BobWins`) `BobWins`.
+
+The witness is the **band-top lag-monotone staircase** `Staircase.stairMoves c h` (this file,
+namespace `Staircase`): phase `k+1` raises the lag to `2(k+1)` (one `RL` pair), rides right past
+every separator of every pair whose recurring slack is `2(k+1)`, then tail-rides until the
+displacement exceeds the phase index.  Safety (`stair_safe`), separation (`stair_separates`), and
+Yes (`stair_yes`) are all FULLY PROVEN; the construction rests on the single isolated combinatorial
+lemma `band_recurrence_ge_max` (the `max`-bounded recurring-slack fact, supplying both the
+`ω`-finiteness of the slack buckets and the per-bucket ride termination) — plus, transitively, the
+pre-existing `boundedSlack_recurrence`. -/
 theorem separating_trajectory_exists (c : Perm) (h : ¬ EventuallyIdentity c) :
     ∃ m : ℕ → Dir,
       (∀ (k₀ : ℕ+) (t : ℕ), 1 ≤ position c (ofMoves m) (k₀ : ℤ) t) ∧
@@ -1491,34 +1564,29 @@ theorem separating_trajectory_exists (c : Perm) (h : ¬ EventuallyIdentity c) :
           signalOf c (position c (ofMoves m) (a : ℤ) s) s
             ≠ signalOf c (position c (ofMoves m) (b : ℤ) s) s) ∧
       (∀ k₀ : ℕ+, ∃ s : ℕ, signalOf c (position c (ofMoves m) (k₀ : ℤ) s) s = true) :=
-  sorry
+  ⟨Staircase.stairMoves c h,
+    Staircase.stair_safe c h,
+    Staircase.stair_separates c h,
+    Staircase.stair_yes c h⟩
 
-/-- **Adaptive localization (now reduced to `separating_trajectory_exists`).**
+-- Axiom audit.  `separating_trajectory_exists` is `sorry`-free *modulo* the two isolated
+-- combinatorial residues `band_recurrence_ge_max` (new) and `boundedSlack_recurrence`
+-- (pre-existing): its profile shows `sorryAx` solely through those.  Every game-semantic and
+-- construction step (the state machine, safety, the per-bucket separation, Yes) is fully proven.
+#print axioms separating_trajectory_exists
+
+/-- **Adaptive localization (fully reduced to `separating_trajectory_exists`).**
 
 For every *non-eventually-identity* permutation `c`, there is a never-guessing exploration
 strategy `σ` that *localizes* every start cell: from any `k₀`, `σ`'s trajectory stays safe for
 finitely long and rules out every wrong candidate by a signal mismatch.
 
-This is the genuinely hard adaptive-combinatorics content.  By `LemmaA`
-(`not_eventually_identity_implies_distinguishable`), every pair of cells `a < b` is
-*distinguishable*: there is a *reachable discriminator* `(D, t)` (with `D ≥ 0`, `t ≥ D`,
-`t ≡ D (mod 2)`) at which the signals from `a + D` and `b + D` differ.  What remains — and what
-this `sorry` packages — is the *constructive scheduling* problem: design ONE never-guessing
-strategy whose single trajectory visits, for each `k₀`, enough `(D, t)` pairs (in the correct
-parity/timing windows, never falling off the left) to separate `k₀` from *every* other
-candidate in finite time.
-
-Three exact-dynamics negative results (documented at the `sorry` in `Answer.lean`) show this
-strategy must be genuinely adaptive (belief-guided): no fixed time-indexed displacement schedule
-suffices, the two-phase "localize then navigate" approach fails on low-slack discriminators, and
-"finite belief" alone does not imply winnability.  Hence the construction here is exactly the
-belief-state strategy itself — the foresight invariant that interleaves "ride the diagonal to
-catch low-slack discriminators" with "stay near the origin to bound `k₀`" — proven to terminate
-(reach a singleton belief) for every `k₀`.
-
-Discharging this lemma is the substantial separate Lean project flagged in `Answer.lean`; the
-belief-state *plumbing* (this file's reduction) is complete, so closing this one statement
-closes the winning direction of `main`. -/
+The witnessing `σ` is the **fixed (signal-independent) band-top staircase** `ofMoves (stairMoves)`
+from `separating_trajectory_exists`.  Earlier notes feared this had to be a genuinely *adaptive*
+belief-state machine; in fact a *c-tailored fixed* trajectory suffices (Bob still uses the signals
+only to know *when to stop*, via `beliefStrat`, but his moves are predetermined).  The reduction
+`ofMoves_localizes` turns (safety + separation + Yes) into `Localizes`, and those three are proven
+in namespace `Staircase` modulo the single isolated lemma `band_recurrence_ge_max`. -/
 theorem adaptive_localizes (c : Perm) (h : ¬ EventuallyIdentity c) :
     ∃ σ : Strategy, NeverGuesses σ ∧ ∀ k₀ : ℕ+, Localizes c σ k₀ := by
   obtain ⟨m, hsafe, hsep, hyes⟩ := separating_trajectory_exists c h

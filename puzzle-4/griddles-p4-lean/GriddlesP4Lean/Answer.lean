@@ -1,6 +1,7 @@
 import GriddlesP4Lean.Losing
 import GriddlesP4Lean.WinningRestricted
 import GriddlesP4Lean.WinningKProbeGen
+import GriddlesP4Lean.WinningAdaptive
 
 /-!
 # Main theorem
@@ -19,7 +20,12 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
   · -- Losing direction (contrapositive).
     intro h_wins h_ei
     exact EventuallyIdentity_loses c h_ei h_wins
-  · -- Winning direction. **OPEN** — the explicit *uniform* winning strategy.
+  · -- Winning direction.  Discharged by `notEI_BobWins` (WinningAdaptive): the **band-top
+    -- lag-monotone staircase** — a fixed signal-independent trajectory — localizes every start
+    -- cell, and `localizes_BobWins` packages that into `BobWins`.  This is FULLY PROVEN modulo two
+    -- isolated combinatorial recurrence lemmas (`boundedSlack_recurrence`, `band_recurrence_ge_max`).
+    --
+    -- Historical note on the architecture (the prior `sorry` was here):
     --
     -- WHAT IS PROVEN (axiom-clean):
     --   * `not_eventually_identity_implies_distinguishable` (LemmaA): ¬EI ⟹ every pair `(a,b)`
@@ -98,9 +104,15 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
     -- foresight invariant ("never enter a stranding state"), since (1)-(3) rule out every shortcut.
     -- The math content is done (LemmaA, the losing direction, and the arbitrary-K decodable class are
     -- all axiom-clean); what remains is packaging it into one explicit, provably-complete strategy.
-    -- (The `→` direction of `main` is the open piece; `←` is proven in `Losing.lean`.)
+    -- (The `→` direction of `main` is now closed via the band-top staircase; `←` is in `Losing`.)
     intro h_not_ei
-    sorry
+    exact notEI_BobWins c h_not_ei
+
+-- Axiom audit.  `main` is `sorry`-free *modulo* the two isolated combinatorial recurrence lemmas
+-- (`boundedSlack_recurrence`, `band_recurrence_ge_max`): its `#print axioms` shows `sorryAx` only
+-- through those.  The losing direction and ALL the game-semantic / construction plumbing of the
+-- winning direction are fully proven.
+#print axioms main
 
 /-- **Capstone for the locally-decodable class** (fully `sorry`-free).  Connecting the
     machine-checked losing direction with the restricted winning theorem: every locally
