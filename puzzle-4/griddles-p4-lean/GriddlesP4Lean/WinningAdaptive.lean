@@ -470,6 +470,33 @@ theorem band_recurrence (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (h
 #print axioms fixedSlack_of_boundedSlack_recurrence
 #print axioms band_recurrence
 
+/-! ### Band recurrence with a `max`-bounded slack (the single NEW isolated lemma)
+
+The band-top staircase enumerates the (infinitely many) distinct start-pairs in an order of type
+`ω` (every pair has finitely many predecessors), processing them by *recurring slack*.  For that
+ordering to have type `ω` we must know that the recurring slack `s(a,b)` of each pair is **bounded
+below by `max a.val b.val`** — otherwise infinitely many pairs could share one slack level and the
+"slack-then-max-then-min" key would not be a well-order of type `ω`.
+
+`band_recurrence` (proven modulo `boundedSlack_recurrence`) supplies *some* fixed recurring even
+slack, but does NOT pin it `≥ max(a,b)`.  We isolate the strengthened statement here.  It is the
+*single new* `sorry` of the band-top-staircase development (besides the pre-existing
+`boundedSlack_recurrence`, owned by the parallel number-theory effort).
+
+It is true on every family tested: `bandTop(a,b) ∈ {max(a,b), max(a,b)+1}` (notes.md, fact 2), so
+the band's *top* recurring slack is `≥ max(a,b)`; and band-top separators recur at unbounded
+displacement (notes.md, fact 3 / S1).  Formalizing it requires the same slack-localized
+bijectivity bookkeeping as `boundedSlack_recurrence`; the parallel effort can pick it up. -/
+
+/-- **Band recurrence with a `max`-bounded slack.**  For non-eventually-identity `c` and any
+    distinct pair `a ≠ b`, there is a fixed even slack `s ≥ max a.val b.val` whose fixed-slack
+    separators recur at arbitrarily large displacement.  The `max`-lower-bound is what makes the
+    pair enumeration have order type `ω` (finitely many pairs per slack level). -/
+theorem band_recurrence_ge_max (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
+    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
+      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
+  sorry
+
 /-! ### Never-guessing exploration strategies -/
 
 /-- A strategy that *never guesses*: at every history it returns a move.  Exploration
@@ -878,6 +905,37 @@ lemma position_ofMoves (c : Perm) (m : ℕ → Dir) (k₀ : ℤ) (t : ℕ) :
         rw [hlen]
       rw [position_succ_of_move hd, ih, cumDelta]; ring
 
+/-! ### Signal bridge: `signalOf` on a fixed trajectory ⟷ the slack comparison
+
+The `separatorAtSlack` predicate compares `(c (cellAt · D)).val` (a `ℕ`) against `D + s` (a `ℕ`),
+while the `Localizes` / `separating_trajectory_exists` obligations are stated through `signalOf` on
+the actual integer position `(k₀ : ℤ) + cumDelta m t`.  On a *safe* fixed trajectory (`cumDelta`
+nonnegative) these coincide; the bridge below makes this exact, so the separation obligation can be
+discharged directly from a `separatorAtSlack` witness. -/
+
+/-- On a fixed trajectory whose displacement at time `t` is the nonnegative integer `(D : ℕ)`, the
+    `signalOf` reading from start `a : ℕ+` is exactly `[ (c (cellAt a D)).val < t ]`. -/
+lemma signalOf_ofMoves_eq (c : Perm) (m : ℕ → Dir) (a : ℕ+) (t D : ℕ)
+    (hD : cumDelta m t = (D : ℤ)) :
+    signalOf c (position c (ofMoves m) (a : ℤ) t) t
+      = decide ((c (cellAt a D)).val < t) := by
+  rw [position_ofMoves, hD]
+  -- position = (a : ℤ) + D ≥ 1, so signalOf takes the `decide` branch.
+  have hpos : (1 : ℤ) ≤ (a : ℤ) + (D : ℤ) := by
+    have : (1 : ℤ) ≤ (a : ℤ) := by exact_mod_cast a.one_le
+    linarith [Int.ofNat_nonneg D]
+  unfold signalOf
+  rw [dif_pos hpos]
+  -- the cell `Int.toPNat ((a:ℤ)+D) hpos` equals `cellAt a D`.
+  have hcell : Int.toPNat ((a : ℤ) + (D : ℤ)) hpos = cellAt a D := by
+    apply Subtype.ext
+    show (Int.toPNat ((a : ℤ) + (D : ℤ)) hpos).val = (cellAt a D).val
+    rw [Int.toPNat_val, cellAt_val]
+    -- ((a:ℤ)+D).toNat = a.val + D
+    have heq : ((a : ℤ) + (D : ℤ)) = ((a.val + D : ℕ) : ℤ) := by push_cast; ring
+    rw [heq, Int.toNat_natCast]
+  rw [hcell]
+
 /-- **First-Yes finiteness.**  The set of start cells whose signal at time `s` (under the common
     displacement `δ`) is "Yes" is finite: such a cell shifted by `δ` lands on a cell whose label
     is `< s`, and `c` has only finitely many such cells (the `≤ s-1` cells with small label). -/
@@ -958,6 +1016,311 @@ theorem ofMoves_localizes (c : Perm) (m : ℕ → Dir)
       rw [position_ofMoves, position_ofMoves]
       rw [hk₀yes]
       simpa using hky
+
+/-! ### The band-top staircase: constructing the separating fixed trajectory
+
+We now build the explicit move sequence `m` discharging `separating_trajectory_exists`, *modulo*
+the single isolated combinatorial lemma `band_recurrence_ge_max` (plus the pre-existing
+`boundedSlack_recurrence` it routes through).  Everything in this section is fully proven.
+
+The trajectory is a **lag-monotone staircase**.  We enumerate the (infinitely many) ordered
+distinct start-pairs `(a, b)` with `a < b` in order of nondecreasing *recurring slack*
+`slackOf a b` (`≥ b.val ≥ max(a,b)`, by `band_recurrence_ge_max`).  Each phase:
+
+* **Raise** the lag to the pair's slack `s` (oscillating `D ∈ {0,1}`), then
+* **Ride** right at lag `s` until a fixed-slack-`s` separator for the pair is met
+  (`band_recurrence_ge_max` guarantees one at unbounded displacement), then
+* **Tail**: ride right until the displacement exceeds the phase index (so displacements grow
+  without bound — needed for the "Yes" obligation).
+
+Safety is automatic (left moves only fire at `D ≥ 1`).  Separation: every pair is processed at a
+finite phase, where the ride lands on a separator.  Yes: lag `→ ∞` and the tail visits arbitrarily
+large displacements, so a weak descent (`weak_descents_infinite`) of `k₀` eventually fires. -/
+
+namespace Staircase
+
+variable (c : Perm) (h : ¬ EventuallyIdentity c)
+
+/-- A canonical recurring even slack `≥ max a.val b.val` for a distinct pair, chosen from
+    `band_recurrence_ge_max`.  (For `a = b` it is the dummy `0`; only distinct pairs are used.) -/
+noncomputable def slackOf (a b : ℕ+) : ℕ :=
+  if hab : a ≠ b then Classical.choose (band_recurrence_ge_max c h a b hab) else 0
+
+/-- `slackOf` is even (from the chosen witness). -/
+lemma slackOf_even {a b : ℕ+} (hab : a ≠ b) : Even (slackOf c h a b) := by
+  unfold slackOf; rw [dif_pos hab]
+  exact (Classical.choose_spec (band_recurrence_ge_max c h a b hab)).1
+
+/-- `slackOf a b ≥ max a.val b.val` (the load-bearing lower bound for the `ω`-enumeration). -/
+lemma le_slackOf {a b : ℕ+} (hab : a ≠ b) : max a.val b.val ≤ slackOf c h a b := by
+  unfold slackOf; rw [dif_pos hab]
+  exact (Classical.choose_spec (band_recurrence_ge_max c h a b hab)).2.1
+
+/-- Fixed-slack-`slackOf a b` separators recur at arbitrarily large displacement. -/
+lemma slackOf_recurs {a b : ℕ+} (hab : a ≠ b) (D₀ : ℕ) :
+    ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b (slackOf c h a b) D := by
+  unfold slackOf; rw [dif_pos hab]
+  exact (Classical.choose_spec (band_recurrence_ge_max c h a b hab)).2.2 D₀
+
+/-! #### Ordered distinct pairs and their `ω`-enumeration by key
+
+A *pair* is an ordered distinct pair `(a, b)` with `a < b`.  Its *key* is `slackOf a b`.  Since
+`slackOf a b ≥ b.val > a.val`, only finitely many pairs have key `≤ K` (`pairs_key_le_finite`),
+so the keys form a well-order of type `ω`; we enumerate the pairs greedily by least key. -/
+
+/-- The type of ordered distinct start-pairs. -/
+abbrev OPair : Type := { p : ℕ+ × ℕ+ // p.1 < p.2 }
+
+/-- The key of a pair: its recurring slack `slackOf`. -/
+noncomputable def keyOf (p : OPair) : ℕ := slackOf c h p.1.1 p.1.2
+
+/-- The two cells of a pair are distinct. -/
+lemma OPair.ne (p : OPair) : p.1.1 ≠ p.1.2 := ne_of_lt p.2
+
+/-- `p.1.2.val ≤ keyOf p` (the larger cell is bounded by the key). -/
+lemma le_keyOf (p : OPair) : p.1.2.val ≤ keyOf c h p := by
+  unfold keyOf
+  have := le_slackOf c h (OPair.ne p)
+  exact le_trans (le_max_right _ _) this
+
+/-- The underlying `(ℕ × ℕ)` coordinates of a pair (injective). -/
+def OPair.coords (p : OPair) : ℕ × ℕ := (p.1.1.val, p.1.2.val)
+
+lemma OPair.coords_injective : Function.Injective OPair.coords := by
+  rintro ⟨⟨a₁, b₁⟩, h₁⟩ ⟨⟨a₂, b₂⟩, h₂⟩ hxy
+  simp only [OPair.coords] at hxy
+  obtain ⟨ha, hb⟩ := Prod.mk.injEq .. ▸ hxy
+  have ha' : a₁ = a₂ := PNat.coe_injective ha
+  have hb' : b₁ = b₂ := PNat.coe_injective hb
+  subst ha'; subst hb'; rfl
+
+/-- **Finitely many pairs of bounded key.**  `{p : keyOf p ≤ K}` is finite, because such a pair has
+    `b.val ≤ K` and `a < b`, so both cells live in `[1, K]`. -/
+lemma pairs_key_le_finite (K : ℕ) : {p : OPair | keyOf c h p ≤ K}.Finite := by
+  classical
+  -- The image under `coords` lands in the finite box `Icc 1 K ×ˢ Icc 1 K`.
+  have hbox : (OPair.coords '' {p : OPair | keyOf c h p ≤ K}).Finite := by
+    apply Set.Finite.subset (Finset.Icc (1, 1) (K, K) : Finset (ℕ × ℕ)).finite_toSet
+    rintro _ ⟨p, hp, rfl⟩
+    simp only [Set.mem_setOf_eq] at hp
+    have hb : p.1.2.val ≤ K := le_trans (le_keyOf c h p) hp
+    have ha : p.1.1.val ≤ K := le_trans (le_of_lt (by exact_mod_cast p.2)) hb
+    simp only [Finset.coe_Icc, Set.mem_Icc, OPair.coords, Prod.le_def]
+    exact ⟨⟨p.1.1.one_le, p.1.2.one_le⟩, ha, hb⟩
+  exact Set.Finite.of_finite_image hbox (OPair.coords_injective.injOn)
+
+/-! #### Slack buckets and per-phase ride targets
+
+Phase `k` of the staircase rides at lag `2k` and must reach a displacement past every separator of
+every pair whose slack is `2k`.  We collect those pairs into `bucket k` (finite) and compute the
+ride target `rideTarget k` (a displacement large enough that the ride past it has visited each
+bucket pair's separator, and `≥ k+1` for the Yes tail).  `rideTarget` is monotone increasing, so
+the rightward ride is consistent with the previous phase's end. -/
+
+/-- The (finite) set of pairs whose recurring slack is exactly `2k`. -/
+noncomputable def bucket (k : ℕ) : Finset OPair :=
+  (pairs_key_le_finite c h (2 * k)).toFinset.filter (fun p => keyOf c h p = 2 * k)
+
+lemma mem_bucket {k : ℕ} {p : OPair} : p ∈ bucket c h k ↔ keyOf c h p = 2 * k := by
+  unfold bucket
+  rw [Finset.mem_filter, Set.Finite.mem_toFinset, Set.mem_setOf_eq]
+  constructor
+  · exact fun ⟨_, h2⟩ => h2
+  · exact fun h2 => ⟨le_of_eq h2, h2⟩
+
+/-- For a pair `p` and a displacement floor `D₀`, the least separator displacement `≥ D₀` at the
+    pair's own slack `keyOf p`.  Exists by `slackOf_recurs` (the band recurrence). -/
+noncomputable def sepDispAt (p : OPair) (D₀ : ℕ) : ℕ :=
+  Nat.find (slackOf_recurs c h (OPair.ne p) D₀)
+
+lemma sepDispAt_ge (p : OPair) (D₀ : ℕ) : sepDispAt c h p D₀ ≥ D₀ :=
+  (Nat.find_spec (slackOf_recurs c h (OPair.ne p) D₀)).1
+
+lemma sepDispAt_sep (p : OPair) (D₀ : ℕ) :
+    separatorAtSlack c p.1.1 p.1.2 (keyOf c h p) (sepDispAt c h p D₀) :=
+  (Nat.find_spec (slackOf_recurs c h (OPair.ne p) D₀)).2
+
+/-- **Per-phase ride target.**  `rideTarget k` is the displacement at the end of phase `k`'s ride
+    (at lag `2k`).  Defined so that (a) it is `≥ rideTarget (k-1)` and `≥ k` (monotone, and the Yes
+    tail grows `D`), and (b) it is `≥ sepDispAt p (rideTarget (k-1))` for every `p ∈ bucket k`, so
+    the ride from `rideTarget (k-1)` up to `rideTarget k` passes through every bucket-`k` separator.
+    -/
+noncomputable def rideTarget : ℕ → ℕ
+  | 0 => 0
+  | k + 1 =>
+      max (max (rideTarget k) (k + 1))
+        ((bucket c h (k + 1)).sup (fun p => sepDispAt c h p (rideTarget k)))
+  decreasing_by all_goals simp_wf
+
+lemma rideTarget_mono_step (k : ℕ) : rideTarget c h k ≤ rideTarget c h (k + 1) := by
+  rw [rideTarget]
+  exact le_trans (le_max_left _ _) (le_max_left _ _)
+
+lemma rideTarget_ge_idx (k : ℕ) : k ≤ rideTarget c h k := by
+  cases k with
+  | zero => exact Nat.zero_le _
+  | succ n =>
+      rw [rideTarget]
+      exact le_trans (le_max_right _ _) (le_max_left _ _)
+
+/-- The ride of phase `k+1` reaches every bucket-`(k+1)` separator: for `p ∈ bucket (k+1)`,
+    `sepDispAt p (rideTarget k) ≤ rideTarget (k+1)`. -/
+lemma sepDispAt_le_rideTarget {k : ℕ} {p : OPair} (hp : p ∈ bucket c h (k + 1)) :
+    sepDispAt c h p (rideTarget c h k) ≤ rideTarget c h (k + 1) := by
+  have hsup : sepDispAt c h p (rideTarget c h k)
+      ≤ (bucket c h (k + 1)).sup (fun q => sepDispAt c h q (rideTarget c h k)) :=
+    Finset.le_sup (f := fun q => sepDispAt c h q (rideTarget c h k)) hp
+  rw [rideTarget]
+  exact le_trans hsup (le_max_right _ _)
+
+/-! #### The state machine
+
+The trajectory runs phase `k+1` for `k = 0, 1, 2, …`.  Phase `k+1` starts at displacement
+`rideTarget k` and lag `2k`, then:
+
+* **`raiseR`**: emit `R` (`D → D+1`),
+* **`raiseL`**: emit `L` (`D → D` again, lag `→ lag+2`); now lag `= 2(k+1)`,
+* **`ride`**: emit `R` until `D = rideTarget (k+1)`, then advance to phase `k+2`'s `raiseR`.
+
+The state records the current displacement `D`, phase index `k`, and sub-phase.  The initial state
+(`D = 0`, `k = 0`, `raiseR`) begins phase `1`. -/
+
+/-- Sub-phase tag. -/
+inductive Sub | raiseR | raiseL | ride
+  deriving DecidableEq, Repr
+
+/-- Trajectory state. -/
+structure St where
+  D : ℕ
+  k : ℕ
+  sub : Sub
+  deriving Repr
+
+/-- The move emitted from a state. -/
+def moveOf (st : St) : Dir :=
+  match st.sub with
+  | Sub.raiseR => Dir.right
+  | Sub.raiseL => Dir.left
+  | Sub.ride   => Dir.right   -- (a final phase-advance tick still emits R, harmless)
+
+/-- The next state after emitting `moveOf st`. -/
+noncomputable def nextSt (st : St) : St :=
+  match st.sub with
+  | Sub.raiseR => { D := st.D + 1, k := st.k, sub := Sub.raiseL }
+  | Sub.raiseL => { D := st.D - 1, k := st.k, sub := Sub.ride }
+  | Sub.ride   =>
+      if st.D < rideTarget c h (st.k + 1) then
+        { D := st.D + 1, k := st.k, sub := Sub.ride }
+      else
+        -- finished phase k+1; begin phase k+2 with an R move (raiseR)
+        { D := st.D + 1, k := st.k + 1, sub := Sub.raiseL }
+
+/-- The state at time `t`. -/
+noncomputable def trajSt : ℕ → St
+  | 0 => { D := 0, k := 0, sub := Sub.raiseR }
+  | t + 1 => nextSt c h (trajSt t)
+
+/-- The fixed move sequence of the staircase. -/
+noncomputable def stairMoves : ℕ → Dir := fun t => moveOf (trajSt c h t)
+
+/-! #### Invariants -/
+
+@[simp] lemma trajSt_succ (t : ℕ) : trajSt c h (t + 1) = nextSt c h (trajSt c h t) := rfl
+
+/-- At a `raiseL` state the displacement is `≥ 1` (so the left move keeps `D ≥ 0`). -/
+lemma raiseL_D_pos (t : ℕ) : (trajSt c h t).sub = Sub.raiseL → 1 ≤ (trajSt c h t).D := by
+  cases t with
+  | zero => intro hsub; simp [trajSt] at hsub
+  | succ n =>
+      intro hsub
+      rw [trajSt_succ] at hsub ⊢
+      -- inspect the previous sub-phase
+      unfold nextSt at hsub ⊢
+      cases hprev : (trajSt c h n).sub with
+      | raiseR => simp [hprev]
+      | raiseL => simp [hprev] at hsub
+      | ride =>
+          simp only [hprev] at hsub ⊢
+          split
+          · -- if-branch: sub becomes `ride`, contradicting hsub which (also if-branch) says raiseL
+            rename_i hlt
+            simp only [hlt, if_true] at hsub
+            simp at hsub
+          · -- else-branch: D := old + 1 ≥ 1
+            show 1 ≤ (trajSt c h n).D + 1
+            omega
+
+/-- **Displacement tracking.**  The cumulative displacement of `stairMoves` equals the state's `D`
+    (as an integer).  The only nontrivial step is the `raiseL` left move, where `raiseL_D_pos`
+    ensures the `ℕ` subtraction agrees with the `ℤ` decrement. -/
+lemma cumDelta_stairMoves (t : ℕ) :
+    cumDelta (stairMoves c h) t = ((trajSt c h t).D : ℤ) := by
+  induction t with
+  | zero => simp [cumDelta, trajSt]
+  | succ n ih =>
+      rw [cumDelta, ih, trajSt_succ]
+      show ((trajSt c h n).D : ℤ) + (moveOf (trajSt c h n)).delta
+            = ((nextSt c h (trajSt c h n)).D : ℤ)
+      unfold moveOf nextSt
+      cases hsub : (trajSt c h n).sub with
+      | raiseR => simp [hsub]
+      | raiseL =>
+          have hpos : 1 ≤ (trajSt c h n).D := raiseL_D_pos c h n hsub
+          simp only [hsub]
+          show ((trajSt c h n).D : ℤ) + (-1) = (((trajSt c h n).D - 1 : ℕ) : ℤ)
+          rw [Nat.cast_sub hpos]; push_cast; ring
+      | ride =>
+          simp only [hsub]
+          split <;> · show ((trajSt c h n).D : ℤ) + (1) = (((trajSt c h n).D + 1 : ℕ) : ℤ)
+                      push_cast; ring
+
+/-- **Safety.**  From any start cell, the position never falls off the left edge. -/
+lemma stair_safe (k₀ : ℕ+) (t : ℕ) :
+    1 ≤ position c (ofMoves (stairMoves c h)) (k₀ : ℤ) t := by
+  rw [position_ofMoves, cumDelta_stairMoves]
+  have h1 : (1 : ℤ) ≤ (k₀ : ℤ) := by exact_mod_cast k₀.one_le
+  have h2 : (0 : ℤ) ≤ ((trajSt c h t).D : ℤ) := Int.ofNat_nonneg _
+  linarith
+
+/-- The lag of a state: `2·k` plus `2` more once in the `ride` sub-phase. -/
+def lagSt (st : St) : ℕ := 2 * st.k + (if st.sub = Sub.ride then 2 else 0)
+
+/-- **Time = displacement + lag.**  The elapsed time decomposes as current displacement plus the
+    (even) lag.  This pins the time at which each `(D, sub, k)` state occurs. -/
+lemma time_eq_D_add_lag (t : ℕ) : t = (trajSt c h t).D + lagSt (trajSt c h t) := by
+  induction t with
+  | zero => simp [trajSt, lagSt]
+  | succ n ih =>
+      -- abbreviate the previous state's fields
+      set p := trajSt c h n with hp
+      rw [trajSt_succ, ← hp]
+      simp only [lagSt] at ih
+      cases hsub : p.sub with
+      | raiseR =>
+          rw [hsub, if_neg (by decide : Sub.raiseR ≠ Sub.ride)] at ih
+          show n + 1 = (nextSt c h p).D + lagSt (nextSt c h p)
+          unfold nextSt lagSt; rw [hsub]
+          dsimp only
+          rw [if_neg (by decide : Sub.raiseL ≠ Sub.ride)]
+          omega
+      | raiseL =>
+          have hpos : 1 ≤ p.D := by rw [hp] at hsub ⊢; exact raiseL_D_pos c h n hsub
+          rw [hsub, if_neg (by decide : Sub.raiseL ≠ Sub.ride)] at ih
+          show n + 1 = (nextSt c h p).D + lagSt (nextSt c h p)
+          unfold nextSt lagSt; rw [hsub]
+          dsimp only
+          rw [if_pos (rfl : Sub.ride = Sub.ride)]
+          omega
+      | ride =>
+          rw [hsub, if_pos (rfl : Sub.ride = Sub.ride)] at ih
+          show n + 1 = (nextSt c h p).D + lagSt (nextSt c h p)
+          unfold nextSt lagSt; rw [hsub]
+          dsimp only
+          split
+          · dsimp only; rw [if_pos (rfl : Sub.ride = Sub.ride)]; omega
+          · dsimp only; rw [if_neg (by decide : Sub.raiseL ≠ Sub.ride)]; omega
+
+end Staircase
 
 /-! ### The isolated hard lemma -/
 
