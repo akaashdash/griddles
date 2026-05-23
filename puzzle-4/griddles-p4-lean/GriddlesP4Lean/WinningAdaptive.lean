@@ -141,6 +141,66 @@ theorem separators_exist (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (
 #print axioms indistinguishable_iff_no_separator
 #print axioms separators_exist
 
+/-! ### Separators at unbounded displacement
+
+`separators_exist` produces *some* separator; the strengthening below produces separators at
+*arbitrarily large* displacement.  The key is the threshold-floored Lemma A
+(`IndistFrom_implies_EventuallyIdentity`): if no separator existed at any displacement `≥ D₀`,
+then the pair would be `IndistFrom`-indistinguishable above `D₀`, forcing `c` eventually
+identity — contradicting `¬ EventuallyIdentity c`. -/
+
+/-- **Bridge (floored): no separator at displacement `≥ D₀` ⇔ `IndistFrom`.**  Mirror of
+    `indistinguishable_iff_no_separator`, parameterized by a displacement floor `D₀`.  The
+    `cellAt` wrapper of `separatedAtDisp` reconciles definitionally with the inline `aD` cell
+    inside `IndistFrom`. -/
+theorem indistFrom_iff_no_separator_ge (c : Perm) (a b : ℕ+) (D₀ : ℕ) :
+    IndistFrom c a b D₀ ↔ ∀ D : ℕ, D₀ ≤ D → ¬ separatedAtDisp c a b D := by
+  constructor
+  · -- IndistFrom ⇒ no separator at any D ≥ D₀.
+    intro h D hD₀
+    rintro ⟨t, ht_ge, ht_par, hne⟩
+    rw [decide_ne_iff_not_iff] at hne
+    exact hne (h D hD₀ t ht_ge ht_par)
+  · -- No separator at D ≥ D₀ ⇒ IndistFrom.
+    intro h D hD₀ t ht_ge ht_par
+    by_contra hiff
+    exact h D hD₀ ⟨t, ht_ge, ht_par, (decide_ne_iff_not_iff _ _).mpr hiff⟩
+
+/-- **Separators occur at arbitrarily large displacement.**  For a non-eventually-identity
+    `c` and any pair of distinct start cells, separators exist at displacement `≥ D₀` for every
+    `D₀`.  Contrapositive of the threshold Lemma A
+    (`IndistFrom_implies_EventuallyIdentity`), with a WLOG ordering of the pair (the separator
+    predicate is symmetric up to the Boolean disagreement, which is symmetric). -/
+theorem separators_unbounded (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
+    ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatedAtDisp c a b D := by
+  intro D₀
+  -- WLOG order the pair so the threshold Lemma A applies (needs `a < b`).
+  rcases lt_or_gt_of_ne hab with hlt | hgt
+  · -- a < b.
+    by_contra hcon
+    push_neg at hcon
+    -- hcon : ∀ D, D ≥ D₀ → ¬ separatedAtDisp c a b D
+    have hno : ∀ D : ℕ, D₀ ≤ D → ¬ separatedAtDisp c a b D := fun D hD => hcon D hD
+    have hindist : IndistFrom c a b D₀ :=
+      (indistFrom_iff_no_separator_ge c a b D₀).mpr hno
+    exact h (IndistFrom_implies_EventuallyIdentity hlt hindist)
+  · -- b < a; obtain a separator for `(b, a)` and swap.
+    by_contra hcon
+    push_neg at hcon
+    have hno : ∀ D : ℕ, D₀ ≤ D → ¬ separatedAtDisp c b a D := by
+      intro D hD
+      rintro ⟨t, ht_ge, ht_par, hne⟩
+      exact hcon D hD ⟨t, ht_ge, ht_par, hne.symm⟩
+    have hindist : IndistFrom c b a D₀ :=
+      (indistFrom_iff_no_separator_ge c b a D₀).mpr hno
+    exact h (IndistFrom_implies_EventuallyIdentity hgt hindist)
+
+-- Axiom audit: `separators_unbounded` is `sorry`-free — it depends only on the three standard
+-- classical axioms `[propext, Classical.choice, Quot.sound]` (NO `sorryAx`), routing through
+-- `LemmaA`'s axiom-clean threshold `IndistFrom_implies_EventuallyIdentity`.
+#print axioms indistFrom_iff_no_separator_ge
+#print axioms separators_unbounded
+
 /-! ### Never-guessing exploration strategies -/
 
 /-- A strategy that *never guesses*: at every history it returns a move.  Exploration

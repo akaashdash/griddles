@@ -1221,4 +1221,490 @@ theorem not_eventually_identity_implies_distinguishable
   obtain ⟨_, h_ei⟩ := Indistinguishable_implies_eventually_identity hab h_indist
   exact h ⟨a, h_ei⟩
 
+/-! ## Threshold-floored indistinguishability
+
+`IndistFrom c a b D₀` is the threshold-floored variant of `Indistinguishable`: the signals
+of the two trajectories agree at every displacement `D ≥ D₀` and every valid time `t ≥ D`
+with `t ≡ D (mod 2)`.  This is exactly the negation of "a separator exists at displacement
+`≥ D₀`".
+
+The point of this section is to re-run the Lemma A engine *with a floor*: every engine helper
+(`indist_consec`, `good_symm`, `bad_D_propagates`, `active_step`, `chain_bound`) only ever
+applies the signal-agreement hypothesis at a *single* displacement `D` (or `D ± Δ`), with
+times naturally `≥ D`.  Provided every such displacement is `≥ D₀`, the agreement floor is
+respected, so the helpers carry over verbatim.  The conclusion is the same kill — either a
+pigeonhole/cofinitely-bad contradiction, or (in the `Δ = 1` ascending branch) eventual
+identity from the cell `a + D₀`. -/
+
+/-- Threshold-floored indistinguishability: signal-agreement at every displacement `D ≥ D₀`. -/
+def IndistFrom (c : Perm) (a b : ℕ+) (D₀ : ℕ) : Prop :=
+  ∀ D : ℕ, D₀ ≤ D → ∀ t : ℕ, (t : ℤ) ≥ D → ((t : ℤ) - D) % 2 = 0 →
+    ((c (aD a D)).val < t ↔ (c (aD b D)).val < t)
+
+/-- **Threshold `indist_consec`.**  Same conclusion as `indist_consec` but using only the
+    floored hypothesis `IndistFrom`, valid at displacements `D ≥ D₀`. -/
+lemma indist_consec_from {c : Perm} {a b : ℕ+} (hab : a < b) {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) {D : ℕ} (hD₀ : D₀ ≤ D)
+    (h_a_ge : D ≤ (c (aD a D)).val) (h_b_ge : D ≤ (c (aD b D)).val) :
+    ((c (aD a D)).val + 1 = (c (aD b D)).val ∨
+     (c (aD b D)).val + 1 = (c (aD a D)).val) ∧
+    min (c (aD a D)).val (c (aD b D)).val % 2 = D % 2 := by
+  set X := (c (aD a D)).val with hX_def
+  set Y := (c (aD b D)).val with hY_def
+  have h_sig : ∀ t : ℕ, (t : ℤ) ≥ D → ((t : ℤ) - D) % 2 = 0 → (X < t ↔ Y < t) := by
+    intro t ht_ge ht_par
+    exact h D hD₀ t ht_ge ht_par
+  -- X ≠ Y by bijectivity.
+  have h_X_ne_Y : X ≠ Y := by
+    intro h_eq
+    have h_pnat_eq : c (aD a D) = c (aD b D) := Subtype.ext h_eq
+    have h_arg_eq : aD a D = aD b D := c.injective h_pnat_eq
+    have h_val_eq : a.val + D = b.val + D := by
+      have := congrArg (fun (n : ℕ+) => n.val) h_arg_eq
+      simpa [aD_val] using this
+    have hab_val : a.val < b.val := hab
+    omega
+  rcases lt_or_gt_of_ne h_X_ne_Y with h_X_lt_Y | h_X_gt_Y
+  · -- X < Y.  Show Y = X + 1.
+    have h_Y_eq_X1 : Y = X + 1 := by
+      by_contra h_ne
+      have h_Y_ge_X2 : X + 2 ≤ Y := by omega
+      by_cases h_par : (X + 1 - D) % 2 = 0
+      · have h_t_ge : ((↑(X + 1) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(X + 1) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ X + 1 := by omega
+          have h_cast : (((X + 1) - D : ℕ) : ℤ) = (↑(X + 1) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]; exact_mod_cast h_par
+        have h_iff := h_sig (X + 1) h_t_ge h_t_par
+        have : X < X + 1 := by omega
+        have h_Y_lt : Y < X + 1 := h_iff.mp this
+        omega
+      · have h_X2_par : (X + 2 - D) % 2 = 0 := by omega
+        have h_t_ge : ((↑(X + 2) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(X + 2) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ X + 2 := by omega
+          have h_cast : (((X + 2) - D : ℕ) : ℤ) = (↑(X + 2) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]; exact_mod_cast h_X2_par
+        have h_iff := h_sig (X + 2) h_t_ge h_t_par
+        have : X < X + 2 := by omega
+        have h_Y_lt : Y < X + 2 := h_iff.mp this
+        omega
+    have h_par_diff : ((↑Y : ℤ) - D) % 2 ≠ 0 := by
+      intro h_par
+      have h_t_ge : ((↑Y : ℤ)) ≥ D := by exact_mod_cast h_b_ge
+      have h_iff := h_sig Y h_t_ge h_par
+      have hX : X < Y := h_X_lt_Y
+      have hY : ¬ (Y < Y) := lt_irrefl Y
+      exact hY (h_iff.mp hX)
+    refine ⟨Or.inl h_Y_eq_X1.symm, ?_⟩
+    rw [min_eq_left (by omega : X ≤ Y)]
+    have h_Y_ne_D_par : (Y - D) % 2 ≠ 0 := by
+      intro h
+      apply h_par_diff
+      have h_nat : ((Y - D : ℕ) : ℤ) % 2 = 0 := by exact_mod_cast h
+      have : ((Y - D : ℕ) : ℤ) = ((Y : ℤ) - D) := by
+        have : D ≤ Y := h_b_ge
+        push_cast; omega
+      rw [← this]; exact h_nat
+    omega
+  · -- X > Y.  Symmetric.
+    have h_X_eq_Y1 : X = Y + 1 := by
+      by_contra h_ne
+      have h_X_ge_Y2 : Y + 2 ≤ X := by omega
+      by_cases h_par : (Y + 1 - D) % 2 = 0
+      · have h_t_ge : ((↑(Y + 1) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(Y + 1) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ Y + 1 := by omega
+          have h_cast : (((Y + 1) - D : ℕ) : ℤ) = (↑(Y + 1) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]; exact_mod_cast h_par
+        have h_iff := h_sig (Y + 1) h_t_ge h_t_par
+        have : Y < Y + 1 := by omega
+        have h_X_lt : X < Y + 1 := h_iff.mpr this
+        omega
+      · have h_Y2_par : (Y + 2 - D) % 2 = 0 := by omega
+        have h_t_ge : ((↑(Y + 2) : ℤ)) ≥ D := by push_cast; omega
+        have h_t_par : ((↑(Y + 2) : ℤ) - D) % 2 = 0 := by
+          have h_le : D ≤ Y + 2 := by omega
+          have h_cast : (((Y + 2) - D : ℕ) : ℤ) = (↑(Y + 2) - ↑D : ℤ) :=
+            Nat.cast_sub h_le
+          rw [← h_cast]; exact_mod_cast h_Y2_par
+        have h_iff := h_sig (Y + 2) h_t_ge h_t_par
+        have : Y < Y + 2 := by omega
+        have h_X_lt : X < Y + 2 := h_iff.mpr this
+        omega
+    have h_par_diff : ((↑X : ℤ) - D) % 2 ≠ 0 := by
+      intro h_par
+      have h_t_ge : ((↑X : ℤ)) ≥ D := by exact_mod_cast h_a_ge
+      have h_iff := h_sig X h_t_ge h_par
+      have hY : Y < X := h_X_gt_Y
+      have hX : ¬ (X < X) := lt_irrefl X
+      exact hX (h_iff.mpr hY)
+    refine ⟨Or.inr h_X_eq_Y1.symm, ?_⟩
+    rw [min_eq_right (by omega : Y ≤ X)]
+    have h_X_ne_D_par : (X - D) % 2 ≠ 0 := by
+      intro h
+      apply h_par_diff
+      have h_nat : ((X - D : ℕ) : ℤ) % 2 = 0 := by exact_mod_cast h
+      have : ((X - D : ℕ) : ℤ) = ((X : ℤ) - D) := by
+        have : D ≤ X := h_a_ge
+        push_cast; omega
+      rw [← this]; exact h_nat
+    omega
+
+/-- **Threshold `good_symm`.**  At any displacement `D ≥ D₀`, the a-side is above threshold
+    iff the b-side is.  (Uses the signal at the minimal valid time `t = D`, which is `≥ D₀`.) -/
+lemma good_symm_from {c : Perm} {a b : ℕ+} {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) {D : ℕ} (hD₀ : D₀ ≤ D) :
+    (D ≤ (c (aD a D)).val) ↔ (D ≤ (c (aD b D)).val) := by
+  have hsig : (c (aD a D)).val < D ↔ (c (aD b D)).val < D :=
+    h D hD₀ D (le_refl (D : ℤ)) (by simp)
+  constructor
+  · intro ha
+    by_contra hb
+    push_neg at hb
+    exact absurd (hsig.mpr hb) (by omega)
+  · intro hb
+    by_contra ha
+    push_neg at ha
+    exact absurd (hsig.mp ha) (by omega)
+
+/-- **Threshold `bad_D_propagates`.**  At displacement `D ≥ D₀`, a "below threshold" a-side
+    forces a "below threshold" b-side. -/
+lemma bad_D_propagates_from {c : Perm} {a b : ℕ+} {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) {D : ℕ} (hD₀ : D₀ ≤ D)
+    (h_bad : (c (aD a D)).val < D) :
+    (c (aD b D)).val < D := by
+  have h_t_ge : (D : ℤ) ≥ (D : ℤ) := le_refl _
+  have h_t_par : ((D : ℤ) - (D : ℤ)) % 2 = 0 := by simp
+  have h_iff := h D hD₀ D h_t_ge h_t_par
+  exact h_iff.mp h_bad
+
+/-- **Threshold `active_step`.**  If `D ≥ D₀ + Δ` is active, then `D − Δ` (which is `≥ D₀`)
+    is active too and the a-values are consecutive-bounded. -/
+lemma active_step_from {c : Perm} {a b : ℕ+} (hab : a < b) {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) {Δ : ℕ} (hΔ : b.val = a.val + Δ) {D : ℕ}
+    (hDΔ : D₀ + Δ ≤ D) (hact : D ≤ (c (aD a D)).val) :
+    (D - Δ ≤ (c (aD a (D - Δ))).val) ∧ (c (aD a D)).val ≤ (c (aD a (D - Δ))).val + 1 := by
+  have hbridge : aD a D = aD b (D - Δ) := by
+    apply Subtype.ext; show a.val + D = b.val + (D - Δ); omega
+  have hb_ge : D - Δ ≤ (c (aD b (D - Δ))).val := by rw [← hbridge]; omega
+  have hDmΔ_D₀ : D₀ ≤ D - Δ := by omega
+  have ha_ge : D - Δ ≤ (c (aD a (D - Δ))).val := (good_symm_from h hDmΔ_D₀).mpr hb_ge
+  refine ⟨ha_ge, ?_⟩
+  have hcons := (indist_consec_from hab h hDmΔ_D₀ ha_ge hb_ge).1
+  rw [← hbridge] at hcons
+  rcases hcons with h1 | h1 <;> omega
+
+/-- **Threshold `chain_bound`.**  On the active prefix of a residue starting at `r ≥ D₀`,
+    c-values grow by at most `1` per `Δ`-step. -/
+lemma chain_bound_from {c : Perm} {a b : ℕ+} (hab : a < b) {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) {Δ : ℕ} (hΔ : b.val = a.val + Δ) (hΔ1 : 1 ≤ Δ)
+    {r : ℕ} (hr : D₀ ≤ r) :
+    ∀ k : ℕ, (r + k * Δ ≤ (c (aD a (r + k * Δ))).val) →
+      (c (aD a (r + k * Δ))).val ≤ (c (aD a r)).val + k := by
+  intro k
+  induction k with
+  | zero => intro _; simp
+  | succ n ih =>
+      intro hact
+      have hDΔ : D₀ + Δ ≤ r + (n + 1) * Δ := by
+        have : Δ ≤ (n + 1) * Δ := by nlinarith [Nat.zero_le n]
+        omega
+      have hstep := active_step_from hab h hΔ hDΔ hact
+      have heq : r + (n + 1) * Δ - Δ = r + n * Δ := by
+        have hexp : (n + 1) * Δ = n * Δ + Δ := by ring
+        omega
+      rw [heq] at hstep
+      obtain ⟨hact_prev, hbound_step⟩ := hstep
+      have hih := ih hact_prev
+      omega
+
+/-- **Threshold `cofinitely_bad_impossible`.**  Same statement and proof as
+    `cofinitely_bad_impossible`; included here only to mirror the floored naming (it does not
+    use any indistinguishability hypothesis, so it is literally the original lemma). -/
+lemma cofinitely_bad_impossible_from {c : Perm} {a : ℕ+} {T : ℕ}
+    (hbound : ∀ D : ℕ, T ≤ D → (c (aD a D)).val < D) : False :=
+  cofinitely_bad_impossible hbound
+
+/-- **Threshold `good_downward` (Δ = 1).**  For the pair `(a, a+1)`, at displacement `D ≥ D₀`,
+    if `a + (D+1)` is above threshold then so is `a + D`. -/
+lemma good_downward_from {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1) {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) {D : ℕ} (hD₀ : D₀ ≤ D)
+    (hD : (D + 1) ≤ (c (aD a (D + 1))).val) : D ≤ (c (aD a D)).val := by
+  have hbridge : aD b D = aD a (D + 1) := by
+    apply Subtype.ext; show b.val + D = a.val + (D + 1); omega
+  have hgs := good_symm_from h hD₀ (D := D)
+  rw [hbridge] at hgs
+  rw [hgs]
+  omega
+
+/-! ### Δ ≥ 2 floored impossibility -/
+
+/-- **Threshold `indist_Delta_ge_2_impossible`.**  Floored re-run of the `Δ ≥ 2` kill: active
+    displacements `D ≥ D₀` are bounded via `chain_bound_from` on residues `r ∈ [D₀, D₀+Δ)`, so
+    cofinitely many displacements are bad. -/
+lemma indistFrom_Delta_ge_2_impossible {c : Perm} {a b : ℕ+} (hab : a < b) {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) {Δ : ℕ} (hΔ : b.val = a.val + Δ) (hΔ2 : 2 ≤ Δ) : False := by
+  -- Max c-value over the Δ residues based at D₀.
+  set M : ℕ := (Finset.range Δ).sup (fun r => (c (aD a (D₀ + r))).val) with hMdef
+  apply cofinitely_bad_impossible_from (a := a) (T := D₀ + (M + 1) * Δ)
+  intro D hD
+  by_contra hcon
+  push_neg at hcon
+  have hΔpos : 0 < Δ := by omega
+  -- Decompose `D = D₀ + q`, `q = (D - D₀)`; residue `q % Δ`, quotient `q / Δ`.
+  set q := D - D₀ with hqdef
+  have hDeq0 : D = D₀ + q := by omega
+  set r0 := q % Δ with hr0def
+  set k := q / Δ with hkdef
+  have hqeq : q = r0 + k * Δ := by
+    rw [hr0def, hkdef, Nat.mul_comm, Nat.add_comm]; exact (Nat.div_add_mod q Δ).symm
+  have hr0lt : r0 < Δ := Nat.mod_lt _ hΔpos
+  -- The residue base `r = D₀ + r0`.
+  set r := D₀ + r0 with hrdef
+  have hr_ge : D₀ ≤ r := by omega
+  have hDeq : D = r + k * Δ := by omega
+  have hact' : r + k * Δ ≤ (c (aD a (r + k * Δ))).val := by rw [← hDeq]; exact hcon
+  have hcb := chain_bound_from hab h hΔ (by omega) hr_ge k hact'
+  rw [← hDeq] at hcb
+  have hM : (c (aD a r)).val ≤ M := by
+    rw [hMdef, hrdef]
+    exact Finset.le_sup (f := fun r => (c (aD a (D₀ + r))).val) (Finset.mem_range.mpr hr0lt)
+  have hDMk : D ≤ M + k := le_trans hcon (le_trans hcb (by omega))
+  have h2k : 2 * k ≤ k * Δ := by nlinarith [hΔ2, Nat.zero_le k]
+  have hkM : k ≤ M := by
+    have hkΔ : k * Δ ≤ M + k := by omega
+    omega
+  have hkMΔ : k * Δ ≤ M * Δ := by
+    have := Nat.mul_le_mul_right (k := Δ) hkM
+    simpa using this
+  have hTexp : (M + 1) * Δ = M * Δ + Δ := by ring
+  -- D = r + kΔ = D₀ + r0 + kΔ ≤ D₀ + (Δ-1) + MΔ < D₀ + (M+1)Δ = T ≤ D.
+  omega
+
+/-! ### Δ = 1 floored ascending branch -/
+
+/-- **Threshold `indist_ascending_Delta1`.**  For `(a, a+1)`, if `IndistFrom` holds with floor
+    `D₀`, displacement `D₀` is active, and the first step at `D₀` ascends, then the a-chain
+    ascends from `D₀`: `c(a + D₀ + k).val = c(a + D₀).val + k`. -/
+lemma indistFrom_ascending_Delta1 {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (hab : a < b) {D₀ : ℕ} (h : IndistFrom c a b D₀)
+    (hact0 : D₀ ≤ (c (aD a D₀)).val)
+    (hσ0 : (c (aD a D₀)).val + 1 = (c (aD a (D₀ + 1))).val) :
+    ∀ k : ℕ, (c (aD a (D₀ + k))).val = (c (aD a D₀)).val + k := by
+  have hbridge : ∀ D : ℕ, aD b D = aD a (D + 1) := by
+    intro D; apply Subtype.ext; show b.val + D = a.val + (D + 1); omega
+  suffices h2 : ∀ k : ℕ,
+      (c (aD a (D₀ + k))).val = (c (aD a D₀)).val + k ∧
+      (c (aD a (D₀ + (k + 1)))).val = (c (aD a D₀)).val + (k + 1) by
+    intro k; exact (h2 k).1
+  intro k
+  induction k with
+  | zero =>
+      refine ⟨by simp, ?_⟩
+      have : D₀ + (0 + 1) = D₀ + 1 := by omega
+      rw [this, ← hσ0]
+  | succ m ih =>
+      obtain ⟨hm, hm1⟩ := ih
+      refine ⟨hm1, ?_⟩
+      -- Activity of displacement D₀ + (m+1).
+      have h_a_ge : (D₀ + (m + 1)) ≤ (c (aD a (D₀ + (m + 1)))).val := by rw [hm1]; omega
+      have hD₀le : D₀ ≤ D₀ + (m + 1) := by omega
+      have h_b_ge : (D₀ + (m + 1)) ≤ (c (aD b (D₀ + (m + 1)))).val :=
+        (good_symm_from h hD₀le).mp h_a_ge
+      have hcons := (indist_consec_from hab h hD₀le h_a_ge h_b_ge).1
+      rw [hbridge (D₀ + (m + 1))] at hcons
+      have hstep_eq : D₀ + (m + 1) + 1 = D₀ + (m + 1 + 1) := by omega
+      rw [hstep_eq] at hcons
+      rcases hcons with hasc | hdesc
+      · rw [← hasc, hm1]; ring
+      · exfalso
+        -- descending here would give c(a + D₀ + (m+2)) = c(a + D₀ + m), contradicting injectivity
+        have h_eq_val : (c (aD a (D₀ + (m + 1 + 1)))).val = (c (aD a (D₀ + m))).val := by
+          rw [hm]; omega
+        have h_eq : c (aD a (D₀ + (m + 1 + 1))) = c (aD a (D₀ + m)) := Subtype.ext h_eq_val
+        have h_pos_eq : aD a (D₀ + (m + 1 + 1)) = aD a (D₀ + m) := c.injective h_eq
+        have hcontra : a.val + (D₀ + (m + 1 + 1)) = a.val + (D₀ + m) := by
+          have := congrArg (fun (p : ℕ+) => p.val) h_pos_eq
+          simpa [aD_val] using this
+        omega
+
+/-- **Threshold `indist_Delta1_pos`.**  Ascending Δ=1 from floor `D₀` gives eventual identity
+    from cell `a + D₀`. -/
+lemma indistFrom_Delta1_pos {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (hab : a < b) {D₀ : ℕ} (h : IndistFrom c a b D₀)
+    (hact0 : D₀ ≤ (c (aD a D₀)).val)
+    (hσ0 : (c (aD a D₀)).val + 1 = (c (aD a (D₀ + 1))).val) :
+    ∀ n : ℕ+, (aD a D₀) ≤ n → c n = n := by
+  have hasc := indistFrom_ascending_Delta1 hb hab h hact0 hσ0
+  apply flat_Delta_one (Q := aD a D₀)
+  intro q hq hqpos
+  left
+  -- displacement of q relative to a, written as D₀ + (q - (a+D₀))
+  set D := q.val - a.val with hD
+  have hqge : a.val + D₀ ≤ q.val := hq
+  have hqval : q.val = a.val + D := by omega
+  have hDge : D₀ ≤ D := by omega
+  set kk := D - D₀ with hkk
+  have hDeq : D = D₀ + kk := by omega
+  have hq_eq : aD a D = q := by
+    apply Subtype.ext; show a.val + D = q.val; omega
+  have hq1_eq : aD a (D + 1) = ⟨q.val + 1, hqpos⟩ := by
+    apply Subtype.ext; show a.val + (D + 1) = q.val + 1; omega
+  have e1 := hasc kk
+  have e2 := hasc (kk + 1)
+  rw [← hDeq] at e1
+  have hDeq1 : D₀ + (kk + 1) = D + 1 := by omega
+  rw [hDeq1] at e2
+  rw [hq_eq] at e1
+  rw [hq1_eq] at e2
+  rw [e2, e1]
+  omega
+
+/-! ### Δ = 1 floored descending branch -/
+
+/-- **Threshold `indist_Delta1_neg`.**  For `(a, a+1)`, a descending start at an active floor
+    `D₀` is impossible.
+
+If *every* displacement `≥ D₀` were active, the a-chain `f k = c(a + D₀ + k).val` would be an
+injective ±1 walk (`indist_consec_from` + `good_symm_from`), hence ascending
+(`pm1_injective_ascending`) — contradicting the descending start `hσ0`.  So some displacement
+`≥ D₀` is bad; bad propagates forward (Δ = 1), so cofinitely many displacements are bad and
+`cofinitely_bad_impossible_from` closes it. -/
+lemma indistFrom_Delta1_neg {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (hab : a < b) {D₀ : ℕ} (h : IndistFrom c a b D₀)
+    (hact0 : D₀ ≤ (c (aD a D₀)).val)
+    (hσ0 : (c (aD a (D₀ + 1))).val + 1 = (c (aD a D₀)).val) :
+    False := by
+  have hbridge : ∀ D : ℕ, aD b D = aD a (D + 1) := by
+    intro D; apply Subtype.ext; show b.val + D = a.val + (D + 1); omega
+  -- **Forward bad propagation (Δ = 1).**
+  have hbad_fwd : ∀ k j : ℕ, (c (aD a (D₀ + k))).val < D₀ + k →
+      (c (aD a (D₀ + k + j))).val < D₀ + k + j := by
+    intro k j
+    induction j with
+    | zero => simpa using id
+    | succ m ih =>
+        intro hk
+        have ihm := ih hk
+        have hD₀le : D₀ ≤ D₀ + k + m := by omega
+        have hbp := bad_D_propagates_from h hD₀le ihm
+        rw [hbridge (D₀ + k + m)] at hbp
+        have he : D₀ + k + m + 1 = D₀ + k + (m + 1) := by omega
+        rw [he] at hbp
+        omega
+  -- **Existence of a bad displacement ≥ D₀** (else the ascending walk contradicts `hσ0`).
+  have hexbad : ∃ k : ℕ, (c (aD a (D₀ + k))).val < D₀ + k := by
+    by_contra hall
+    push_neg at hall
+    -- All displacements ≥ D₀ are active; build the ±1 walk and show it ascends.
+    set f : ℕ → ℕ := fun k => (c (aD a (D₀ + k))).val with hf
+    have hf_inj : Function.Injective f := by
+      intro k1 k2 hk
+      simp only [hf] at hk
+      have hc : c (aD a (D₀ + k1)) = c (aD a (D₀ + k2)) := Subtype.ext hk
+      have hpe := c.injective hc
+      have : a.val + (D₀ + k1) = a.val + (D₀ + k2) := by
+        have := congrArg (fun (m : ℕ+) => m.val) hpe; simpa [aD_val] using this
+      omega
+    have hf_step : ∀ k, f (k + 1) = f k + 1 ∨ f (k + 1) + 1 = f k := by
+      intro k
+      have hD₀le : D₀ ≤ D₀ + k := by omega
+      have h_a_ge : (D₀ + k) ≤ (c (aD a (D₀ + k))).val := hall k
+      have h_b_ge : (D₀ + k) ≤ (c (aD b (D₀ + k))).val := (good_symm_from h hD₀le).mp h_a_ge
+      have hcons := (indist_consec_from hab h hD₀le h_a_ge h_b_ge).1
+      rw [hbridge (D₀ + k)] at hcons
+      have he : D₀ + k + 1 = D₀ + (k + 1) := by omega
+      rw [he] at hcons
+      simp only [hf]
+      rcases hcons with h1 | h1
+      · left; omega
+      · right; omega
+    have hasc := pm1_injective_ascending f hf_inj hf_step 0
+    -- f 1 = f 0 + 1 ascending, but hσ0 says descending.
+    have hf0 : f 0 = (c (aD a D₀)).val := by simp only [hf]; congr 1
+    have hf1 : f 1 = (c (aD a (D₀ + 1))).val := by simp only [hf]
+    rw [hf0, hf1] at hasc
+    -- hasc : c(a+D₀+1).val = c(a+D₀).val + 1, but hσ0 : c(a+D₀+1)+1 = c(a+D₀)
+    omega
+  -- **Finish via cofinitely-bad.**
+  obtain ⟨k, hk⟩ := hexbad
+  apply cofinitely_bad_impossible_from (a := a) (T := D₀ + k)
+  intro D hD
+  obtain ⟨j, rfl⟩ : ∃ j, D = D₀ + k + j := ⟨D - (D₀ + k), by omega⟩
+  exact hbad_fwd k j hk
+
+/-! ### Δ = 1 floored bad branch -/
+
+/-- **Threshold `Δ = 1` bad start.**  For `(a, a+1)`, if displacement `D₀` is *below threshold*
+    (`c(a+D₀) < D₀`), then every `D ≥ D₀` is bad, contradicting injectivity. -/
+lemma indistFrom_Delta1_bad {c : Perm} {a b : ℕ+} (hb : b.val = a.val + 1)
+    (hab : a < b) {D₀ : ℕ} (h : IndistFrom c a b D₀)
+    (hbad0 : (c (aD a D₀)).val < D₀) : False := by
+  have hbridge : ∀ D : ℕ, aD b D = aD a (D + 1) := by
+    intro D; apply Subtype.ext; show b.val + D = a.val + (D + 1); omega
+  -- All displacements `D ≥ D₀` are bad, by induction on `D - D₀`.
+  have hallbad : ∀ k : ℕ, (c (aD a (D₀ + k))).val < D₀ + k := by
+    intro k
+    induction k with
+    | zero => simpa using hbad0
+    | succ m ih =>
+        have hD₀le : D₀ ≤ D₀ + m := by omega
+        have hbp := bad_D_propagates_from h hD₀le ih
+        -- hbp : c(b + (D₀+m)) < D₀+m, and b+(D₀+m) = a+(D₀+m+1)
+        rw [hbridge (D₀ + m)] at hbp
+        have he : D₀ + m + 1 = D₀ + (m + 1) := by omega
+        rw [he] at hbp
+        omega
+  apply cofinitely_bad_impossible_from (a := a) (T := D₀)
+  intro D hD
+  obtain ⟨k, rfl⟩ : ∃ k, D = D₀ + k := ⟨D - D₀, by omega⟩
+  exact hallbad k
+
+/-! ### Master floored Lemma A -/
+
+/-- **Threshold Lemma A.**  `IndistFrom c a b D₀` (signal-agreement at every displacement
+    `≥ D₀`) for a pair `a < b` forces `c` to be eventually identity.
+
+The case split mirrors `Indistinguishable_implies_eventually_identity`, run with the floor:
+
+* `Δ ≥ 2`: `indistFrom_Delta_ge_2_impossible` (cofinitely-bad kill) ⇒ `False` ⇒ EI vacuously.
+* `Δ = 1`, displacement `D₀` *bad*: `indistFrom_Delta1_bad` ⇒ `False` ⇒ EI vacuously.
+* `Δ = 1`, `D₀` active, descending start: `indistFrom_Delta1_neg` ⇒ `False` ⇒ EI vacuously.
+* `Δ = 1`, `D₀` active, ascending start: `indistFrom_Delta1_pos` ⇒ EI from cell `a + D₀`. -/
+theorem IndistFrom_implies_EventuallyIdentity {c : Perm} {a b : ℕ+} (hab : a < b) {D₀ : ℕ}
+    (h : IndistFrom c a b D₀) : EventuallyIdentity c := by
+  set Δ : ℕ := b.val - a.val with hΔ_def
+  have hΔ_pos : 1 ≤ Δ := by
+    have h_ab_val : a.val < b.val := hab
+    omega
+  have hab' : a.val < b.val := hab
+  have hbΔ : b.val = a.val + Δ := by omega
+  rcases eq_or_lt_of_le hΔ_pos with hΔ_eq | hΔ_ge_2
+  · -- Δ = 1.
+    have hΔ_eq_1 : Δ = 1 := hΔ_eq.symm
+    have hb1 : b.val = a.val + 1 := by omega
+    by_cases hbad0 : (c (aD a D₀)).val < D₀
+    · -- bad start ⇒ False ⇒ EI vacuously.
+      exact (indistFrom_Delta1_bad hb1 hab h hbad0).elim
+    · push_neg at hbad0
+      -- active start: split on σ(D₀).
+      have hD₀le : D₀ ≤ D₀ := le_refl _
+      have hbridge0 : aD b D₀ = aD a (D₀ + 1) := by
+        apply Subtype.ext; show b.val + D₀ = a.val + (D₀ + 1); omega
+      have hb_ge0 : D₀ ≤ (c (aD b D₀)).val := (good_symm_from h hD₀le).mp hbad0
+      have hsig0 := (indist_consec_from hab h hD₀le hbad0 hb_ge0).1
+      rw [hbridge0] at hsig0
+      rcases hsig0 with hpos | hneg
+      · -- ascending ⇒ EI from a + D₀.
+        exact ⟨aD a D₀, indistFrom_Delta1_pos hb1 hab h hbad0 hpos⟩
+      · -- descending ⇒ False ⇒ EI vacuously.
+        exact (indistFrom_Delta1_neg hb1 hab h hbad0 hneg).elim
+  · -- Δ ≥ 2 ⇒ False ⇒ EI vacuously.
+    have hΔ_ge_2' : 2 ≤ Δ := hΔ_ge_2
+    exact (indistFrom_Delta_ge_2_impossible hab h hbΔ hΔ_ge_2').elim
+
 end TrolleyRetrieval
