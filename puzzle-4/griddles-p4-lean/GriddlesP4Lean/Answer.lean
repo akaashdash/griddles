@@ -3,6 +3,7 @@ import GriddlesP4Lean.WinningRestricted
 import GriddlesP4Lean.WinningKProbeGen
 import GriddlesP4Lean.WinningAdaptive
 import GriddlesP4Lean.BandBoundedAbove
+import GriddlesP4Lean.GrowStair
 
 /-!
 # Main theorem

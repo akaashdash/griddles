@@ -28,3 +28,4 @@ import GriddlesP4Lean.Answer
 import GriddlesP4Lean.WinningAdaptive
 import GriddlesP4Lean.BandBoundedAbove
 import GriddlesP4Lean.Q2Even
+import GriddlesP4Lean.GrowStair

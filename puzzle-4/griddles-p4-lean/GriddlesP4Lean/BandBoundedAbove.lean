@@ -443,19 +443,11 @@ theorem notEI_boundedAbove_BobWins (c : Perm) (h : ¬ EventuallyIdentity c)
 #print axioms bandProvider_of_boundedAbove
 #print axioms notEI_boundedAbove_BobWins
 
-/-- **Unbounded-above ⟹ Bob wins (TRUE; the SINGLE genuinely-open residue).**
-
-    If `c` is not eventually identity and is *not* bounded above, Bob still wins — this is a TRUE
-    proposition (the answer `BobWins ↔ ¬EI` is correct and confirmed).  But its proof needs the
-    not-yet-formalized **Q2-even / odd-δ separating trajectory with a growing lag** (the
-    "unbounded-above" slice of the dichotomy: when `(c n).val - n.val` is unbounded, a fixed even
-    slack can fail to recur, so the band recurrence must be replaced by a δ-aware, growing-lag
-    argument).  This is the lone remaining `sorry` of `main`'s winning direction; it is clearly
-    labelled here so the axiom audit pinpoints exactly this residue. -/
-theorem notEI_unboundedAbove_BobWins (c : Perm) (h : ¬ EventuallyIdentity c)
-    (hub : ¬ ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B) : BobWins c := by
-  sorry
-
-#print axioms notEI_unboundedAbove_BobWins
+-- **Unbounded-above ⟹ Bob wins** is now proven (axiom-clean) in `GriddlesP4Lean.GrowStair` as
+-- `notEI_unboundedAbove_BobWins`, via the **growing-lag staircase** whose per-pair separators come
+-- from the axiom-clean `q2even` (the unbounded-above counterpart of `band_of_boundedAbove`).  This
+-- file deliberately no longer defines it: `GrowStair` imports `Q2Even`, which imports this file, so
+-- the theorem must live downstream of `q2even`.  `Answer.main` dispatches the unbounded-above
+-- branch to `GrowStair.notEI_unboundedAbove_BobWins`.
 
 end TrolleyRetrieval
