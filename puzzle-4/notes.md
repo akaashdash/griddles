@@ -1526,3 +1526,15 @@ RESULT: `#print axioms main` = [propext, sorryAx, Classical.choice, Quot.sound];
 through EXACTLY ONE residue (band_recurrence_ge_max_of_jointFinite), down from two. Build GREEN.
 We did NOT formalize "J-finite ⟹ bounded" (empirically true but a separate combinatorial fact);
 the J-finite case is simply the one residue.
+
+## Loop iteration (2026-05-23 #4): residue = bounded + COMONOTONE (symmetric joint)
+
+The single residue band_recurrence_ge_max_of_jointFinite is sharpened by a SYMMETRIC joint:
+J'' := {ascent-a ∧ weak-desc-b} (a-cell high) ALSO yields separators (slack from the a-side).
+So band holds if J OR J'' infinite. The true residue = BOTH finite, which forces (verified
+125/1035 cases, 0 unbounded): φ(a+D), φ(b+D) COMONOTONE in sign (both ascend or both descend)
+cofinitely, AND bounded displacement. = exactly the parity-shift regime. In the comonotone case
+the finite pigeonhole gives a recurring value (x,y) same sign; it separates unless va,vb are
+consecutive (|x−y−δ|=1); so the residue closes iff "all recurring comonotone values consecutive
+⇒ EI" (the consecutive⇒EI argument, now with comonotone+bounded structure). Plan: formalize the
+symmetric J'' lemma (shrink residue to comonotone+bounded), then attempt consecutive⇒EI close.
