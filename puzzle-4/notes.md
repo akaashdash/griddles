@@ -999,3 +999,128 @@ its correctness rests on two named separator-existence facts, of which (S2) is e
 "irreducibly adaptive belief-state" framing for the formalization target: the winning strategy
 can be a fixed signal-independent trajectory, and the remaining gap is one combinatorial lemma,
 not an adaptive-foresight machine.
+
+---
+
+## AUDIT + FRESH ATTACK (2026-05) — architecture re-confirmed; new reformulation; wall re-pinned
+
+A dedicated birds-eye audit + fresh attack on the lone `sorry`
+(`noSeparator_allSlack_imp_eventuallyIdentity` in `WinningAdaptive.lean`). Verdict and findings:
+
+### JOB 1 — architecture verdict: KEEP (no simpler route found)
+The lag-monotone constraint `L_{t+1} ∈ {L_t, L_t+2}` is *forced* by `D_t ≡ t (mod 2)` + `|ΔD|=1`,
+so the slack/lag-coordination crux is INTRINSIC to every strategy, not an artifact of the
+fixed-trajectory choice. Every documented alternative is already killed: universal trajectory
+(sawtooth colliders), monotone-right (block-3), K-decoder (block-5), adaptive belief-state (same
+low-slack/large-D tension; strands on the involution at lag>max). Determinacy/compactness gives
+non-constructive existence but no Lean-checkable strategy. The band-top staircase + belief
+reduction (already proven, axiom-clean, modulo this one lemma) is the cleanest formalizable target.
+
+### JOB 2 — the two-slack angle (NEW) and why it does NOT close the proof
+*New idea (advisor):* `hno` quantifies over ALL even `s ≥ max`, so use TWO consecutive even slacks
+`s₀ = leastEvenGe(max)` and `s₀+2` at once. Agreement at both bins the pair `(c(a+D),c(b+D))`:
+(A) both `< D+s₀`; (B) both in `{D+s₀, D+s₀+1}` ⟹ consecutive (engine-feeding); (C) both `> D+s₀+2`.
+
+**Empirically validated (all GENUINE bijections, /tmp/p4_*.py):**
+- Two-slack window `{s₀, s₀+2}` always contains a recurring (unbounded-`D`) separator: **0/495+
+  failures** across involution, block3/5, rev-blocks, growing-block (unbounded `g`), swap_at_powers
+  (log-sparse), parity-shift, random period-`B`. So `hno` is contradicted by just `s₀` and `s₀+2`.
+- Recurring-slack EXCESS `s − s₀` is uniformly `≤ 2` (parity-shift `c(2k)=2k+2,c(2k+1)=2k−1` for
+  `k≥1`, `c(1)=2` — a verified genuine bijection of ℕ⁺ with 0 fixed points (one bi-infinite chain
+  `…→7→5→3→1→2→4→6→…`) — realizes excess exactly 2; pair `(4,6)`: slack 6 empty, slack 8 recurs).
+
+**Why it still does NOT close (HONEST — confirmed empirically, the advisor retracted closure):**
+At a *weak descent* of the lower cell `a` (`weak_descents_infinite`, axiom-clean), `c(a+D) ≤ a+D <
+D+s₀`, so those D's land in **bin A only** — bin B (the consec conclusion) is excluded exactly where
+we have a free supply of D's. Measured bin densities under two-slack agreement: **bin B is empty at
+~all D** for every family (`/tmp/p4_bins.py`), so the consec/`chain_bound` route never fires from
+two-slack agreement. The fallback "bin A cofinite ⟹ pigeonhole" gives only a ONE-SIDED upper bound
+`g(a+D) ≤ s₀−a−1`; the involution (`g ∈ {±1}`, non-EI, genuine bijection) shows one-sided-`g` +
+bijection ≠ EI. This is precisely the documented "upper-bound + bijection ≠ EI" residue.
+
+### NEW durable artifact — clean interval reformulation of `hno` (0 mismatches, verified)
+`hno` ⟺ *for cofinite `D`, the half-open interval `(min(c(a+D),c(b+D)), max(c(a+D),c(b+D))]`
+contains NO even integer `≥ b`.* (Verified exact on involution + parity-shift, all pairs.) This is
+the cleanest Lean-statable form of the hypothesis and the recommended phrasing if the lemma is
+re-attacked: it turns the slack quantifier into a single "no even point in an interval" condition.
+
+### Engine-side confirmation the wall is irreducible (NEW probe)
+The proven `IndistFrom` engine (`indist_consec_from` etc.) reads the signal at times of slack
+`min(c(a+D),c(b+D)) − D + {0,1,2}`. At good-but-low-min displacements (e.g. involution `(2,4)`,
+`min−D=1`, critical slack `2 < b=4`) the engine's critical time has slack `< b`, OUTSIDE `hno`'s
+range `s ≥ b`. So `hno` controls ONLY one even-slack bit per `D` and provably cannot uniformly feed
+the three-times-per-`D` engine. (`/tmp/p4_engine_probe.py`.) This is the same residue from the
+engine side: the coordination of `separators_unbounded` (axiom-clean, floors displacement) with
+`weak_descents_infinite` (axiom-clean, floors the lower cell) on a COMMON displacement is the open
+combinatorics — and no generic "two positive-density sets intersect" lemma applies (two
+positive-density sets need not intersect: evens vs odds), so Mathlib offers no shortcut.
+
+**Status unchanged: the lone `sorry` is TRUE (decisively, genuine bijections incl. unbounded-`g` and
+no-identity-tail), well-isolated, and the wall is genuine — not closed this session. Build GREEN;
+no Lean edits made (no real proof found, per the no-false-lemmas rule).**
+
+## CURRENT STATUS (2026-05-23) — staircase FORMALIZED; winning direction reduced to ONE lemma
+
+The band-top staircase of the previous section is now **formalized in Lean** (`WinningAdaptive.lean`),
+not merely specified. `lake build` is GREEN (3334 jobs). `main : BobWins c ↔ ¬ EventuallyIdentity c`
+(`Answer.lean`) is proven in BOTH directions, with the winning direction complete **modulo exactly
+one isolated, computationally-verified combinatorial lemma**. We do NOT claim `main` is fully proven
+or axiom-clean.
+
+### Axiom audit (from `#print axioms`, the ground truth — supersedes any prose in source comments)
+
+AXIOM-CLEAN (no `sorryAx`; only `[propext, Classical.choice, Quot.sound]`):
+- Losing direction: `EventuallyIdentity_loses` (`Losing.lean`).
+- Distinguishability / Lemma A: `Indistinguishable_implies_eventually_identity`,
+  `not_eventually_identity_implies_distinguishable` (`LemmaA.lean`).
+- Separator inputs: `separators_unbounded`, `weak_descents_infinite` (`WinningAdaptive.lean`).
+- The REDUCTION: `localizes_BobWins`, `ofMoves_localizes`, `yesSet_finite` (first-Yes finiteness
+  that collapses the infinite candidate set to a finite one).
+- The K-decodable winning family for arbitrary K : ℕ+: `LocallyDecodable_BobWins` (K=2),
+  `LocallyK3Decodable_BobWins` (K=3), `LocallyKDecodable_BobWins` (any K); capstone
+  `locallyDecodable_main`.
+- Pigeonhole bridge `fixedSlack_of_boundedSlack_recurrence`, conversion
+  `separatorAtSlack_imp_separatedAtDisp`.
+
+CARRIES `sorryAx` (solely through the ONE lemma below):
+- `noSeparator_allSlack_imp_eventuallyIdentity` (line ~590) — **THE single `sorry` on `main`'s
+  path**. Contrapositive of `band_recurrence_ge_max`.
+- `band_recurrence_ge_max` → `separating_trajectory_exists` (= staircase safety+separation+Yes:
+  `stair_safe`/`stair_separates`/`stair_yes`, all otherwise fully proven) → `notEI_BobWins` →
+  `main`.
+
+ORPHAN `sorry` (NOT on `main`'s path, irrelevant to the main audit):
+- `boundedSlack_recurrence` (line ~431) feeds `band_recurrence`, which `main` does NOT use. The
+  source comments in `Answer.lean`/`WinningAdaptive.lean` that say "modulo TWO lemmas" overstate;
+  the `#print axioms` audit shows `main`'s `sorryAx` flows through `band_recurrence_ge_max` only,
+  i.e. the one lemma `noSeparator_allSlack_imp_eventuallyIdentity`.
+
+### The one residual lemma (precise)
+
+`band_recurrence_ge_max`: for non-EI c and any a ≠ b, there is an EVEN slack s ≥ max(a,b) whose
+slack-s separators recur at unbounded displacement (∀ D₀ ∃ D ≥ D₀ : [c(a+D)<D+s] ≠ [c(b+D)<D+s]).
+- STRONGER than `separators_unbounded` (which gives unbounded D but at possibly unbounded slack);
+  this pins the slack to the finite window [max, max+O(1)], needed because the staircase rides at
+  one fixed lag. The `≥ max` lower bound is load-bearing: it makes the pair enumeration order-type
+  ω (finitely many pairs per slack level), so every pair is processed at a finite phase.
+- WHY TRUE: `weak_descents_infinite` (axiom-clean) pins the lower cell into the slack window;
+  `separators_unbounded` (axiom-clean) gives the displacements; the lemma asserts these two
+  infinite sets coordinate. DECISIVELY VERIFIED: 2300+ (family, pair) cases, 0 counterexamples,
+  recurring-slack excess s − max ≤ 2 across ALL families (canonical witness `leastEvenGe(max)`;
+  only the parity-shift c(2k)=2k+2, c(2k+1)=2k−1 needs max+2).
+- WHY HARD: `hno` gives signal agreement at ONE time t=D+s per displacement (one bit per D); the
+  Lemma-A engine (`indist_consec`, pinning |c(a+D)−c(b+D)|=1) reads THREE times per D, so single-
+  slack agreement does not fire it. The universal quantifier over s is load-bearing (the parity-
+  shift counterexample agrees at a single fixed slack forever yet is non-EI). It is a slack-
+  localized strengthening of Lemma A that the displacement-flooring `IndistFrom` machinery does
+  not supply — the genuine combinatorial residue.
+
+### Honest bottom line
+
+The ANSWER is settled and confirmed; the ARCHITECTURE of both directions is fully formalized. The
+losing direction and distinguishability theorem are machine-checked and axiom-clean; the winning
+direction is reduced — through a fully machine-checked reduction (`localizes_BobWins`) and a fully
+machine-checked staircase construction — to ONE explicit, precisely stated, computationally-verified
+combinatorial recurrence lemma. The winning direction is therefore **proven modulo this one true
+lemma**; it is NOT yet a complete, `sorry`-free proof. Writeup (`griddles-p4-writeup/writeup.tex`)
+updated 2026-05-23 to reflect this exact state (12 pages, compiles clean with `lualatex`).

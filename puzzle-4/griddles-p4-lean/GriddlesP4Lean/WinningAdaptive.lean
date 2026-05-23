@@ -363,6 +363,75 @@ theorem weak_descents_infinite (c : Perm) (a : ℕ+) :
 -- `pmax_ge`) are `sorry`-free — only the three standard classical axioms.
 #print axioms weak_descents_infinite
 
+/-! ### Dual bijectivity engine: infinitely many weak *ascents*
+
+Symmetrically to `weak_descents_infinite`, a permutation of `ℕ⁺` has infinitely many *weak
+ascents* `c m ≥ m`.  (A permutation cannot satisfy `c m < m` for all large `m`: that would force
+the image to undershoot and miss large values, contradicting surjectivity.)  We obtain it from
+`weak_descents_infinite` applied to the inverse `c.symm`: a weak descent of `c.symm` at value
+`v` is `c.symm v ≤ v`, and the cell `p := c.symm v` then satisfies `c p = v ≥ p` — a weak ascent
+of `c`.  Driving `v → ∞` along the inverse's descent ray, the witnesses `p = c.symm v` are
+unbounded (only finitely many `v` map below any fixed cap, by injectivity of `c.symm`).
+
+This is the `max`-side companion to the `min`-side `weak_descents_infinite`; the band recurrence's
+upper window edge `max (c (a+D)) (c (b+D)) − D ≥ b` is governed by ascents the same way the lower
+edge is governed by descents.  Axiom-clean (routes only through `weak_descents_infinite`).
+
+API note: this is stated in **cell form** (`∀ P₀, ∃ p ≥ P₀, p ≤ c p`), NOT the ray/displacement
+form of `weak_descents_infinite` (`∀ D₀, ∃ D ≥ D₀, c (cellAt a D) ≤ cellAt a D`).  To recover the
+ray form on `{a + D}`, note `cellAt a D` ranges over all cells `≥ a`, so given `a` apply this lemma
+at `P₀ := max a (a + D₀)` and set `D := p.val − a.val`. -/
+theorem weak_ascents_infinite (c : Perm) :
+    ∀ P₀ : ℕ+, ∃ p : ℕ+, P₀ ≤ p ∧ (p : ℕ+) ≤ c p := by
+  classical
+  intro P₀
+  -- We need a weak ascent cell `p ≥ P₀`.  A weak descent of `c.symm` at a *large enough* value
+  -- `v` gives the cell `p = c.symm v` with `c p = v ≥ p`; we must additionally ensure `p ≥ P₀`.
+  -- Use `weak_descents_infinite c.symm 1` along value displacement to get a descent value
+  -- `v = 1 + D` as large as we like; among those, pick `v` with `c.symm v ≥ P₀` (possible since
+  -- only finitely many values map below `P₀` under `c.symm`).
+  --
+  -- Concretely: the set of values `v` with `c.symm v < P₀` is `c '' {1, …, P₀ − 1}` (finite); pick
+  -- a descent value above all of them.  We realise "above all of them" via a numeric floor `V₀`.
+  -- The finitely many "small-image" values are `≤ max (c '' {1,…,P₀})`; take the descent ray floor
+  -- past that.
+  -- Floor: any value `v` with `c.symm v < P₀` satisfies `v = c (c.symm v)` with `c.symm v ≤ P₀`,
+  -- hence `v ∈ c '' (Icc 1 P₀)`; bound that image set.
+  set Smallimg : Finset ℕ+ := (Finset.Icc (1 : ℕ+) P₀).image c with hSmall
+  -- numeric floor strictly above every element of Smallimg
+  set V₀ : ℕ := (Smallimg.image PNat.val).sup id + 1 with hV₀
+  -- Get a weak descent of `c.symm` on the ray `{1 + D}` at displacement `≥ V₀`.
+  obtain ⟨D, hDge, hwd⟩ := weak_descents_infinite c.symm 1 V₀
+  -- hwd : (c.symm (cellAt 1 D)).val ≤ (cellAt 1 D).val ; cellAt 1 D = 1 + D as ℕ+.
+  set v : ℕ+ := cellAt 1 D with hv
+  have hv_val : v.val = 1 + D := rfl
+  have hv_ge : V₀ ≤ v.val := by rw [hv_val]; omega
+  -- The cell p := c.symm v is a weak ascent of c with c p = v.
+  refine ⟨c.symm v, ?_, ?_⟩
+  · -- p ≥ P₀.  Else c.symm v < P₀ would put v ∈ Smallimg, so v.val ≤ sup < V₀ ≤ v.val, contra.
+    by_contra hlt
+    push_neg at hlt  -- hlt : c.symm v < P₀
+    -- then v = c (c.symm v) with c.symm v ∈ Icc 1 P₀, so v ∈ Smallimg.
+    have hmem_cell : c.symm v ∈ Finset.Icc (1 : ℕ+) P₀ :=
+      Finset.mem_Icc.mpr ⟨(c.symm v).one_le, le_of_lt hlt⟩
+    have hmem : v ∈ Smallimg := by
+      rw [hSmall, Finset.mem_image]
+      exact ⟨c.symm v, hmem_cell, c.apply_symm_apply v⟩
+    have hle_sup : v.val ≤ (Smallimg.image PNat.val).sup id := by
+      apply Finset.le_sup (f := id)
+      rw [Finset.mem_image]; exact ⟨v, hmem, rfl⟩
+    -- v.val ≤ V₀ - 1 < V₀ ≤ v.val
+    rw [hV₀] at hv_ge
+    omega
+  · -- c (c.symm v) = v ≥ c.symm v  (the weak descent of c.symm).
+    -- weak descent: (c.symm v).val ≤ v.val  (hwd, with cellAt 1 D = v).
+    have hdesc : (c.symm v).val ≤ v.val := hwd
+    -- goal: c.symm v ≤ c (c.symm v) = v.
+    rw [c.apply_symm_apply v]
+    exact_mod_cast hdesc
+
+#print axioms weak_ascents_infinite
+
 /-! ### Pigeonhole reduction: bounded-slack recurrence ⟹ fixed-slack recurrence
 
 The band recurrence (`band_recurrence`) reduces, by a finite pigeonhole over the slack window
@@ -523,7 +592,51 @@ IS the open combinatorics.  This is the *same* residue as `boundedSlack_recurren
 contrapositive of the other on slacks in `[max, max+O(1)]`).  No single-slack reformulation is
 sound (the WARNING counterexample `c(2k)=2k+2 / c(2k+1)=2k−1`, pair `(2,4)`, agrees at slack `4`
 forever yet is non-EI), so the universal quantifier over `s` is load-bearing and cannot be
-weakened.  Left as the lone `sorry` of `main`'s path; build stays GREEN. -/
+weakened.  Left as the lone `sorry` of `main`'s path; build stays GREEN.
+
+## ATTEMPT LOG — "band collapse + cut counting" strategy (independently re-verified, still open)
+
+A later attempt evaluated the proposed *band-collapse + cut-counting* route (window-in-`g`
+reformulation, weak-ray pigeonhole, Hall/min-cut flow conservation).  Truth re-confirmed and the
+three sub-strategies each **empirically broken on a concrete tested family** (`uv run`, families:
+parity-shift, adjacent-involution involution, block/reverse-block, `swap_at_powers`, growing
+reverse-block with *unbounded* `g`, and 400 random block-bijections; 0 counterexamples to the
+lemma itself):
+
+  1. **BAND COLLAPSE (STEP 1) is unsound as stated.** Its "for all even `T ≥ D+b`, agreement at
+     this single `D`" premise is NOT what `hno` gives: `hno` supplies, per even slack `s`, only a
+     *tail* of `D`'s with floor `D₀(s)`, and `D₀(s)` is unconstrained in `s`.  At a fixed `D` only
+     the finitely many slacks with `D₀(s) ≤ D` are pinned, so the per-`D` "no even integer in the
+     window" dichotomy does not follow.  (For bounded-`g` families `D₀(s)=0` off the recurring
+     slack, but that is a *consequence* of the structure, not derivable from `hno`.)
+
+  2. **The single-ray pigeonhole (weak descents of `a`, or weak ascents of `b`) does not globalize.**
+     For *bounded-`g`* perms the weak-ascent-of-`b` ray has a bounded window, so one even slack
+     recurs by pigeonhole.  But for `growing_blocks_rev` (block sizes `2,3,4,…`, each reversed; non-EI,
+     `g` unbounded *above and below* yet weak descents AND ascents both ~50% of the ray) the window
+     `(min(c(a+D),c(b+D))−D, max−D]` along *any* single ray is **unbounded** (its smallest even
+     `s ≥ b` ranges over `[b, ~776]` and drifts up with the block index), so the "finitely many
+     windows ⇒ some `s` recurs" pigeonhole fails.  The recurring slack is recovered only by a *global*
+     count, not a single ray.
+
+  3. **Cut/flow route A's premise "ψ bounded" is FALSE.** The cut identity
+     `ψ(N) := |{n ≤ N : c(n) > N}| = |{n > N : c(n) ≤ N}|` was verified (holds for all tested `c, N`),
+     and `EI ⟺ ψ(N)=0 eventually` is the right equivalence.  But the proposed finish "band collapse
+     forces `ψ` bounded, hence `ψ → 0`, hence EI" is wrong: for `growing_blocks_rev`, `ψ(N) → ∞`
+     (observed `ψ` climbing `31,32,…,50,…` linearly in the block index) while `c` is non-EI.  So
+     band-collapse structure does NOT bound `ψ`, and route A cannot close.
+
+**Sharpened structural fact (verified, useful for any future attempt).** The recurring even slack
+is **`leastEvenGe(max a b)` for 400/400 random block-bijections**, but **`leastEvenGe(max)+2` for
+the parity-shift** `c(2k)=2k+2, c(2k+1)=2k−1` on pairs like `(2,4)` (there `leastEvenGe(b)=4`
+recurs 0 times; `6` recurs at every even `D`).  Hence the witness is genuinely in
+`{leastEvenGe(max), leastEvenGe(max)+2}` with **no single closed-form** — the existential over `s`
+in `band_recurrence_ge_max` is unavoidable, matching the WALL above.
+
+**Reusable pieces landed by that attempt** (both axiom-clean, NO `sorryAx`): the geometric
+`separatorAtSlack_iff_window` (separator ⟺ `min < D+s ≤ max`) and the dual bijectivity engine
+`weak_ascents_infinite` (companion to `weak_descents_infinite`, governing the window's *upper* edge).
+The `sorry` itself is UNCHANGED. -/
 theorem noSeparator_allSlack_imp_eventuallyIdentity
     (c : Perm) (a b : ℕ+) (hab : a ≠ b)
     (hno : ∀ s : ℕ, Even s → max a.val b.val ≤ s →
@@ -549,6 +662,56 @@ private lemma not_indicatorAgree_imp_separatorAtSlack
     exact absurd (hlt.mpr hyge) (by omega)
   · intro hyge; by_contra hxge; push_neg at hxge
     exact absurd (hlt.mp hxge) (by omega)
+
+/-! ### Window characterization of a fixed-slack separator
+
+A slack-`s` separator at displacement `D` is exactly the statement that the *threshold*
+`D + s` lies in the half-open interval *between* the two displaced labels
+`c (a+D)` and `c (b+D)`: it separates them iff exactly one is below the threshold, i.e. iff
+`min < D+s ≤ max`.  This is a definitional Boolean-to-order unfolding, axiom-clean, and is the
+natural geometric reformulation used by every analysis of the band recurrence (the "separating
+slacks at `D` form the interval `(min−D, max−D]`").  Proven here for reuse. -/
+theorem separatorAtSlack_iff_window (c : Perm) (a b : ℕ+) (s D : ℕ) :
+    separatorAtSlack c a b s D ↔
+      min (c (cellAt a D)).val (c (cellAt b D)).val < D + s ∧
+        D + s ≤ max (c (cellAt a D)).val (c (cellAt b D)).val := by
+  unfold separatorAtSlack
+  rw [decide_ne_iff_not_iff]
+  set x := (c (cellAt a D)).val with hx
+  set y := (c (cellAt b D)).val with hy
+  -- `¬ ((x < D+s) ↔ (y < D+s))` ⟺ exactly one of `x,y` is `< D+s` ⟺ `min < D+s ≤ max`.
+  constructor
+  · intro h
+    -- exactly one side is below the threshold.
+    by_cases hxlt : x < D + s
+    · -- then y is not below.
+      have hyge : ¬ y < D + s := fun hylt => h ⟨fun _ => hylt, fun _ => hxlt⟩
+      push_neg at hyge
+      refine ⟨?_, ?_⟩
+      · exact lt_of_le_of_lt (min_le_left x y) hxlt
+      · exact le_trans hyge (le_max_right x y)
+    · -- x not below; then y must be below (else the iff holds vacuously).
+      push_neg at hxlt
+      by_cases hylt : y < D + s
+      · refine ⟨?_, ?_⟩
+        · exact lt_of_le_of_lt (min_le_right x y) hylt
+        · exact le_trans hxlt (le_max_left x y)
+      · push_neg at hylt
+        exact absurd ⟨fun hx' => absurd hx' (by omega), fun hy' => absurd hy' (by omega)⟩ h
+  · rintro ⟨hmin, hmax⟩ hiff
+    -- `min < D+s ≤ max` with both-or-neither below the threshold is contradictory.
+    rcases le_total x y with hxy | hxy
+    · -- min = x, max = y; so x < D+s ≤ y, contradicting the iff at the `x` side.
+      rw [min_eq_left hxy] at hmin
+      rw [max_eq_right hxy] at hmax
+      have : y < D + s := hiff.mp hmin
+      omega
+    · rw [min_eq_right hxy] at hmin
+      rw [max_eq_left hxy] at hmax
+      have : x < D + s := hiff.mpr hmin
+      omega
+
+#print axioms separatorAtSlack_iff_window
 
 /-- **Band recurrence with a `max`-bounded slack.**  For non-eventually-identity `c` and any
     distinct pair `a ≠ b`, there is a fixed even slack `s ≥ max a.val b.val` whose fixed-slack
