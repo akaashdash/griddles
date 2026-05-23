@@ -1789,3 +1789,23 @@ Q2-EVEN STATUS: proven for EVEN δ (parity-collision) and δ=1 (peak-chase); OPE
 count). Downstream (ofMoves_localizes hsep ∀ pairs) needs ALL δ, so odd δ≥3 is required.
 REMAINING for unbounded-above case: (1) odd δ≥3 Q2-even; (2) the growing-lag c-tailored trajectory
 (NOT started — existing Staircase uses FIXED slack via band; a growing-lag analogue using Q2-even is new).
+
+## Loop iteration (2026-05-23 #14): Q2-even CLOSED for ALL δ (uniform leftward-to-chain-start argument) — UNDER REVIEW
+
+The odd-δ agent closed δ=1 (peak-chase) + even δ (parity) but left odd δ≥3 to a "multi-spike count."
+A cleaner UNIFORM argument closes ALL δ:
+Assume bad adversary (⋆) for pair (a,b=a+δ). The separator links are (a+D, a+D+δ) for D≥0, partitioning
+cells ≥a into δ residue chains {a+r, a+r+δ, …}, r∈[0,δ). Take a large spike s (φ(s)≥M huge). At s the
+link is high (max(va,vb)≥va=φ(s)+a≥L) ⟹ (⋆) ⟹ width-1. The MAXIMAL high region containing s on its
+chain is a monotone ±1 walk (width-1 + injectivity ⟹ no turning). LEFTWARD along the chain φ only
+INCREASES (c(prev)=c(cur)∓1 with cell −δ ⟹ φ(prev)=φ(cur)+(δ−1)≥φ(cur), or +(δ+1) in the other
+monotone direction), so the region stays high (≥L) all the way down to the CHAIN-START a+r ∈[a,a+δ)
+(a FIXED cell). Monotonicity pins c(a+r)=c(s)∓(s−(a+r))/δ ⟹ φ(a+r)=φ(s)+(s−a−r)(δ−1)/δ [or ·(δ+1)/δ]
+→ ∞ as s→∞. But a+r is one of δ FIXED cells, so φ(a+r) is a FIXED finite number. CONTRADICTION (pick s
+with φ(s) large enough). Hence (⋆) impossible for EVERY δ ⟹ Q2-even holds for ALL pairs.
+δ=1 special case: chain=all cells≥a, chain-start a, φ(a)=φ(s) (const monotone) ⟹ φ(a)=φ(s) for all
+spikes ⟹ sup φ finite, contra unbounded. Subsumes the agent's δ=1 pigeonhole + even-δ parity.
+KEY vs agent: the agent thought "leftward ruled out, rightward forced + multi-spike count"; but the
+high REGION (not the chase) extends leftward to the FIXED chain-start, and φ(fixed cell)→∞ is the
+contradiction — single spike suffices, no multi-spike count. STATUS: under advisor review (derived
+fast; scrutinize the 'region extends to chain-start' + monotone-direction steps).
