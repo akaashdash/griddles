@@ -1468,3 +1468,21 @@ infinite for bounded non-EI c", equivalently "gap=1 cofinitely on strict-ascent-
 (c(a+D)=c(b+D)±1 ⇒ φ(a+D)≥δ; for δ=1, consecutive cells→consecutive values cofinitely on
 strict-ascents ⇒ shift ⇒ EI; δ≥2 needs the chaining argument). This residual is crisper and
 likely more formalizable than the earlier separating_value_inf_fiber form.
+
+## Loop iteration (2026-05-23 #3): JOINT-condition dichotomy (cleaner than bounded/unbounded?)
+
+On weak-descents-of-a (always infinite), lo_D ≤ a < M, so a slack-M separator (M even) occurs
+iff also weak-ascent-b. Hence:
+  band_recurrence at slack M (M even)  ⟺  {D : c(a+D)≤a+D ∧ c(b+D)≥b+D} is INFINITE.
+PROPOSED cleaner dichotomy (replaces bounded/unbounded):
+  (1) JOINT {weak-desc-a ∧ weak-asc-b} infinite ⟹ slack-M (or M+1 if M odd, via strict ascent b)
+      recurrence DIRECTLY. Clean, provable from weak_descents_infinite/weak_ascents_infinite +
+      separatorAtSlack_iff_window. Verified infinite for growing_blocks_rev (unbounded) — count grows.
+  (2) JOINT finite ⟹ the anti-correlated regime. parity-shift (bounded) is exactly this
+      (weak-desc-a ⟺ D odd, weak-asc-b ⟺ D even — disjoint). Also: if φ(b+D)→∞ with φ(a+D)
+      bounded on that subseq, slack-M separators appear anyway — so the genuinely-hard sub-case
+      is joint-finite AND φ(a+D),φ(b+D) comonotone (both small or both large together), which is
+      "bounded-like" and amenable to the finite pigeonhole (S_infinite).
+NEXT: verify joint-finite ⟹ pigeonhole-handled (i.e. joint-finite ⟹ effectively bounded on rays
+or directly S_infinite), and consider restructuring the Lean proof around the JOINT dichotomy
+(slack-M-easy case is axiom-clean-able; would isolate the residue to the anti-correlated case only).
