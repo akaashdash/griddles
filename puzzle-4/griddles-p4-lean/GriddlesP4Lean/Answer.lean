@@ -2,6 +2,7 @@ import GriddlesP4Lean.Losing
 import GriddlesP4Lean.WinningRestricted
 import GriddlesP4Lean.WinningKProbeGen
 import GriddlesP4Lean.WinningAdaptive
+import GriddlesP4Lean.BandBoundedAbove
 
 /-!
 # Main theorem
@@ -20,13 +21,14 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
   · -- Losing direction (contrapositive).
     intro h_wins h_ei
     exact EventuallyIdentity_loses c h_ei h_wins
-  · -- Winning direction.  Discharged by `notEI_BobWins` (WinningAdaptive): the **band-top
-    -- lag-monotone staircase** — a fixed signal-independent trajectory — localizes every start
-    -- cell, and `localizes_BobWins` packages that into `BobWins`.  This is FULLY PROVEN modulo a
-    -- SINGLE isolated combinatorial recurrence residue (`band_recurrence_ge_max_of_bothJointFinite`,
-    -- reached via `band_recurrence_ge_max`'s SYMMETRIC JOINT-condition trichotomy: J-infinite and
-    -- J''-infinite are BOTH proven axiom-clean, leaving only the both-finite = bounded+comonotone
-    -- residue).
+  · -- Winning direction.  Dispatched on bounded-above (see the `by_cases` at the end of this
+    -- branch): the BOUNDED-ABOVE regime is discharged FULLY `sorry`-free by
+    -- `notEI_boundedAbove_BobWins` (the **band-top lag-monotone staircase** — a fixed
+    -- signal-independent trajectory parameterized by an axiom-clean `BandProvider` from
+    -- `band_of_boundedAbove` — localizes every start cell, and `localizes_BobWins` packages that
+    -- into `BobWins`).  Only the UNBOUNDED-ABOVE regime (`notEI_unboundedAbove_BobWins`) remains a
+    -- single clearly-labelled `sorry` (a TRUE proposition needing the Q2-even/odd-δ growing-lag
+    -- trajectory).  The false general dispatch `band_recurrence_ge_max` is no longer on this path.
     --
     -- Historical note on the architecture (the prior `sorry` was here):
     --
@@ -108,17 +110,29 @@ theorem main (c : Perm) : BobWins c ↔ ¬ EventuallyIdentity c := by
     -- The math content is done (LemmaA, the losing direction, and the arbitrary-K decodable class are
     -- all axiom-clean); what remains is packaging it into one explicit, provably-complete strategy.
     -- (The `→` direction of `main` is now closed via the band-top staircase; `←` is in `Losing`.)
+    --
+    -- DISPATCH on bounded-above.  The winning direction is now split into two regimes by whether the
+    -- displacement `(c n).val - n.val` is bounded above:
+    --   * BOUNDED ABOVE → `notEI_boundedAbove_BobWins` (BandBoundedAbove): fully `sorry`-free.  The
+    --     axiom-clean `band_of_boundedAbove` supplies a `BandProvider`, fed into the parameterized
+    --     band-top staircase `BobWins_of_bandProvider`.  This closes the entire bounded-above regime
+    --     (incl. the parity-shift family) with NO appeal to the false `band_recurrence_ge_max`.
+    --   * UNBOUNDED ABOVE → `notEI_unboundedAbove_BobWins` (BandBoundedAbove): the SINGLE remaining
+    --     `sorry`.  It states a TRUE proposition (Bob wins), but its proof needs the not-yet-
+    --     formalized Q2-even/odd-δ growing-lag trajectory.  So `main`'s residual `sorryAx` now flows
+    --     ONLY through this clearly-labelled unbounded-above branch.
     intro h_not_ei
-    exact notEI_BobWins c h_not_ei
+    by_cases hbdd : ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B
+    · exact notEI_boundedAbove_BobWins c h_not_ei hbdd
+    · exact notEI_unboundedAbove_BobWins c h_not_ei hbdd
 
--- Axiom audit.  `main` is `sorry`-free *modulo* a SINGLE isolated combinatorial recurrence residue
--- (`band_recurrence_ge_max_of_bothJointFinite`, the bounded + pointwise-comonotone regime of
--- `band_recurrence_ge_max`'s SYMMETRIC JOINT-condition trichotomy): its `#print axioms` shows
--- `sorryAx` only through that one residue.  Both the J-infinite case (absorbing the entire unbounded
--- regime) AND the symmetric J''-infinite case are proven axiom-clean, so the residue is exactly the
--- both-finite regime (bounded |φ|, φ(a+D) and φ(b+D) never opposite-signed; recurring separating
--- slack pinned to {M, M+2}).  The losing direction and ALL the game-semantic / construction plumbing
--- of the winning direction are fully proven.
+-- Axiom audit.  `main` is `sorry`-free *modulo* a SINGLE isolated residue, now ISOLATED to the
+-- UNBOUNDED-ABOVE branch: `notEI_unboundedAbove_BobWins` (BandBoundedAbove).  Its `#print axioms`
+-- shows `sorryAx` flowing ONLY through that branch.  The BOUNDED-ABOVE branch
+-- (`notEI_boundedAbove_BobWins`) is fully `sorry`-free via the axiom-clean `band_of_boundedAbove`
+-- and the parameterized band-top staircase `BobWins_of_bandProvider`; the false general dispatch
+-- `band_recurrence_ge_max` is no longer on `main`'s call path.  The losing direction and ALL the
+-- game-semantic / construction plumbing of the winning direction are fully proven.
 #print axioms main
 
 /-- **Capstone for the locally-decodable class** (fully `sorry`-free).  Connecting the

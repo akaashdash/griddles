@@ -412,4 +412,50 @@ theorem band_of_boundedAbove (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ
 #print axioms cofinite_of_backward_closed
 #print axioms band_of_boundedAbove
 
+/-! ### Dispatch into the staircase winner -/
+
+/-- **A `BandProvider` from bounded-above.**  For non-EI `c` that is bounded above, the axiom-clean
+    `band_of_boundedAbove` supplies the band recurrence for every distinct *ordered* pair `a < b`;
+    the `a ≠ b` interface of `BandProvider` is met by dispatching on `lt_or_gt_of_ne` and, in the
+    `b < a` half, swapping the (symmetric) `separatorAtSlack` Boolean disagreement (`max` is
+    symmetric, mirroring `band_recurrence_ge_max`'s own order reduction). -/
+theorem bandProvider_of_boundedAbove (c : Perm) (h : ¬ EventuallyIdentity c)
+    (hbdd : ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B) : BandProvider c := by
+  intro a b hab
+  rcases lt_or_gt_of_ne hab with hlt | hgt
+  · -- a < b : directly.
+    exact band_of_boundedAbove c h a b hlt hbdd
+  · -- b < a : obtain for (b, a) and swap the separator's Boolean disagreement.
+    obtain ⟨s, hse, hsM, hpin⟩ := band_of_boundedAbove c h b a hgt hbdd
+    refine ⟨s, hse, by rw [max_comm]; exact hsM, fun D₀ => ?_⟩
+    obtain ⟨D, hD, hsep⟩ := hpin D₀
+    exact ⟨D, hD, by unfold separatorAtSlack at hsep ⊢; exact hsep.symm⟩
+
+/-- **Bounded-above ⟹ Bob wins (axiom-clean).**  If `c` is not eventually identity and is bounded
+    above (`∃ B, ∀ n, (c n).val ≤ n.val + B`), then Bob wins.  Routes through the parameterized
+    band-top staircase `BobWins_of_bandProvider` fed by `bandProvider_of_boundedAbove` — entirely
+    `sorry`-free (the false general dispatch `band_recurrence_ge_max` is no longer on this path). -/
+theorem notEI_boundedAbove_BobWins (c : Perm) (h : ¬ EventuallyIdentity c)
+    (hbdd : ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B) : BobWins c :=
+  BobWins_of_bandProvider c h (bandProvider_of_boundedAbove c h hbdd)
+
+-- Axiom audit.  The bounded-above winner is `sorry`-free: `[propext, Classical.choice, Quot.sound]`.
+#print axioms bandProvider_of_boundedAbove
+#print axioms notEI_boundedAbove_BobWins
+
+/-- **Unbounded-above ⟹ Bob wins (TRUE; the SINGLE genuinely-open residue).**
+
+    If `c` is not eventually identity and is *not* bounded above, Bob still wins — this is a TRUE
+    proposition (the answer `BobWins ↔ ¬EI` is correct and confirmed).  But its proof needs the
+    not-yet-formalized **Q2-even / odd-δ separating trajectory with a growing lag** (the
+    "unbounded-above" slice of the dichotomy: when `(c n).val - n.val` is unbounded, a fixed even
+    slack can fail to recur, so the band recurrence must be replaced by a δ-aware, growing-lag
+    argument).  This is the lone remaining `sorry` of `main`'s winning direction; it is clearly
+    labelled here so the axiom audit pinpoints exactly this residue. -/
+theorem notEI_unboundedAbove_BobWins (c : Perm) (h : ¬ EventuallyIdentity c)
+    (hub : ¬ ∃ B : ℕ, ∀ n : ℕ+, (c n).val ≤ n.val + B) : BobWins c := by
+  sorry
+
+#print axioms notEI_unboundedAbove_BobWins
+
 end TrolleyRetrieval
