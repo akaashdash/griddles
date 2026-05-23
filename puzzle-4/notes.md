@@ -1582,3 +1582,49 @@ residue for c where J or J'' is INFINITE (proven axiom-clean), but bounded-comon
 (parity-shift family) fall into the both-finite residue with J/J'' vacuous, and closing them needs
 deriving the band from ¬EI+bijectivity directly — which is exactly the hard bounded-displacement
 band recurrence that has resisted every approach. Structural re-dispatch won't change this.
+
+## Loop iteration (2026-05-23 #7): THREE-AGENT synthesis — BOUNDED-ABOVE case PROVEN (closes the wall); residue flips to UNBOUNDED-ABOVE
+
+Ran 3 parallel agents on the band recurrence (band: non-EI c, a<b ⟹ ∃ even s≥b separating c(a+D),c(b+D) at ∞-many D).
+
+### (A) Literature (bespoke; no off-the-shelf theorem)
+Closest framework = bounded-displacement / WOBBLING GROUP theory; Laczkovich's discrepancy criterion. Our
+cut B(N)=#{n≤N: c(n)>N} IS their discrepancy object. But it does NOT close even the bounded sub-case. The
+EVEN-s parity condition has NO analog anywhere — the load-bearing oddity; any proof needs a bespoke parity/
+counting argument on B(N). Cite Laczkovich+wobbling as conceptual home in writeup, keep honest framing.
+(Refs: Juschenko–de la Salle arXiv:1301.4736; arXiv:1907.01597 quoting Laczkovich Crelle 404 (1990).)
+
+### (B) Counterexample search (NONE; lemma robustly TRUE incl. unbounded)
+13 families × 78 pairs = 1014 combos, ZERO counterexamples. Witness s = leastEvenGe(b) for every family/pair
+EXCEPT parity_shift even-even needs leastEvenGe(b)+2. DENSITY DICHOTOMY: cyclic-shift/parity_shift = linear
+density; ALL block-reversals/interval-exchanges = LOG density (in same reversed block, R−L = b−a EXACTLY ⟹
+~3·log₂(D) separators, verified to D=3×10⁷). So NO positive-density/pigeonhole proof can work — proof must
+tolerate log-sparse separators. Files: griddles-p4-verify/counterexample_search.py, structural_witness.py.
+
+### (C) Direct proof (Opus): BOUNDED-ABOVE ⟹ band — COMPLETE PROOF (verified by me); UNBOUNDED-ABOVE open
+Reformulation: f(n)=c(n)−n. For even s≥b, p=s−a ∈ P={p≥δ, p≡a mod 2}. band-fail ⟺ ∀p∈P, (⋆_p):
+[f(n)≥p] ⟺ [f(n+δ)≥p−δ] for all n≥N_p (N_p finite PER p — no uniformity needed; that was the wall).
+Lemma (general, no bddness): DESCENT-COFINITE ⟹ EI. If c(n)≤n cofinitely then EI (cut B(M)=#{n≤M:c(n)>M};
+for n∈[N,M], c(n)≤M ⟹ {n≤M:c(n)>M}⊆[1,N), =0 for M≥max_{n<N}c(n) ⟹ c([1,M])=[1,M] ⟹ c(M)=M).
+BOUNDED-ABOVE (f≤B⁺ globally) PROOF: V={v: f⁻¹(v) infinite}; weak-ascents ⟹ V≠∅, v*=max V≥0.
+  • v*=0: values>0 finite (bdd above) ⟹ f≤0 cofinitely ⟹ EI. Contra.
+  • v*≥1: q̄ = largest int ≡b(mod2), 0≤q̄≤v*; p=q̄+δ∈P. For ∞-many m=n+δ∈f⁻¹(v*), n≥N_p: RHS [f(m)≥q̄]
+    true ⟹ LHS f(n)≥q̄+δ≥v*−1+δ.
+      δ≥2: f(n)≥v*+1 at ∞-many n ⟹ pigeonhole over finite (v*,B⁺] ⟹ recurring value >v*, contra max V.
+      δ=1: f(n)≥v* ∞-often with n+1∈f⁻¹(v*); bdd-above ⟹ f(n)=v* cofinitely ⟹ f⁻¹(v*) backward-closed
+           ⟹ f≡v* on tail ⟹ c(n)=n+v* shift ⟹ omits v*≥1 values, not bijective. Contra.
+  KEY: single-ray level set + threshold FIXED from global v* ⟹ ONE (⋆_p) application, ONE finite exception.
+  Dodges sparse-fiber AND escaping-exception traps. CLOSES THE WALL (parity_shift is bdd-above; it just
+  doesn't satisfy band-fail, so hypothesis unavailable — no spurious contradiction).
+UNBOUNDED-ABOVE (limsup f=+∞): OPEN. Backward-push-up f(n+δ)≥q ⟹ f(n)≥q+δ chains backward but exceptions
+  N_{q+jδ} ESCALATE while positions decrease, and small positions can carry huge f (c(1)=10⁶) ⟹ no ceiling
+  to collide with. Empirically this regime is ALWAYS J-infinite (witness leastEvenGe(b), log-density).
+  Minimal finishing sub-lemma: unbounded-above ⟹ memJ infinite (a-ray weak-descent ∧ b-ray peak co-occur
+  at ∞-many common D). Then Lean's PROVEN band_recurrence_ge_max_of_jointInfinite finishes.
+
+### NET / Lean plan
+Residue FLIPS from "bounded comonotone (the hard wall)" → "unbounded-above ⟹ J-infinite (empirically easy)".
+Restructure band_recurrence_ge_max to dispatch BOUNDED-ABOVE (formalize agent's proof) vs UNBOUNDED-ABOVE
+(prove unbounded ⟹ J-infinite, then existing J-infinite proof). Bounded-above proof is the big new content
+and is clean/formalizable. Status: agent's bounded-above proof manually verified; pressure-test w/ advisor
+before formalizing.
