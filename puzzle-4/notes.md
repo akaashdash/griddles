@@ -1457,3 +1457,14 @@ swap-powers [infinite but log-sparse], block-3/5, rev-block-5, random period-6).
   those c need the recurrence from OTHER (non-strict-asc-b) separators. So this sufficient
   condition handles most bounded c but not the gap=1-cofinite edge — that edge is where the
   remaining bounded difficulty concentrates.
+
+## Loop iteration (2026-05-23 #2): cleaner bounded reduction is counterexample-free
+
+Searched 1900 bounded non-EI permutations (block/periodic, B=2..8, all pairs): the set
+{D : c(b+D)>b+D AND |c(a+D)−c(b+D)|≥2} is INFINITE in EVERY case (0 suspicious;
+gap2/strict-asc ratio ≥ 0.25). So the cleaner reduction G ⊇ {strict-asc-b ∧ gap≥2}
+robustly gives band_recurrence for bounded c. Residual to PROVE: "{strict-asc-b ∧ gap≥2}
+infinite for bounded non-EI c", equivalently "gap=1 cofinitely on strict-ascent-b ⇒ EI"
+(c(a+D)=c(b+D)±1 ⇒ φ(a+D)≥δ; for δ=1, consecutive cells→consecutive values cofinitely on
+strict-ascents ⇒ shift ⇒ EI; δ≥2 needs the chaining argument). This residual is crisper and
+likely more formalizable than the earlier separating_value_inf_fiber form.
