@@ -514,9 +514,150 @@ theorem localizes_BobWins {σ : Strategy} (hng : NeverGuesses σ)
       rw [guessPos_val (by rw [hguess_val]; exact hcur_pos)]
       exact hguess_val
 
+/-! ### Fixed (signal-independent) trajectories
+
+A *fixed trajectory* ignores the observed signals and plays a predetermined move at each step
+(depending only on elapsed time = history length).  It never guesses, and — crucially — its net
+displacement from the start cell is the *same function of time for every start cell*.  This makes
+the key "belief becomes finite at the first Yes" argument clean: the candidates still consistent
+at a Yes-time `s` all map, under the common displacement, into the finite set of cells whose
+label is `< s`. -/
+
+/-- The signal-independent strategy that, at time-step of history length `t`, plays move `m t`. -/
+def ofMoves (m : ℕ → Dir) : Strategy := fun h => Action.move (m h.length)
+
+lemma ofMoves_neverGuesses (m : ℕ → Dir) : NeverGuesses (ofMoves m) :=
+  fun h => ⟨m h.length, rfl⟩
+
+/-- Cumulative net displacement of the move sequence `m` after `t` steps. -/
+def cumDelta (m : ℕ → Dir) : ℕ → ℤ
+  | 0     => 0
+  | t + 1 => cumDelta m t + (m t).delta
+
+/-- **Position under a fixed trajectory is start-independent in its increment.**  From start
+    `k₀`, the position at time `t` is `k₀ + cumDelta m t`; the displacement `cumDelta m t` does
+    not depend on `k₀` (nor on any signal). -/
+lemma position_ofMoves (c : Perm) (m : ℕ → Dir) (k₀ : ℤ) (t : ℕ) :
+    position c (ofMoves m) k₀ t = k₀ + cumDelta m t := by
+  induction t with
+  | zero => simp [cumDelta]
+  | succ t ih =>
+      have hlen : (history c (ofMoves m) k₀ t).length = t :=
+        history_length_neverGuesses (ofMoves_neverGuesses m) k₀ t
+      have hd : (ofMoves m) (history c (ofMoves m) k₀ t) = Action.move (m t) := by
+        show Action.move (m (history c (ofMoves m) k₀ t).length) = Action.move (m t)
+        rw [hlen]
+      rw [position_succ_of_move hd, ih, cumDelta]; ring
+
+/-- **First-Yes finiteness.**  The set of start cells whose signal at time `s` (under the common
+    displacement `δ`) is "Yes" is finite: such a cell shifted by `δ` lands on a cell whose label
+    is `< s`, and `c` has only finitely many such cells (the `≤ s-1` cells with small label). -/
+lemma yesSet_finite (c : Perm) (s : ℕ) (δ : ℤ) :
+    {k : ℕ+ | signalOf c ((k : ℤ) + δ) s = true}.Finite := by
+  classical
+  -- The finite "small-label" cells, shifted to ℤ-positions.
+  have hindex : {v : ℕ+ | (v : ℕ) < s}.Finite :=
+    Set.Finite.preimage (Subtype.val_injective.injOn) (Set.finite_Iio s)
+  have hP : ((fun v : ℕ+ => ((c.symm v : ℕ+) : ℤ)) '' {v : ℕ+ | (v : ℕ) < s}).Finite :=
+    hindex.image _
+  have hmap_inj : Function.Injective (fun k : ℕ+ => (k : ℤ) + δ) := by
+    intro a b hab
+    have : (a : ℤ) = (b : ℤ) := by simpa using hab
+    exact_mod_cast this
+  refine Set.Finite.subset (hP.preimage hmap_inj.injOn) ?_
+  intro k hk
+  simp only [Set.mem_setOf_eq] at hk
+  show ((k : ℤ) + δ) ∈ (fun v : ℕ+ => ((c.symm v : ℕ+) : ℤ)) '' {v : ℕ+ | (v : ℕ) < s}
+  unfold signalOf at hk
+  split at hk
+  · rename_i hpos
+    rw [decide_eq_true_eq] at hk
+    refine ⟨c (Int.toPNat ((k : ℤ) + δ) hpos), hk, ?_⟩
+    have hcoe : ((Int.toPNat ((k : ℤ) + δ) hpos : ℕ+) : ℤ) = (k : ℤ) + δ := by
+      have h1 : ((Int.toPNat ((k : ℤ) + δ) hpos : ℕ+) : ℕ) = ((k : ℤ) + δ).toNat :=
+        Int.toPNat_val _ _
+      have h2 : (((Int.toPNat ((k : ℤ) + δ) hpos : ℕ+) : ℕ) : ℤ) = (k : ℤ) + δ := by
+        rw [h1]; exact Int.toNat_of_nonneg (by linarith)
+      simpa using h2
+    simp only [Equiv.symm_apply_apply]
+    exact hcoe
+  · simp at hk
+
+/-- **Reduction to a fixed separating trajectory.**  If a fixed (signal-independent) trajectory
+    `ofMoves m` is safe from every start, eventually emits a "Yes" from every start, and
+    *separates every pair* of distinct start cells (their signal histories eventually differ),
+    then it `Localizes` every start cell.
+
+    The finite-`T` obligation in `Localizes` (rule out *all infinitely many* wrong candidates by
+    one time) is discharged by **first-Yes finiteness**: at a Yes-time `s₀` for `k₀`, every
+    candidate not yet distinguished must itself signal "Yes" at `s₀`, and there are only finitely
+    many such (`yesSet_finite`); each is separated at *some* finite time, so the maximum is a
+    finite stop time `T`. -/
+theorem ofMoves_localizes (c : Perm) (m : ℕ → Dir)
+    (hsafe : ∀ (k₀ : ℕ+) (t : ℕ), 1 ≤ position c (ofMoves m) (k₀ : ℤ) t)
+    (hsep : ∀ a b : ℕ+, a ≠ b → ∃ s : ℕ,
+        signalOf c (position c (ofMoves m) (a : ℤ) s) s
+          ≠ signalOf c (position c (ofMoves m) (b : ℤ) s) s)
+    (hyes : ∀ k₀ : ℕ+, ∃ s : ℕ, signalOf c (position c (ofMoves m) (k₀ : ℤ) s) s = true) :
+    ∀ k₀ : ℕ+, Localizes c (ofMoves m) k₀ := by
+  classical
+  intro k₀
+  obtain ⟨s₀, hs₀⟩ := hyes k₀
+  set δ := cumDelta m s₀ with hδ
+  -- Rewrite the Yes-time signal of `k₀` in `δ`-form.
+  have hk₀yes : signalOf c ((k₀ : ℤ) + δ) s₀ = true := by
+    rwa [position_ofMoves] at hs₀
+  -- The finite set of candidates that are *not* distinguished by `s₀` (they signal Yes at `s₀`).
+  have hfin : {k : ℕ+ | signalOf c ((k : ℤ) + δ) s₀ = true}.Finite := yesSet_finite c s₀ δ
+  -- Per-candidate separation time.
+  set g : ℕ+ → ℕ := fun k => if h : k ≠ k₀ then Classical.choose (hsep k k₀ h) else 0 with hg
+  set T : ℕ := max s₀ (hfin.toFinset.sup g) with hT
+  refine ⟨T, ?_, ?_⟩
+  · intro t _; exact hsafe k₀ t
+  · intro k hkne
+    by_cases hky : signalOf c ((k : ℤ) + δ) s₀ = true
+    · -- `k` signals Yes at `s₀` ⇒ `k ∈` the finite set ⇒ use its separation time `g k ≤ T`.
+      have hmem : k ∈ hfin.toFinset := by
+        rw [Set.Finite.mem_toFinset]; exact hky
+      have hgk : g k = Classical.choose (hsep k k₀ hkne) := by rw [hg]; exact dif_pos hkne
+      have hspec := Classical.choose_spec (hsep k k₀ hkne)
+      refine ⟨g k, ?_, ?_⟩
+      · exact le_trans (le_trans (Finset.le_sup hmem) (le_max_right _ _)) (le_refl _)
+      · rw [hgk]; exact hspec
+    · -- `k` signals No at `s₀` while `k₀` signals Yes ⇒ distinguished at `s₀ ≤ T`.
+      refine ⟨s₀, le_max_left _ _, ?_⟩
+      rw [position_ofMoves, position_ofMoves]
+      rw [hk₀yes]
+      simpa using hky
+
 /-! ### The isolated hard lemma -/
 
-/-- **Adaptive localization (the single remaining `sorry`).**
+/-- **Separating fixed trajectory (the single remaining `sorry`).**
+
+For every non-eventually-identity `c`, there is ONE fixed (signal-independent) move sequence `m`
+whose trajectory is (i) *safe* — never falls off the left edge from any start (equivalently
+`cumDelta m t ≥ 0`, i.e. `D_t ≥ 0`); (ii) *Yes-emitting* — from every start cell it eventually
+reads a "Yes"; and (iii) *separating* — for any two distinct start cells the signal histories
+eventually differ.
+
+This is the purely combinatorial heart, with **no game/belief semantics left**: by
+`ofMoves_localizes` (proven), (i)+(ii)+(iii) imply `Localizes` for every start, hence (via
+`localizes_BobWins`) `BobWins`.  The construction is a *c-tailored* lag-monotone "staircase":
+ride right to sweep displacements at the current lag, take single left moves to raise the lag,
+dwelling at each lag long enough to reach the next pair's separator.  Existence of separators at
+unbounded displacement (the "catchable-ahead" fact, the unbounded form of `separators_exist`)
+guarantees every pair is eventually caught; first-Yes finiteness (`yesSet_finite`) gives the
+finite per-`k₀` stop time.  Discharging this is the remaining work. -/
+theorem separating_trajectory_exists (c : Perm) (h : ¬ EventuallyIdentity c) :
+    ∃ m : ℕ → Dir,
+      (∀ (k₀ : ℕ+) (t : ℕ), 1 ≤ position c (ofMoves m) (k₀ : ℤ) t) ∧
+      (∀ a b : ℕ+, a ≠ b → ∃ s : ℕ,
+          signalOf c (position c (ofMoves m) (a : ℤ) s) s
+            ≠ signalOf c (position c (ofMoves m) (b : ℤ) s) s) ∧
+      (∀ k₀ : ℕ+, ∃ s : ℕ, signalOf c (position c (ofMoves m) (k₀ : ℤ) s) s = true) :=
+  sorry
+
+/-- **Adaptive localization (now reduced to `separating_trajectory_exists`).**
 
 For every *non-eventually-identity* permutation `c`, there is a never-guessing exploration
 strategy `σ` that *localizes* every start cell: from any `k₀`, `σ`'s trajectory stays safe for
@@ -543,8 +684,9 @@ Discharging this lemma is the substantial separate Lean project flagged in `Answ
 belief-state *plumbing* (this file's reduction) is complete, so closing this one statement
 closes the winning direction of `main`. -/
 theorem adaptive_localizes (c : Perm) (h : ¬ EventuallyIdentity c) :
-    ∃ σ : Strategy, NeverGuesses σ ∧ ∀ k₀ : ℕ+, Localizes c σ k₀ :=
-  sorry
+    ∃ σ : Strategy, NeverGuesses σ ∧ ∀ k₀ : ℕ+, Localizes c σ k₀ := by
+  obtain ⟨m, hsafe, hsep, hyes⟩ := separating_trajectory_exists c h
+  exact ⟨ofMoves m, ofMoves_neverGuesses m, ofMoves_localizes c m hsafe hsep hyes⟩
 
 /-! ### Conclusion: the winning direction -/
 
