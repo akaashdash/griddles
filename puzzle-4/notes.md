@@ -1665,3 +1665,11 @@ PATH FORWARD: the Lean winning direction must be rebuilt off the band recurrence
 The honest writeup status should change from "machine-verified modulo one true lemma" to "modulo the
 winning-direction strategy; the previously-attempted fixed-staircase lemma is now KNOWN FALSE
 (AP-split), confirming adaptivity is required."
+
+### #8 follow-up: ANSWER SURVIVES — Bob WINS AP-split via adaptive belief-state strategy
+Belief-state minimax solver (negative displacement allowed; safety = position≥1 for all in belief):
+AP-split is WINNABLE for all k₀ in {1..8},{1..12},{1..16},{1..20},{1..30} (all True). Controls:
+involution (non-EI) wins; identity (EI) LOSES. So the solver is faithful and the answer
+"Bob wins ⟺ ¬EI" is NOT threatened. The band recurrence being false ONLY kills the fixed-staircase
+Lean route; Bob wins AP-split adaptively (tracking the climbing slack s(D)~√D). This concretely
+realizes the documented "no fixed trajectory is universal / adaptivity is unavoidable" results.
