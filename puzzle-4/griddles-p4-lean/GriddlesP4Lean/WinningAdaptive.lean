@@ -1320,6 +1320,150 @@ lemma time_eq_D_add_lag (t : ℕ) : t = (trajSt c h t).D + lagSt (trajSt c h t) 
           · dsimp only; rw [if_pos (rfl : Sub.ride = Sub.ride)]; omega
           · dsimp only; rw [if_neg (by decide : Sub.raiseL ≠ Sub.ride)]; omega
 
+/-! #### Reaching ride states
+
+The ride of phase `k+1` (state `⟨·, k, ride⟩`) visits every displacement in
+`[rideTarget k, rideTarget (k+1)]`.  We first show that, starting from the ride-start state
+`⟨rideTarget k, k, ride⟩`, the trajectory reaches `⟨D', k, ride⟩` for every `D'` in range
+(`ride_extends`); then that the ride-start state itself is reached (`reach_ride_start`); finally we
+combine them (`reach_ride`). -/
+
+/-- From the ride-start of phase `k+1`, the ride reaches `⟨rideTarget k + j, k, ride⟩` for every
+    `j` with `rideTarget k + j ≤ rideTarget (k+1)`. -/
+lemma ride_extends {k t₀ : ℕ} (h₀ : trajSt c h t₀ = ⟨rideTarget c h k, k, Sub.ride⟩) :
+    ∀ j : ℕ, rideTarget c h k + j ≤ rideTarget c h (k + 1) →
+      ∃ t, trajSt c h t = ⟨rideTarget c h k + j, k, Sub.ride⟩ := by
+  intro j
+  induction j with
+  | zero => intro _; exact ⟨t₀, by simpa using h₀⟩
+  | succ i ih =>
+      intro hle
+      obtain ⟨t, ht⟩ := ih (by omega)
+      refine ⟨t + 1, ?_⟩
+      rw [trajSt_succ, ht]
+      -- at ⟨rideTarget k + i, k, ride⟩ with D < rideTarget (k+1): step rides to D+1
+      unfold nextSt
+      dsimp only
+      rw [if_pos (by omega : rideTarget c h k + i < rideTarget c h (k + 1))]
+      congr 1
+
+/-- The ride-start state of phase `k+1` is reached: `∃ t, trajSt t = ⟨rideTarget k, k, ride⟩`. -/
+lemma reach_ride_start (k : ℕ) :
+    ∃ t, trajSt c h t = ⟨rideTarget c h k, k, Sub.ride⟩ := by
+  induction k with
+  | zero =>
+      -- t = 2: raiseR (t0) → raiseL (t1) → ride (t2), with rideTarget 0 = 0
+      refine ⟨2, ?_⟩
+      have hr0 : rideTarget c h 0 = 0 := by rw [rideTarget]
+      rw [hr0]
+      show nextSt c h (nextSt c h (trajSt c h 0)) = ⟨0, 0, Sub.ride⟩
+      rfl
+  | succ n ih =>
+      obtain ⟨t₀, ht₀⟩ := ih
+      -- ride from rideTarget n to rideTarget (n+1) (last ride state of phase n+1)
+      obtain ⟨t, ht⟩ := ride_extends c h ht₀ (rideTarget c h (n + 1) - rideTarget c h n)
+        (by have := rideTarget_mono_step c h n; omega)
+      have hD : rideTarget c h n + (rideTarget c h (n + 1) - rideTarget c h n)
+          = rideTarget c h (n + 1) := by
+        have := rideTarget_mono_step c h n; omega
+      rw [hD] at ht
+      -- two more ticks: boundary (ride→raiseL at D+1, k+1) then raiseL (→ride at D, k+1)
+      refine ⟨t + 2, ?_⟩
+      show nextSt c h (nextSt c h (trajSt c h t)) = _
+      rw [ht]
+      -- first nextSt: ride at D = rideTarget(n+1), not < target ⇒ boundary
+      unfold nextSt
+      dsimp only
+      rw [if_neg (by omega : ¬ rideTarget c h (n + 1) < rideTarget c h (n + 1))]
+      dsimp only
+      -- now at ⟨rideTarget(n+1)+1, n+1, raiseL⟩; nextSt raiseL → ⟨rideTarget(n+1), n+1, ride⟩
+      congr 1
+
+/-- **Ride coverage.**  Phase `k+1`'s ride visits every displacement `D'` in
+    `[rideTarget k, rideTarget (k+1)]` (in the `ride` sub-phase). -/
+lemma reach_ride (k D' : ℕ) (hlo : rideTarget c h k ≤ D') (hhi : D' ≤ rideTarget c h (k + 1)) :
+    ∃ t, trajSt c h t = ⟨D', k, Sub.ride⟩ := by
+  obtain ⟨t₀, ht₀⟩ := reach_ride_start c h k
+  obtain ⟨t, ht⟩ := ride_extends c h ht₀ (D' - rideTarget c h k) (by omega)
+  rw [show rideTarget c h k + (D' - rideTarget c h k) = D' by omega] at ht
+  exact ⟨t, ht⟩
+
+/-! #### Separation
+
+At a ride state `⟨D', k, ride⟩` the signal from start `a : ℕ+` reads exactly the slack-`2(k+1)`
+comparison `[ (c (cellAt a D')).val < D' + 2(k+1) ]`.  So a `separatorAtSlack`-witness at slack
+`2(k+1)` and displacement `D'`, visited by the ride, makes the signals of the two cells differ. -/
+
+/-- The signal at a ride state, in the slack comparison form. -/
+lemma signal_at_ride {t D' k : ℕ} (a : ℕ+) (ht : trajSt c h t = ⟨D', k, Sub.ride⟩) :
+    signalOf c (position c (ofMoves (stairMoves c h)) (a : ℤ) t) t
+      = decide ((c (cellAt a D')).val < D' + (2 * k + 2)) := by
+  have hcum : cumDelta (stairMoves c h) t = (D' : ℤ) := by
+    rw [cumDelta_stairMoves, ht]
+  have htime : t = D' + (2 * k + 2) := by
+    have := time_eq_D_add_lag c h t
+    rw [ht] at this
+    simpa [lagSt] using this
+  rw [signalOf_ofMoves_eq c (stairMoves c h) a t D' hcum]
+  rw [htime]
+
+/-- `keyOf p` is even and `≥ 2`, hence `= 2·(k+1)` for some `k`.  (The pair's larger cell is `≥ 2`.)
+    -/
+lemma keyOf_eq_two_mul_succ (p : OPair) : ∃ k : ℕ, keyOf c h p = 2 * (k + 1) := by
+  have heven : Even (keyOf c h p) := slackOf_even c h (OPair.ne p)
+  have hge2 : 2 ≤ keyOf c h p := by
+    have h1 : (2 : ℕ) ≤ p.1.2.val := by
+      have : p.1.1.val < p.1.2.val := by exact_mod_cast p.2
+      have : 1 ≤ p.1.1.val := p.1.1.one_le
+      omega
+    exact le_trans h1 (le_keyOf c h p)
+  obtain ⟨m, hm⟩ := heven
+  -- keyOf = m + m = 2m, with 2m ≥ 2 ⇒ m ≥ 1 ⇒ m = (m-1)+1
+  refine ⟨m - 1, ?_⟩
+  omega
+
+/-- **Separation for an ordered pair.**  For `p : OPair`, the trajectory eventually emits different
+    signals from `p.1.1` and `p.1.2`. -/
+lemma separates_OPair (p : OPair) :
+    ∃ s : ℕ,
+      signalOf c (position c (ofMoves (stairMoves c h)) (p.1.1 : ℤ) s) s
+        ≠ signalOf c (position c (ofMoves (stairMoves c h)) (p.1.2 : ℤ) s) s := by
+  -- The pair's slack is `2(k+1)`, so it lives in `bucket (k+1)`.
+  obtain ⟨k, hk⟩ := keyOf_eq_two_mul_succ c h p
+  have hmem : p ∈ bucket c h (k + 1) := by
+    rw [mem_bucket, hk]
+  -- The bucket-`(k+1)` separator displacement for `p`, visited by phase-`(k+1)`'s ride.
+  set D' := sepDispAt c h p (rideTarget c h k) with hD'
+  have hlo : rideTarget c h k ≤ D' := sepDispAt_ge c h p (rideTarget c h k)
+  have hhi : D' ≤ rideTarget c h (k + 1) := sepDispAt_le_rideTarget c h hmem
+  obtain ⟨t, ht⟩ := reach_ride c h k D' hlo hhi
+  refine ⟨t, ?_⟩
+  -- both signals in slack-comparison form
+  rw [signal_at_ride c h p.1.1 ht, signal_at_ride c h p.1.2 ht]
+  -- the separator at slack `keyOf p = 2(k+1)` and displacement `D'`
+  have hsep : separatorAtSlack c p.1.1 p.1.2 (keyOf c h p) D' := sepDispAt_sep c h p (rideTarget c h k)
+  unfold separatorAtSlack at hsep
+  -- keyOf p = 2k+2, so the bounds match
+  rw [hk] at hsep
+  -- hsep : decide ((c (cellAt p.1.1 D')).val < D' + 2*(k+1)) ≠ decide (... p.1.2 ...)
+  have he1 : D' + (2 * k + 2) = D' + 2 * (k + 1) := by ring
+  rw [he1]
+  convert hsep using 2 <;> ring
+
+/-- **Separation (any distinct pair).**  The staircase trajectory separates any two distinct start
+    cells `a ≠ b`. -/
+lemma stair_separates (a b : ℕ+) (hab : a ≠ b) :
+    ∃ s : ℕ,
+      signalOf c (position c (ofMoves (stairMoves c h)) (a : ℤ) s) s
+        ≠ signalOf c (position c (ofMoves (stairMoves c h)) (b : ℤ) s) s := by
+  rcases lt_or_gt_of_ne hab with hlt | hgt
+  · -- a < b: use the OPair (a, b)
+    obtain ⟨s, hs⟩ := separates_OPair c h ⟨(a, b), hlt⟩
+    exact ⟨s, hs⟩
+  · -- b < a: use the OPair (b, a) and swap the `≠`
+    obtain ⟨s, hs⟩ := separates_OPair c h ⟨(b, a), hgt⟩
+    exact ⟨s, hs.symm⟩
+
 end Staircase
 
 /-! ### The isolated hard lemma -/
