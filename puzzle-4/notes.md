@@ -1673,3 +1673,32 @@ involution (non-EI) wins; identity (EI) LOSES. So the solver is faithful and the
 "Bob wins ⟺ ¬EI" is NOT threatened. The band recurrence being false ONLY kills the fixed-staircase
 Lean route; Bob wins AP-split adaptively (tracking the climbing slack s(D)~√D). This concretely
 realizes the documented "no fixed trajectory is universal / adaptivity is unavoidable" results.
+
+## Loop iteration (2026-05-23 #9): ADAPTIVE design — D≥0 strategy, safety free, never stranded via separators_unbounded
+
+User chose: formalize the adaptive strategy. Design (verified by belief-state minimax solver):
+KEY: a D≥0-only (displacement never negative) adaptive strategy WINS all non-EI tested (AP-split,
+block-5, involution) and correctly LOSES identity(EI). [solver /tmp/p4_dge0.py]
+  • SAFETY IS FREE: D≥0 ⟹ position = k₀+D ≥ k₀ ≥ 1 always. No unsafe moves ever needed.
+    (Memory's "block-5 winner uses negative D" was just ONE winner; a safe D≥0 winner also exists.)
+  • NEVER STRANDED: separators_unbounded (PROVEN axiom-clean) gives every pair a separator at
+    UNBOUNDED displacement D — always a FUTURE, SAFE discriminator (large D ⟹ large position). So
+    go-right-and-dwell can resolve any remaining pair. THIS is the TRUE recurrence replacing the FALSE
+    fixed-slack band: separators recur at unbounded DISPLACEMENT, not fixed slack.
+  • ADAPTIVITY ESSENTIAL: no single trajectory hits every (D, even slack) [can't dwell-at-D forever
+    AND visit all D]; fixed growing-amplitude sweep FAILS to localize block-5 (1,2 collide) & AP-split
+    (8,10 collide) [/tmp/p4_growsweep.py]. So Bob must belief-guide which (D,slack) to visit.
+  • GAME understood: EI loses because distinguishing k₀ from UNBOUNDEDLY-large k needs probing small
+    thresholds = unsafe left moves (can't, position would hit 0); non-EI's displacement flips signals
+    for small candidates "for free" via separators_unbounded.
+
+PROOF ARCHITECTURE (reuses PROVEN pieces):
+  localizes_BobWins (proven): never-guessing σ + (∀k₀ Localizes c σ k₀) ⟹ BobWins.
+  Localizes k₀ = ∃ finite T: safe through T (FREE via D≥0) ∧ every k≠k₀ distinguished by T.
+  Two phases: (1) explore (go right + dwell) until first YES ⟹ belief FINITE (yesSet_finite, proven:
+  {k: c(k+D)<t} finite); (2) resolve finite belief — each remaining pair has a separator at unbounded
+  D (separators_unbounded) reachable safely by going right + dwelling to catch its (even) slack ⟹
+  belief → singleton at finite T. Then localizes_BobWins guesses. NO fixed-slack band needed.
+
+TASKS #18–21. The research crux is the termination/no-stranding proof (task #19); the enabling true
+facts (separators_unbounded, yesSet_finite, localizes_BobWins) are all already PROVEN axiom-clean.
