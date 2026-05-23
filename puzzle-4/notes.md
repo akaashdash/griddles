@@ -1124,3 +1124,45 @@ machine-checked staircase construction — to ONE explicit, precisely stated, co
 combinatorial recurrence lemma. The winning direction is therefore **proven modulo this one true
 lemma**; it is NOT yet a complete, `sorry`-free proof. Writeup (`griddles-p4-writeup/writeup.tex`)
 updated 2026-05-23 to reflect this exact state (12 pages, compiles clean with `lualatex`).
+
+## ATTEMPT LOG — "POSITIVE-DENSITY of low-slack separators" angle (2026-05-23) — BROKEN
+
+*New idea (advisor):* instead of seeking a single common point between two infinite sets
+(`separators_unbounded` ∩ `weak_descents`, which the "evens-vs-odds need not intersect" wall blocks),
+target a POSITIVE-DENSITY lower bound: show `S(N) := #{D < N : ∃ even s ∈ {leastEvenGe(M),
+leastEvenGe(M)+2} with a slack-`s` separator at D}` satisfies `S(N) ≥ c·N − O(1)`, then pigeonhole
+over the ≤2 slacks to get a single recurring slack. The premise (from "fresh data" at D ∈ [0,300]):
+the recurring witness slack is ALWAYS in `{leastEvenGe(M), leastEvenGe(M)+2}` and fires at positive
+density.
+
+**VERIFIED EMPIRICALLY FIRST (`density_probe.py`, `density_decay.py` in `griddles-p4-verify/`) —
+THE ANGLE BREAKS. Two independent, decisive witnesses:**
+
+1. **`swap_at_powers` kills the density bound itself (even all-slack).** Separators occur ONLY at
+   `D = 2ᵏ − b` (log-sparse): for pair (2,3) the separating displacements are exactly
+   `1,5,13,29,61,125,253,…,262141` (= `2ᵏ−3`). Hence `S(N) ≈ log₂(N)`, so `S(N)/N → 0`:
+   measured `dens = 0.0045 → 0.0014 → 0.00041 → 0.00012 → 0.000034` as `N = 2k → 500k`. This is
+   NOT a window artifact — allowing EVERY even slack ≥ M (`allslack` column) gives the IDENTICAL
+   log-count. No counting/averaging argument can lift `O(log N)` to `Ω(N)`. The target
+   `S(N) ≥ c·N − O(1)` is simply FALSE for this (genuine, non-EI) bijection.
+
+2. **`growing_blocks_rev` kills the `{leastEvenGe(M), leastEvenGe(M)+2}` restriction (premise false).**
+   The 2-element-window density decays to 0 (`0.044 → 0.022 → 0.011 → 0.0056 → 0.0032` as `N` grows),
+   WHILE the all-slack density stays a healthy constant (0.5 for pair (1,2); 0.39 for (3,4)). So
+   separators ARE dense — but at slacks that DRIFT UPWARD with the block index, NOT confined to
+   `{leastEvenGe(M), +2}`. The task's "fresh data" was anchored at small `D` where blocks are still
+   small; it does not extrapolate. This re-confirms the prior log's line ~618 finding (recurring
+   slack window drifts to ~776 on (2,4)); the recurring-slack excess `s − M` is **unbounded** for
+   growing_blocks_rev, contradicting the "always ≤ 2" premise.
+
+**Why no salvage:** even pigeonholing over ALL `O(N)` candidate slacks `≤ N+M` buys nothing on
+`swap_at_powers` — the TOTAL separator count over all slacks is still `O(log N)`. The two
+obstructions are independent: (1) defeats any density bound; (2) defeats any bounded-slack-window
+restriction. The genuine residue is unchanged — it is the *coordination* of two infinite sets on a
+common displacement, and that coordination is genuinely sparse (`O(log N)`) for `swap_at_powers`,
+so "infinitely often" is the strongest true statement, NOT "positive density".
+
+**Net:** angle refuted with concrete witnesses. NO Lean edits (no false lemma introduced, per the
+no-false-lemmas rule). Build GREEN (3334 jobs, `#print axioms main` unchanged: `sorryAx` flows
+solely through `noSeparator_allSlack_imp_eventuallyIdentity`, the lone `sorry` at line 692). Durable
+artifacts: `density_probe.py`, `density_decay.py`.
