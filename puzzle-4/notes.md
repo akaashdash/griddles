@@ -1166,3 +1166,79 @@ so "infinitely often" is the strongest true statement, NOT "positive density".
 no-false-lemmas rule). Build GREEN (3334 jobs, `#print axioms main` unchanged: `sorryAx` flows
 solely through `noSeparator_allSlack_imp_eventuallyIdentity`, the lone `sorry` at line 692). Durable
 artifacts: `density_probe.py`, `density_decay.py`.
+
+## UPDATE (2026-05-23) — BOUNDED-DISPLACEMENT CASE REDUCED & PARTIALLY FORMALIZED (real new lead)
+
+The band recurrence (`band_recurrence_ge_max`, the lone open lemma) now **dispatches on bounded vs
+unbounded displacement** (`BddDisp c B := ∀ n, |c n − n| ≤ B`). The bounded case — the regime that
+broke ALL prior routes — is reduced to a strictly-more-tractable residue, with the WALL-removing
+step formalized **axiom-clean**.
+
+### The new idea that removes the WALL (verified, then formalized)
+
+The documented WALL was: `noSeparator_allSlack`'s per-slack displacement floor `D₀(s)` does NOT
+uniformize across `s`. **Bounded displacement removes it**: a separator's slack is *capped*.
+
+* **Step A — slack cap (`separatorAtSlack_slack_le_of_bddDisp`, AXIOM-CLEAN `[propext,Quot.sound]`).**
+  A slack-`s` separator at `D` forces (via `separatorAtSlack_iff_window`)
+  `D+s ≤ max(c(a+D),c(b+D))`. With `|c n − n| ≤ B` and `a<b`: `max ≤ (b+D)+B`, so `s ≤ b+B`.
+  VERIFIED: 0 violations over **9.6·10⁶** checks (`bounded_case.py`, `clean_argument.py`).
+  Consequence: only the FINITE even-slack set `[b, b+B]` can ever separate at slack `≥ M=b`.
+
+* **`≥ M` finite pigeonhole (`fixedSlack_ge_of_window_recurrence`, AXIOM-CLEAN).** Mirror of the
+  existing `fixedSlack_of_boundedSlack_recurrence`, restricted to slacks `≥ M`: a uniform floor
+  across the finite slack set follows automatically.
+
+* **Bounded-case theorem (`band_recurrence_ge_max_of_bddDisp`).** Combines Step A + pigeonhole;
+  reduces the bounded case to ONE isolated residue, the **finite-window recurrence**
+  `band_recurrence_finite_window_of_bddDisp`: at unbounded `D`, *some* even slack in `[b, b+B]`
+  separates. This is the fiber-pigeonhole core (`D ↦ (c(a+D)−D, c(b+D)−D)` is FINITE-valued, so a
+  constant-window value recurs, and one such value separates). VERIFIED: 0 counterexamples over
+  **322** (family,pair) combos with fiber-correct, **log-sparse-aware** recurrence detection
+  (`step3_contradiction.py`, `bounded_case.py`). Strictly more tractable than the original: slack
+  range FINITE, floor UNIFORM.
+
+### Crucial subtlety found & handled: log-sparse recurrence
+
+`swap_at_powers (2,3)` separates only at `D = 2ᵏ − b` (the value `(0,1)` on the fiber): genuinely
+infinite but **log-sparse**, last seen at `D = 2¹⁸ − 3`. Count-thresholds wrongly flag these as
+"cofinitely non-separating"; the fiber pigeonhole handles them correctly (it is a true infinite
+fiber). With fiber-correct detection, NO bounded non-EI perm is cofinitely-non-separating for any
+pair — the per-pair recurrence holds.
+
+### Why step 3 has no clean single-engine proof (honest residue characterization)
+
+Step 3 ("some recurring fiber value separates") is an EXISTENTIAL over the finite recurring set
+with no working single-witness selection rule and no single-engine reduction:
+- max-hi / max-vb selection FAILS (block_cycle_3 (1,2): the max-hi recurring window `(2,3]` is
+  non-separating; another value separates). Min-lo on the strict-ascent fiber had 0 failures but
+  its correctness still rests on parity details (parity_shift (2,4): min-lo window `(4,6]` has
+  `lo = leastEvenGe(M)` exactly, separating only via the LARGER even 6).
+- "strict ascent of b ⇒ separating" is FALSE (block_cycle_3 (1,2): half its strict ascents are
+  non-separating). The joint `weak-descent(a) ∧ weak-ascent(b)` engine FAILS on parity_shift
+  (the canonical WALL pair). So the residue genuinely needs the finite-fiber pigeonhole +
+  parity-counting; left as the isolated bounded residue.
+
+### Unbounded case probe (`unbounded_probe.py`)
+
+`growing_blocks_rev` (reverse blocks 2,3,4,…; `|φ|` grows ~√N to 773 over 3·10⁵): finite
+pigeonhole fails (385 recurring slacks, drifting up with block index). BUT the FIXED smallest even
+slack `s* = leastEvenGe(max)` **does recur** at unbounded `D` (count 1159–4614, last near scan top)
+— the wide reversed-block windows engulf `s*`. Clean sufficient condition (0 implication-failures):
+weak descent of `a` together with `c(b+D) ≥ D+s*`. But that is again a JOINT two-ray condition with
+no co-occurrence lemma (same WALL), so the unbounded case is isolated as
+`band_recurrence_ge_max_of_unbddDisp`. NOT closed.
+
+### Lean status (build GREEN, 3334 jobs)
+
+- AXIOM-CLEAN new lemmas: `separatorAtSlack_slack_le_of_bddDisp` (Step A), the `BddDisp` predicate,
+  `fixedSlack_ge_of_window_recurrence`.
+- `band_recurrence_ge_max` now dispatches: bounded → `band_recurrence_ge_max_of_bddDisp` (residue:
+  `band_recurrence_finite_window_of_bddDisp`), unbounded → `band_recurrence_ge_max_of_unbddDisp`.
+- `noSeparator_allSlack_imp_eventuallyIdentity` is now ORPHANED (off `main`'s path), retained only
+  as the all-slacks-route record. `main`'s `sorryAx` now flows through the two NEW residues
+  (bounded finite-window + unbounded), NOT through `noSeparator_allSlack`.
+- NO false lemmas introduced. Durable Python artifacts (all in `griddles-p4-verify/`):
+  `bounded_case.py`, `step3_rigor.py`, `step3_mechanism.py`, `step3_selection.py`,
+  `step3_contradiction.py`, `step3_ascent_fiber.py`, `clean_argument.py`, `recurrence_proof.py`,
+  `key_recurrence.py`, `unbounded_probe.py`, `swap_debug.py`.

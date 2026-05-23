@@ -678,12 +678,127 @@ does NOT close; the failure is **Step 3**, and the precise reasons:
     imbalance) — which is exactly what Step 3 would need.  That extraction burden IS the same residue
     as the parallel `boundedSlack_recurrence`.
 
+## ATTEMPT LOG — "value-hogging / cofinitely-bad" route (the LemmaA engine), re-verified, STILL OPEN
+
+A further attempt evaluated the proposal that the `cofinitely_bad_impossible` value-hogging engine
+(the machine that kills `Indistinguishable`) could be driven by `hno` directly, via the lead "the
+cofinite-finiteness of small-`φ` cells uniformizes the per-`s` thresholds, so for large `D` the
+*active* slack range is controlled and per-slack agreement composes to a full threshold-agreement
+the engine consumes."  Every step checked with `uv run` (`vhog_probe.py`, `discriminator.py`).
+**Truth re-confirmed** (every non-EI family has unbounded separators at some even slack `≥ max`;
+`swap_at_powers` separators are at `D = 2ᵏ − b`, confirmed to `D = 2¹⁸ − 3 = 262141` — log-sparse,
+so DENSITY is impossible, exactly the cofinite-but-SPARSE regime).  The route does NOT close; the
+DISCRIMINATOR (geometric `separatorAtSlack_iff_window`: separator at `D` ⟺ even slack `s ∈ W(D) :=
+(min(c(a+D),c(b+D))−D, max(…)−D]`) kills the uniformization lead two independent ways:
+
+  • **Bounded-`φ` case — parity-shift `(2,4)` (the canonical wall).**  Here `φ` is bounded, so the
+    active window `W(D)` IS bounded (the lead's premise holds).  But `W(D)` *never empties of even
+    slacks*: slack `6 = leastEvenGe(max)+2` lies in `W(D)` at unbounded `D` (1496/2996 of a high-`D`
+    window) — so `hno` at slack `6` FAILS, while `hno` at slack `4` holds forever.  The single
+    non-EI bit lives in the one recurring slack `6`, and there is no uniform rule locating it.  So
+    even in the lead's best case the engine never receives full agreement.  DECISIVE refutation that
+    *no single-slack value-hogging contradiction exists*: parity-shift is a genuine non-EI bijection
+    with `c(a+D)−D ∈ {0,4}` (bounded, balanced), hence `c(a+D) < D` holds **0 times** cofinitely —
+    `cofinitely_bad_impossible`'s premise (`c(a+D) < D` for all large `D`) is unreachable from `hno`.
+
+  • **Unbounded-`φ` case — `growing_blocks_rev (2,4)`.**  The active window `W(D)` is itself
+    *unbounded* (recurring even slacks observed `4 … 348`, drifting up with the block index), so
+    "finitely many active slacks" is outright false.
+
+**Root cause (same residue as all prior routes).**  The engine that kills `Indistinguishable`
+(`indist_consec` → `|c(a+D)−c(b+D)| = 1` → `cofinitely_bad_impossible`) reads the signal at ≥ 3
+times per `D`; `hno` delivers only ONE bit per `D` (which side of the single threshold `D+s` the
+pair straddles).  A balanced bijection (parity-shift) satisfies that one bit at the targeted slack
+forever while staying non-EI, so the value-hogging finiteness never fires.  Confirmed: NO mechanism
+found; `sorry` UNCHANGED, build GREEN.
+
 **Net.**  Every route attempted so far (band-collapse, single-ray pigeonhole, cut-flow route A,
-and now residue-class + cut-balance) hits the identical wall: `hno`'s per-slack displacement floor
-`D₀(s)` does not uniformize across `s`, and no proposed structure-extraction yields more than a
-density that a balanced bijection (parity-shift) satisfies.  The productive next move is to attack
-the parallel `boundedSlack_recurrence` directly (the global-count residue), not the lemma side.  No
-new mechanism found; `sorry` UNCHANGED, build GREEN. -/
+residue-class + cut-balance, and now value-hogging / cofinitely-bad) hits the identical wall:
+`hno`'s per-slack displacement floor `D₀(s)` does not uniformize across `s`, and no proposed
+structure-extraction yields more than a density that a balanced bijection (parity-shift) satisfies.
+The productive next move is to attack the parallel `boundedSlack_recurrence` directly (the
+global-count residue), not the lemma side.  No new mechanism found; `sorry` UNCHANGED, build GREEN.
+
+## ATTEMPT LOG — "convergent-permutation classes C/D" (Agnew/Bourbaki/Kronrod/Wituła), re-verified, STILL OPEN
+
+A further attempt evaluated the proposed split of the lemma along the **convergent/divergent
+permutation dichotomy** of R. Wituła's survey ("Permutations preserving the convergence or the sum
+of series", Zahorski monograph 2015).  For a permutation `p` of `ℕ`, `t(p,n) :=` the number of
+*mutually separated intervals* (maximal consecutive runs) in `p({1,…,n})`; Agnew/Bourbaki:
+`p ∈ C` (convergent) ⟺ `limsupₙ t(p,n) < ∞`; `p ∈ D` (divergent) ⟺ `t(p,n) → ∞`.  Wituła
+Lemma 7.3: if `p` is non-almost-identity then `U(p) = {n : t↑}` and `V(p) = {n : t↓}` are both
+infinite, with `|[1,n]∩U| − |[1,n]∩V| = t(p,n)`.  The proposal: split the lemma by C vs D, using
+the global block-count machinery to produce per-pair separators.  Every step checked with `uv run`
+(`convergence.py`, `conv_caseD.py`, `conv_bridge.py`, `conv_johnston.py`).  **Truth re-confirmed**
+(every non-EI family — incl. a freshly-built genuine class-D witness — has unbounded separators at
+some even slack `≥ max`, all within `excess ≤ 2` of `leastEvenGe(max)`).  The split does NOT close;
+the precise findings:
+
+  • **The split does NOT align with the difficulty boundary: EVERY documented hard witness is
+    class C.**  Classification (`t_max` over `n ≤ 4000`): parity-shift `t≤3`, swap_at_powers `t≤2`,
+    growing_blocks_rev `t≤2`, all block/rev_block/random-periodic/adjacent-involution `t≤3` — ALL
+    class C (bounded block count).  No documented witness is class D.  The 5 prior failed routes
+    therefore ALL live in class C; case D contains no hard witness, so the C/D axis does not separate
+    easy from hard.
+
+  • **Case D bridge is VACUOUS (the key negative result).**  A genuine class-D non-EI permutation
+    was built (`class_d_scatter`: doubling-window interleave, verified `t` climbing to `1024` over
+    one window, `q4_max=1023 ≫ q1_max=256`, 2046 non-fixed tail cells).  The proposed per-pair↔global
+    bridge — "recurring separators at `(a,b)` coincide with `U(p)/V(p)` block-count events on the rays
+    `{a+D},{b+D}`" — holds at `64/64, 97/97, 84/84` (100%) for tested pairs, BUT the **baseline density
+    of `U∪V` over cells is `0.995`**: in class D almost every cell is a U/V event, so "separator cell ∈
+    U∪V" is the trivial statement "almost every cell ∈ U∪V" and carries ZERO localizing information.
+    The U/V machinery supplies no joint engine.  Case D's separators are driven by the same
+    `separatorAtSlack_iff_window` local-window mechanism as case C.
+
+  • **Case C "universal pattern" is the EXISTING engine restated.**  On every class-C witness/pair
+    (incl. the canonical wall parity-shift `(2,4)`), the *upper* cell of the pair is a **weak ascent
+    (`c ≥ index`) at 100% of separating displacements** — but this is exactly `weak_ascents_infinite`
+    (already axiom-clean in Lean) applied to the upper cell, and the g-coordinate window description is
+    exactly `separatorAtSlack_iff_window` re-expressed.  Neither restatement globalizes.  Parity-shift
+    `(2,4)` again refutes any density extraction: the lower cell is a weak ascent too (`gₐ=g_b=+2`),
+    `lower-weak-descent 0/2989`, so even the descent-side engine does not fire on the wall pair — the
+    separator survives purely because the even threshold `D+6` lands in the open window `(D+4, D+6]`.
+
+  • **Johnston subgroup `R = {p : supᵢ|I∖p(I)| < ∞}` sub-split (the one genuinely new axis) also
+    fails to align.**  Sub-classifying class C by R-membership (`conv_johnston.py`, `J(p,L)` saturates
+    ⟺ `p ∈ R`): parity-shift, swap_at_powers, adjacent-involution, block/rev_block ∈ R (J saturates at
+    2–4); **growing_blocks_rev ∉ R** (J grows `4,8,16,27,…` with window length — cutting a size-k
+    reversed block gives `|I∖p(I)| ≈ k → ∞`).  But the hardest wall (parity-shift `(2,4)`) is IN R,
+    and the ∉-R witness (growing_blocks_rev) is handled by the same window engine, so R/¬R does not
+    isolate the difficulty either.  No "intervals move boundedly" reduction for R yields more than the
+    existing window characterization.
+
+**Root cause (same residue as all prior routes).**  `weak_descents_infinite` pins the window's lower
+edge and `weak_ascents_infinite` pins the upper edge, but there is no joint engine forcing BOTH at the
+same `D` with the relative position enclosing an even `s ≥ max(a,b)` infinitely often.  The
+convergent-permutation classification supplies clean *vocabulary* to test the split cleanly, and the
+verdict is that the C/D split (and the finer R/¬R split within C) does NOT correspond to a difficulty
+boundary — every hard case is class C, and the U/V global machinery is vacuous on the per-pair
+question.  The wall is UNCHANGED.  No new mechanism found; `sorry` UNCHANGED, build GREEN.
+
+## Net (updated)
+
+Every route attempted (band-collapse, single-ray pigeonhole, cut-flow route A, residue-class +
+cut-balance, value-hogging / cofinitely-bad, and now the convergent-permutation C/D + Johnston-R
+split) hits the identical wall: `hno`'s per-slack displacement floor `D₀(s)` does not uniformize
+across `s`, and no proposed structure-extraction (density, residue-class, block-count, interval-
+displacement) yields more than a structure that the balanced bijection parity-shift satisfies.
+The productive next move remains the parallel global-count residue `boundedSlack_recurrence`, not
+the lemma side.
+
+## SUPERSEDED / ORPHANED (this lemma is NO LONGER on `main`'s path).
+
+`band_recurrence_ge_max` now **dispatches on bounded vs unbounded displacement** (below) instead of
+routing through this all-slacks contradiction:
+  * the BOUNDED case is closed modulo `band_recurrence_finite_window_of_bddDisp` — the WALL above
+    is *removed* by bounded displacement, because Step A (`separatorAtSlack_slack_le_of_bddDisp`)
+    caps the separating slack into the FINITE set `[max, max+B]`, so the per-slack floor uniformises
+    automatically via the axiom-clean finite pigeonhole `fixedSlack_ge_of_window_recurrence`;
+  * the UNBOUNDED case is the isolated `band_recurrence_ge_max_of_unbddDisp`.
+This declaration is retained ONLY as the documented record of the all-slacks route and its WALL;
+nothing consumes it.  Its `sorry` is therefore off `main`'s axiom path (the new bounded/unbounded
+residues carry that weight). -/
 theorem noSeparator_allSlack_imp_eventuallyIdentity
     (c : Perm) (a b : ℕ+) (hab : a ≠ b)
     (hno : ∀ s : ℕ, Even s → max a.val b.val ≤ s →
@@ -760,35 +875,217 @@ theorem separatorAtSlack_iff_window (c : Perm) (a b : ℕ+) (s D : ℕ) :
 
 #print axioms separatorAtSlack_iff_window
 
-/-- **Band recurrence with a `max`-bounded slack.**  For non-eventually-identity `c` and any
-    distinct pair `a ≠ b`, there is a fixed even slack `s ≥ max a.val b.val` whose fixed-slack
-    separators recur at arbitrarily large displacement.  The `max`-lower-bound is what makes the
-    pair enumeration have order type `ω` (finitely many pairs per slack level).
+/-! ### BOUNDED-DISPLACEMENT CASE of the band recurrence (NEW — the regime that broke prior attempts)
 
-    TRUE (decisively verified computationally; canonical witness `s = leastEvenGe (max a b)`);
-    the remaining `sorry` is isolated in `indicatorAgree_imp_eventuallyIdentity` (KEY) above —
-    the slack-localized combinatorial residue.  Everything else here is the routine wrapping
-    (witness/parity/`≥ max`, and the indicator↔separator conversion via KEY's contrapositive). -/
+The lone open lemma `band_recurrence_ge_max` is closed below for permutations of **bounded
+displacement** (`∃ B, ∀ n, |c n − n| ≤ B`).  This is the regime that defeated every prior route:
+the documented WALL was that `noSeparator_allSlack`'s per-slack displacement floor `D₀(s)` does
+**not uniformize across `s`**.  Bounded displacement removes the WALL: a separator's slack is
+*capped* (Step A below), so only **finitely many** even slacks `≥ M` can ever separate, and the
+existing axiom-clean finite pigeonhole `fixedSlack_of_boundedSlack_recurrence` then uniformizes
+the floor automatically.
+
+## The two pieces
+
+* **Step A — the slack cap (`separatorAtSlack_slack_le_of_bddDisp`, axiom-clean).**  A slack-`s`
+  separator at `D` forces `D + s ≤ max (c (a+D)) (c (b+D))` (the window's upper edge,
+  `separatorAtSlack_iff_window`).  With `(c x).val ≤ x.val + B` (bounded displacement) and
+  `a, b ≤ b` this gives `D + s ≤ (b.val + D) + B`, i.e. `s ≤ b.val + B`.  Verified computationally
+  with **0 violations over 9.6·10⁶ checks** (`bounded_case.py`, `clean_argument.py`).
+
+* **Reduction (`band_recurrence_ge_max_of_bddDisp`).**  Combining Step A with the finite even-slack
+  pigeonhole reduces the lemma to the *finite-window recurrence*: at unbounded `D`, **some** even
+  slack in the finite range `[M, b+B]` separates.  This finite-window recurrence is the genuine
+  residue (`band_recurrence_finite_window_of_bddDisp`); it is the fiber-pigeonhole core
+  (`D ↦ (c(a+D)−D, c(b+D)−D)` is finite-valued, so some constant-window value recurs and one such
+  value separates — verified, 0 counterexamples over 322 (family,pair) combos in
+  `step3_contradiction.py`).  It is strictly more tractable than the original `≥ M`-over-ALL-slacks
+  statement: the slack range is now FINITE and the displacement floor is UNIFORM. -/
+
+/-- **Bounded displacement.**  `c` displaces every cell by at most `B`. -/
+def BddDisp (c : Perm) (B : ℕ) : Prop :=
+  ∀ n : ℕ+, (c n).val ≤ n.val + B ∧ n.val ≤ (c n).val + B
+
+/-- **Step A — the slack cap.**  Under bounded displacement `B`, any slack-`s` separator for a
+    pair `a < b` at any displacement `D` has `s ≤ b.val + B`.
+
+    *Proof.*  By `separatorAtSlack_iff_window`, a separator at `D` gives
+    `D + s ≤ max (c (a+D)).val (c (b+D)).val`.  Bounded displacement bounds each label:
+    `(c (a+D)).val ≤ (a+D).val + B ≤ (b+D).val + B` (since `a < b`) and
+    `(c (b+D)).val ≤ (b+D).val + B`, so the `max ≤ (b.val + D) + B`.  Cancel `D`. -/
+theorem separatorAtSlack_slack_le_of_bddDisp (c : Perm) (a b : ℕ+) (hab : a < b) {B : ℕ}
+    (hB : BddDisp c B) (s D : ℕ) (hsep : separatorAtSlack c a b s D) :
+    s ≤ b.val + B := by
+  -- window upper edge
+  have hwin := (separatorAtSlack_iff_window c a b s D).mp hsep
+  have hup : D + s ≤ max (c (cellAt a D)).val (c (cellAt b D)).val := hwin.2
+  -- each label bounded by (b+D)+B
+  have ha : (c (cellAt a D)).val ≤ (b.val + D) + B := by
+    have := (hB (cellAt a D)).1
+    rw [cellAt_val] at this
+    have hab' : a.val ≤ b.val := le_of_lt hab
+    omega
+  have hb : (c (cellAt b D)).val ≤ (b.val + D) + B := by
+    have := (hB (cellAt b D)).1
+    rw [cellAt_val] at this
+    omega
+  have hmax : max (c (cellAt a D)).val (c (cellAt b D)).val ≤ (b.val + D) + B :=
+    max_le ha hb
+  omega
+
+#print axioms separatorAtSlack_slack_le_of_bddDisp
+
+/-- **The finite-window recurrence (the bounded-case residue).**  For non-eventually-identity `c`
+    of bounded displacement `B` and a pair `a < b`, at arbitrarily large displacement *some* even
+    slack in the finite range `[b, b+B]` separates.
+
+    This is the genuine combinatorial core of the bounded case, isolated as ONE clearly-stated new
+    `sorry`.  It is the fiber-pigeonhole fact (`D ↦ (c(a+D)−D, c(b+D)−D)` takes finitely many
+    values, so a constant-window value recurs, and one such value separates — Step 3).  It is
+    *strictly* more tractable than the original `band_recurrence_ge_max` open lemma: the slack range
+    is FINITE and the displacement floor is UNIFORM, removing the documented "per-slack-floor does
+    not uniformize" WALL.
+
+    ## STATUS: TRUE, decisively verified, isolated as the bounded-case residue.
+    Verified 0 counterexamples over 322 (family,pair) combos with fiber-correct (log-sparse-aware)
+    recurrence detection (`step3_contradiction.py`, `bounded_case.py`).  The remaining gap is the
+    Lean formalization of the finite-fiber pigeonhole + Step-3 parity argument (`Finite.exists_-
+    infinite_fiber` on the bounded `(c(a+D)−D, c(b+D)−D)` map, then "some recurring window contains
+    an even `s ≥ b`"). -/
+theorem band_recurrence_finite_window_of_bddDisp
+    (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a < b) {B : ℕ} (hB : BddDisp c B) :
+    ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ ∃ s : ℕ, Even s ∧ b.val ≤ s ∧ s ≤ b.val + B ∧
+      separatorAtSlack c a b s D := by
+  sorry
+
+#print axioms band_recurrence_finite_window_of_bddDisp
+
+/-- **`≥ M` finite pigeonhole.**  If at unbounded displacement *some* even slack in `[M, M+2K]`
+    separates, then *one fixed* even slack `s` with `M ≤ s ≤ M + 2K` separates at unbounded
+    displacement.  (The `≥ M` companion to `fixedSlack_of_boundedSlack_recurrence`: pigeonhole over
+    the finite even set `{M', M'+2, …}` where `M' = leastEvenGe M`.) -/
+theorem fixedSlack_ge_of_window_recurrence (c : Perm) (a b : ℕ+) (M K : ℕ)
+    (hrec : ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ ∃ s : ℕ, Even s ∧ M ≤ s ∧ s ≤ M + K ∧
+      separatorAtSlack c a b s D) :
+    ∃ s : ℕ, Even s ∧ M ≤ s ∧ ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
+  classical
+  by_contra hcon
+  push_neg at hcon
+  -- hcon : ∀ s, Even s → M ≤ s → ∃ D₀, ∀ D ≥ D₀, ¬ separator
+  -- collect per-even-slack-in-[M,M+K] floors; take their max as a common floor.
+  have hbound : ∀ j : ℕ, ∃ D₀ : ℕ, ∀ D : ℕ, D ≥ D₀ →
+      ¬ (Even (M + j) ∧ M ≤ M + j ∧ M + j ≤ M + K ∧ separatorAtSlack c a b (M + j) D) := by
+    intro j
+    by_cases hev : Even (M + j)
+    · obtain ⟨D₀, hD₀⟩ := hcon (M + j) hev (Nat.le_add_right _ _)
+      exact ⟨D₀, fun D hD ⟨_, _, _, hs⟩ => hD₀ D hD hs⟩
+    · exact ⟨0, fun D _ ⟨he, _, _, _⟩ => hev he⟩
+  choose f hf using hbound
+  set Dstar : ℕ := (Finset.range (K + 1)).sup f with hDstar
+  obtain ⟨D, hD_ge, s, hse, hsM, hsMK, hsep⟩ := hrec Dstar
+  -- s = M + (s - M) with s - M ≤ K, so it's covered by the finite family.
+  set j := s - M with hj
+  have hjK : j ≤ K := by omega
+  have hsj : M + j = s := by omega
+  have hfj_le : f j ≤ Dstar := by
+    rw [hDstar]; exact Finset.le_sup (Finset.mem_range.mpr (Nat.lt_succ_of_le hjK))
+  have hD_ge_fj : D ≥ f j := le_trans hfj_le hD_ge
+  exact hf j D hD_ge_fj ⟨by rw [hsj]; exact hse, by omega, by omega, by rw [hsj]; exact hsep⟩
+
+#print axioms fixedSlack_ge_of_window_recurrence
+
+/-- **BOUNDED-DISPLACEMENT band recurrence (`≥ max`).**  For non-eventually-identity `c` of
+    bounded displacement and any distinct pair, a *fixed* even slack `s ≥ max a.val b.val` has
+    separators at unbounded displacement.  This is `band_recurrence_ge_max` for the bounded regime
+    — the regime that broke all prior attempts.
+
+    *Proof.*  WLOG `a < b` (the predicate is symmetric).  Then `max a.val b.val = b.val = M`.  The
+    finite-window recurrence (`band_recurrence_finite_window_of_bddDisp`) supplies separators at
+    *some* even slack in `[M, M+B]` at unbounded `D`; the `≥ M` finite pigeonhole
+    (`fixedSlack_ge_of_window_recurrence`, axiom-clean) extracts ONE fixed even slack `s ≥ M`.
+    Step A (`separatorAtSlack_slack_le_of_bddDisp`) is what guarantees no separator escapes the
+    finite slack window, so the pigeonhole is exhaustive. -/
+theorem band_recurrence_ge_max_of_bddDisp
+    (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) {B : ℕ} (hB : BddDisp c B) :
+    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
+      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
+  -- WLOG order the pair so `a < b`; then `max a.val b.val = b.val`.
+  rcases lt_or_gt_of_ne hab with hlt | hgt
+  · -- a < b
+    have hmax : max a.val b.val = b.val := max_eq_right (le_of_lt hlt)
+    rw [hmax]
+    have hwin := band_recurrence_finite_window_of_bddDisp c h a b hlt hB
+    obtain ⟨s, hse, hsM, hpin⟩ :=
+      fixedSlack_ge_of_window_recurrence c a b b.val B
+        (fun D₀ => by
+          obtain ⟨D, hD, s, hse, hsM, hsMK, hsep⟩ := hwin D₀
+          exact ⟨D, hD, s, hse, hsM, hsMK, hsep⟩)
+    exact ⟨s, hse, hsM, hpin⟩
+  · -- b < a; obtain for (b, a) and swap the separator's Boolean disagreement.
+    have hmax : max a.val b.val = a.val := max_eq_left (le_of_lt hgt)
+    rw [hmax]
+    have hwin := band_recurrence_finite_window_of_bddDisp c h b a hgt hB
+    obtain ⟨s, hse, hsM, hpin⟩ :=
+      fixedSlack_ge_of_window_recurrence c b a a.val B
+        (fun D₀ => by
+          obtain ⟨D, hD, s, hse, hsM, hsMK, hsep⟩ := hwin D₀
+          exact ⟨D, hD, s, hse, hsM, hsMK, hsep⟩)
+    refine ⟨s, hse, hsM, fun D₀ => ?_⟩
+    obtain ⟨D, hD, hsep⟩ := hpin D₀
+    -- separatorAtSlack is symmetric in (a,b): the Boolean `≠` is symmetric.
+    exact ⟨D, hD, by unfold separatorAtSlack at hsep ⊢; exact hsep.symm⟩
+
+#print axioms band_recurrence_ge_max_of_bddDisp
+
+/-! ### Band recurrence with a `max`-bounded slack — the general lemma (`main`'s consumer)
+
+`band_recurrence_ge_max` below is what `main` consumes (via `slackOf`).  It now **dispatches on
+bounded vs unbounded displacement**: the bounded case is closed modulo the isolated finite-window
+residue (`band_recurrence_ge_max_of_bddDisp`), and only the unbounded case carries open weight
+(`band_recurrence_ge_max_of_unbddDisp`).  Canonical witness in the bounded case `s ∈
+{leastEvenGe(max), leastEvenGe(max)+2}` (existential is genuine — parity-shift needs `+2`). -/
+
+/-! ### UNBOUNDED-displacement case (the remaining residue of the general lemma)
+
+When `c` has *unbounded* displacement the finite pigeonhole of the bounded case fails (the
+pair `(c(a+D)−D, c(b+D)−D)` ranges over an infinite set, and the single-ray window is itself
+unbounded — verified for `growing_blocks_rev`, slack range drifts to ~776 with the block index).
+
+PROBE (Python, `unbounded_probe.py`):  for `growing_blocks_rev` the FIXED smallest even slack
+`s* = leastEvenGe(max a b)` *does* recur at unbounded `D` (count 1159–4614 over a 3·10⁵ scan,
+last occurrence near the scan top).  Mechanism: at the wide reversed-block boundaries the window
+`(lo_D, hi_D]` spans the whole block, so it engulfs `s*` whenever `lo_D < s*`.  A clean sufficient
+condition that recurs (0 implication-failures): a weak descent of `a` (`c(a+D) ≤ a+D`,
+`weak_descents_infinite`) together with `c(b+D) ≥ D + s*`.  However this is again a JOINT
+two-ray condition with no Lean lemma forcing co-occurrence (the same WALL as the bounded
+single-engine attempts), so the unbounded case is left isolated here. -/
+theorem band_recurrence_ge_max_of_unbddDisp
+    (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b)
+    (hunb : ¬ ∃ B : ℕ, BddDisp c B) :
+    ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
+      ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
+  sorry
+
+#print axioms band_recurrence_ge_max_of_unbddDisp
+
 theorem band_recurrence_ge_max (c : Perm) (h : ¬ EventuallyIdentity c) (a b : ℕ+) (hab : a ≠ b) :
     ∃ s : ℕ, Even s ∧ max a.val b.val ≤ s ∧
       ∀ D₀ : ℕ, ∃ D : ℕ, D ≥ D₀ ∧ separatorAtSlack c a b s D := by
-  -- By contradiction: if NO even slack `s ≥ max` has recurring separators, then for every such
-  -- `s` the separators are eventually absent — exactly KEY's hypothesis — forcing `EI`, contra `h`.
-  -- (The witness `s` is genuinely existential: the smallest even `≥ max` does NOT always work,
-  -- e.g. the parity-shift permutation `c(2k)=2k+2, c(2k+1)=2k-1` needs a larger slack for some
-  -- pairs.  So we must NOT hardcode `s`; we let KEY supply the contradiction over ALL `s`.)
-  by_contra hcon
-  apply h
-  apply noSeparator_allSlack_imp_eventuallyIdentity c a b hab
-  intro s hse hsg
-  by_contra hrec
-  push_neg at hrec
-  exact hcon ⟨s, hse, hsg, hrec⟩
+  -- **Dispatch on bounded vs unbounded displacement.**  The bounded case is now CLOSED modulo the
+  -- isolated, strictly-more-tractable finite-window residue (`band_recurrence_ge_max_of_bddDisp`,
+  -- routing through `band_recurrence_finite_window_of_bddDisp`); only the unbounded case carries
+  -- the remaining open weight (`band_recurrence_ge_max_of_unbddDisp`).
+  by_cases hbd : ∃ B : ℕ, BddDisp c B
+  · obtain ⟨B, hB⟩ := hbd
+    exact band_recurrence_ge_max_of_bddDisp c h a b hab hB
+  · exact band_recurrence_ge_max_of_unbddDisp c h a b hab hbd
 
--- Axiom audit: `band_recurrence_ge_max` is the lone remaining `sorry` of the winning direction
--- (its profile shows `sorryAx`).  It states an empirically-decisively-verified TRUE proposition
--- (canonical witness `s = ` smallest even `≥ max a.val b.val`); the gap is the slack-localized
--- combinatorial residue documented above.
+-- Axiom audit: `band_recurrence_ge_max` now dispatches on bounded/unbounded displacement.  The
+-- **bounded case is wired in** via `band_recurrence_ge_max_of_bddDisp` (its residue is the finite-
+-- window `band_recurrence_finite_window_of_bddDisp`); the unbounded case is the isolated
+-- `band_recurrence_ge_max_of_unbddDisp`.  Both residues show `sorryAx`; everything else (Step A
+-- `separatorAtSlack_slack_le_of_bddDisp`, the `≥ M` pigeonhole `fixedSlack_ge_of_window_recurrence`,
+-- and the dispatch) is axiom-clean.
 #print axioms band_recurrence_ge_max
 
 /-! ### Never-guessing exploration strategies -/
