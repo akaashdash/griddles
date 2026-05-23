@@ -1168,10 +1168,11 @@ lemma indist_Delta_even {c : Perm} {a b : ℕ+} (hab : a < b)
 The proof case-splits on `Δ = b − a`:
 
 * `Δ = 1`: the σ(0) case split (`indist_Delta1_pos` / `indist_Delta1_neg`) gives eventual
-  identity.  Fully proven.
-* `Δ` even (`≥ 2`): `indist_Delta_even` derives `False` (parity kill + `regime2_impossible`).
-* `Δ` odd (`≥ 3`): the "no good pair" regime is killed by `regime2_impossible`; the
-  remaining "good pair" case is the single `sorry` (`odd_good_pair_gap`). -/
+  identity.
+* `Δ ≥ 2`: impossible.  Bad displacements are forward-closed (`bad_D_propagates`), so the
+  active displacements form a finite prefix on each residue (chain bound + active lower
+  bound); cofinitely many displacements are then bad, contradicting injectivity
+  (`indist_Delta_ge_2_impossible`).  No parity split is needed. -/
 
 theorem Indistinguishable_implies_eventually_identity
     {c : Perm} {a b : ℕ+} (hab : a < b)
