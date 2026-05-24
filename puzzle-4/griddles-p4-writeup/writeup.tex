@@ -367,6 +367,57 @@ Third, an explicit construction of such a trajectory, which splits into
 two regimes according to whether $c$'s displacement is bounded above.
 
 % ------------------------------------------------------------
+\subsection{Bob's strategy, in plain terms}\label{sec:strategy}
+
+Before the proofs, here is exactly what Bob does when $c$ is not eventually
+the identity. The strategy has two independent parts: a fixed exploration
+walk that he plays \emph{blind}, and a stopping rule driven by the signals.
+
+\paragraph{The exploration walk (predetermined, $c$-tailored).}
+From his knowledge of $c$ alone, Bob fixes \emph{in advance} an infinite
+sequence of left/right pushes---the \emph{staircase}---with one defining
+property: the net displacement is never negative, $D_t\ge 0$ for all~$t$.
+Since the trolley then sits at $k_0+D_t\ge k_0\ge 1$, it \emph{never falls
+off the tape}, whatever the unknown start~$k_0$---in particular it is safe
+even when $k_0=1$, the tightest case. The staircase sweeps through the
+ordered pairs of start cells $(a,b)$, $a<b$, in a fixed order; for each
+pair it
+\begin{enumerate}[topsep=2pt,itemsep=1pt]
+  \item \emph{raises its lag} $\ell=t-D$ to a target value by oscillating
+  in place (a right push then a left push bumps $\ell$ by~$2$ and returns
+  $D$ to where it was);
+  \item \emph{rides right} until the displacement hits a \emph{separator}
+  for $(a,b)$---a moment at which the trolley's report would be \Yes{} if
+  the start were~$a$ but \No{} if it were~$b$ (or vice versa); then
+  \item \emph{tails right}, so displacements grow without bound across
+  phases.
+\end{enumerate}
+When $c$'s labels do not run away upward (\emph{bounded above}) the target
+lag is one fixed value per pair; when they do (\emph{unbounded above}) the
+target lag must grow from pair to pair. Either way it is a single, fixed,
+signal-independent sequence: Bob never consults the signals to decide a
+move.
+
+\paragraph{The stopping rule (signal-driven).}
+While walking, Bob maintains a \emph{belief}: the set of start cells~$k$
+whose \emph{hypothetical} signal history---which he can compute, knowing
+$c$ and his own moves---matches the signals he has actually heard.
+Initially every cell is possible; each signal that disagrees with a
+candidate's hypothetical eliminates it. A single \Yes{} already cuts the
+belief down to a \emph{finite} set (only finitely many cells can be awake
+at any one moment), and because the staircase visits a separator for
+\emph{every} pair, distinct starts eventually yield distinct histories, so
+the belief keeps shrinking. The instant it is a single cell~$k_0$, Bob
+stops, computes the trolley's current position $k_0+D_t$ from~$k_0$ and his
+own (known) displacement, and guesses it---retrieving the trolley.
+
+In one sentence: \emph{play a fixed, safe, rightward staircase, and stop to
+guess the moment the signals have pinned down the start cell.} The rest of
+this section proves that such a staircase exists (Sections~\ref{sec:bounded}
+and~\ref{sec:unbounded}) and that the stopping time is always finite
+(Section~\ref{sec:reduction}).
+
+% ------------------------------------------------------------
 \subsection{The distinguishability theorem}\label{sec:distinguish}
 
 Reaching displacement~$D$ from the start costs time at least~$|D|$, and
