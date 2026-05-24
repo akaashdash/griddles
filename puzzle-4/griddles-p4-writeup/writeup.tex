@@ -1009,63 +1009,6 @@ The forward implication ($\to$) is the losing direction
 by \lean{q2even}). Both branches route through the axiom-clean reduction
 \lean{localizes\us BobWins}, so the whole proof is \lean{sorry}-free.
 
-\subsection{Formalisation status}
-
-\begin{table}[h]
-\centering
-\renewcommand{\arraystretch}{1.2}
-\small
-\begin{tabularx}{\textwidth}{@{}l l >{\raggedright\arraybackslash}X@{}}
-\toprule
-\textbf{Component} & \textbf{Status} & \textbf{Lean name} \\
-\midrule
-Main \emph{iff} (Thm.~\ref{thm:main})
-  & axiom-clean
-  & \lean{main} \\
-Losing direction (Thm.~\ref{thm:losing})
-  & axiom-clean
-  & \lean{EventuallyIdentity\us loses} \\
-Distinguishability (Thm.~\ref{thm:lemmaA})
-  & axiom-clean
-  & \lean{Indistinguishable\us implies\us eventually\us identity};
-    \lean{not\us eventually\us identity\us implies\us distinguishable} \\
-Cut lemma (Lem.~\ref{lem:cut})
-  & axiom-clean
-  & \lean{descent\us cofinite\us imp\us EI} \\
-First-Yes finiteness (Lem.~\ref{lem:yesfin})
-  & axiom-clean
-  & \lean{yesSet\us finite} \\
-Reduction (Thm.~\ref{thm:reduction})
-  & axiom-clean
-  & \lean{localizes\us BobWins}, \lean{ofMoves\us localizes} \\
-Bounded-above band (Thm.~\ref{thm:bandrec})
-  & axiom-clean
-  & \lean{band\us of\us boundedAbove} \\
-Bounded-above winner
-  & axiom-clean
-  & \lean{notEI\us boundedAbove\us BobWins} \\
-Unbounded-above separators (Thm.~\ref{thm:q2even})
-  & axiom-clean
-  & \lean{q2even} \\
-Unbounded-above winner
-  & axiom-clean
-  & \lean{notEI\us unboundedAbove\us BobWins} \\
-$K$-decodable winning classes (Thm.~\ref{thm:k})
-  & axiom-clean
-  & \lean{LocallyDecodable\us BobWins} ($K{=}2$),
-    \lean{LocallyK3Decodable\us BobWins} ($K{=}3$),
-    \lean{LocallyKDecodable\us BobWins} (any~$K$) \\
-Decodable consistency capstone
-  & axiom-clean
-  & \lean{locallyDecodable\us main} \\
-\bottomrule
-\end{tabularx}
-\caption{Formalisation status. Every component---including the main
-\emph{iff}---is machine-checked with no \lean{sorry}; ``axiom-clean'' = the
-\lean{\#print axioms} audit lists only \lean{propext},
-\lean{Classical\dt choice}, \lean{Quot\dt sound}.}
-\end{table}
-
 \subsection{The journey, and what made it work}
 
 The proof was not found in this clean shape. Three milestones reshaped it.
